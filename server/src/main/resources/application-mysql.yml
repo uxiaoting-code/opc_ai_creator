@@ -1,0 +1,72 @@
+# =============================================================================
+#  OPC AI 创作平台 · 后端配置（MySQL profile）
+#
+#  启用方式：启动时带上 --spring.profiles.active=mysql
+#  本文件只覆盖与 MySQL 相关的项，其余配置继承 application.yml。
+#
+#  前置条件（顺序不能反）：
+#    1. 本机已安装并启动 MySQL 8.0 服务；
+#    2. 已执行 server/docs/schema.sql 建好库表；
+#    3. 下面的用户名密码与实际环境一致。
+# =============================================================================
+
+spring:
+  # ---------------------------------------------------------------------------
+  # 数据库连接
+  # ---------------------------------------------------------------------------
+  datasource:
+    # 参数逐项说明（每一行都对应一个真实会踩的坑）：
+    #   characterEncoding=UTF-8  → 不写的话中文会变问号
+    #   sslMode=DISABLED         → 本地开发不走 TLS（MySQL 8 默认要证书）
+    #   allowPublicKeyRetrieval  → MySQL 8 默认密码插件是 caching_sha2_password，
+    #                              非 TLS 连接下不给公钥就会报
+    #                              "Public Key Retrieval is not allowed"
+    #   serverTimezone           → 不加可能报 "server time zone value is unrecognized"
+    #                              导致时间字段整体偏移 8 小时
+    url: jdbc:mysql://127.0.0.1:3306/ai_image_video?characterEncoding=UTF-8&sslMode=DISABLED&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # 账号密码：默认值可直接跑，想改又不想动文件就设环境变量
+    #   PowerShell:  $env:MYSQL_USER="root"; $env:MYSQL_PASSWORD="你的密码"
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:123456}
+
+    hikari:
+      maximum-pool-size: 10        # 课设单人开发，10 个连接绰绰有余
+      minimum-idle: 2
+      connection-timeout: 10000    # 10 秒连不上就报错，别让启动卡死
+      pool-name: opc-hikari
+
+  # ---------------------------------------------------------------------------
+  # JPA
+  # ---------------------------------------------------------------------------
+  jpa:
+    hibernate:
+      # 关键：表结构已由 server/docs/schema.sql 手工建好，绝不能让 Hibernate 去改。
+      # 用 update 它会按实体重新推导列类型（比如把 TINYINT 改成 INTEGER），
+      # 还可能把我们精心调过的索引、ngram 全文索引当成"多余"的东西处理。
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        # 这里刻意不配 hibernate.jdbc.batch_size：
+        # BaseEntity 用的是 GenerationType.IDENTITY，Hibernate 对这种自增主键
+        # 无法做 JDBC 批处理（每行都要回读生成的主键），配了也不会生效。
+        # 想真开批量，得先改成 TableGenerator/序列策略 —— 课设数据量下没必要。
+    show-sql: false
+
+  # H2 控制台在 MySQL 模式下关闭（数据已经在 MySQL 里，没必要再开一个）
+  h2:
+    console:
+      enabled: false
+
+# =============================================================================
+# 日志：MySQL 模式下把 JDBC 相关调安静一点
+# =============================================================================
+logging:
+  level:
+    com.zaxxer.hikari: INFO
+    # 需要排查 SQL 问题时把这两行放开
+    # com.opc.server: DEBUG
+    # org.hibernate.SQL: DEBUG

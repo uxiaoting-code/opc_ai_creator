@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.1.1</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.opc</groupId>
+	<artifactId>opc-server</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>opc-server</name>
+	<description>OPC AI 多模态创作平台后端 · Harness 任务调度 + AiProvider 抽象</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>21</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-h2console</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<!--
+			Spring Boot 4 把 Jackson 从 web starter 里拆了出来，
+			不单独引这个 starter 的话，ObjectMapper 不在编译类路径上，
+			而且 REST 接口也不会序列化成 JSON。
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jackson</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<!--
+			JCodec：纯 Java 的 H.264 编解码器，用来让 Mock 服务商真正"生成"一段
+			能播的 MP4 —— JDK 自带只有 Java2D 画图的 ImageIO，没有任何视频编码能力。
+
+			为什么不用 ffmpeg：需要外部可执行文件，课设环境不一定装了，还得处理
+			进程调用与平台差异。JCodec 是纯 Java 依赖，跟着 jar 走，零外部依赖。
+
+			注意它只支持 Baseline Profile（无 B 帧），但 Chrome / Android ExoPlayer
+			都能正常播放，对演示足够。jcodec-javase 提供 AWT 相关的封装
+			（AWTSequenceEncoder），两个必须一起引。
+		-->
+		<dependency>
+			<groupId>org.jcodec</groupId>
+			<artifactId>jcodec</artifactId>
+			<version>0.2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jcodec</groupId>
+			<artifactId>jcodec-javase</artifactId>
+			<version>0.2.5</version>
+		</dependency>
+		<!--
+			Knife4j：接口文档 UI（访问 /doc.html）。
+
+			⚠️ 这里用的是 boot4 专用 starter，不是官方那个
+			knife4j-openapi3-jakarta-spring-boot-starter ——
+			后者依赖的 springdoc-openapi 2.x 是给 Spring Boot 3 做的，
+			本项目是 Spring Boot 4.1.1，官方版本暂时还不兼容
+			（springdoc 对 Boot 4 的支持在 3.x 才提供）。
+
+			另外：/doc.html、/v3/api-docs、/webjars/** 这些路径都不在
+			/api/** 下面，所以不会被项目自己的 AuthInterceptor 拦到，
+			无需往 WebConfig 的 excludePathPatterns 里加。
+		-->
+		<dependency>
+			<groupId>com.baizhukui</groupId>
+			<artifactId>knife4j-openapi3-boot4-spring-boot-starter</artifactId>
+			<!--
+				版本以 Maven Central 上实际发布的为准：这个 boot4 starter 从 5.0.2 起版，
+				没有 4.x。
+			-->
+			<version>5.7.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-compile</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+						<configuration>
+							<annotationProcessorPaths>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok</artifactId>
+								</path>
+							</annotationProcessorPaths>
+						</configuration>
+					</execution>
+					<execution>
+						<id>default-testCompile</id>
+						<phase>test-compile</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+						<configuration>
+							<annotationProcessorPaths>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok</artifactId>
+								</path>
+							</annotationProcessorPaths>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

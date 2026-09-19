@@ -1,0 +1,121 @@
+# =============================================================================
+# OPC AI 创作平台 · 后端配置
+#
+# 默认使用 H2 文件数据库，**开箱即跑，不需要安装 MySQL**。
+# 交付/答辩要用 MySQL 时，加上 --spring.profiles.active=mysql 即可，
+# 详见 application-mysql.yml。
+#
+# ⚠️ 切 MySQL 前必须先建库建表（Hibernate 不再自动建表）：
+#      mysql -u root -p --default-character-set=utf8mb4
+#      mysql> source E:/code_project/opc_ai_creator/server/docs/schema.sql
+# =============================================================================
+
+server:
+  port: 8080
+  # 关键：必须监听 0.0.0.0 而不是 127.0.0.1
+  # 否则 Android 真机通过局域网 IP 根本连不上（只有本机能访问）
+  address: 0.0.0.0
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  application:
+    name: opc-server
+
+  # ---------------------------------------------------------------------------
+  # 数据库：H2 文件模式（默认）
+  # 用文件而不是内存，服务重启后任务和作品还在，演示时更真实
+  # ---------------------------------------------------------------------------
+  datasource:
+    url: jdbc:h2:file:./data/opc_db;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      # 按实体自动建表/加字段。MySQL profile 下会覆盖成 none
+      # （表由 docs/schema.sql 手工建，Hibernate 不碰）
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  # H2 控制台：浏览器打开 http://localhost:8080/h2-console 可以直接看数据
+  # JDBC URL 填上面的 url，用户名 sa，密码留空
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Jackson 3（Boot 4 起包名为 tools.jackson.*）
+  jackson:
+    default-property-inclusion: always
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 110MB
+
+# =============================================================================
+# 项目自定义配置
+# =============================================================================
+opc:
+  # --- 文件存储 ---
+  storage:
+    upload-dir: ./data/uploads
+    public-path: /upload
+    max-image-size: 10485760    # 10MB，与前端 MediaUtils 的限制一致
+    max-video-size: 104857600   # 100MB
+
+  # --- Harness 任务调度 ---
+  harness:
+    poll-interval-ms: 3000        # 轮询间隔：3 秒扫一次排队任务
+    timeout-sweep-interval-ms: 30000
+    batch-size: 5                 # 每轮最多捞 5 个任务
+    core-pool-size: 2             # 常驻并发
+    max-pool-size: 4              # 最大并发
+    queue-capacity: 200
+    default-max-retry: 3          # 默认最多重试 3 次
+    credits-per-task: 10          # 每个文生图任务扣 10 算力点
+    credits-per-video-task: 15    # 每个图生视频任务扣 15 算力点（逐帧生成更贵）
+    task-timeout-seconds: 300     # 超过 5 分钟没返回判定为失败
+
+  # --- 模拟 AI 服务商 ---
+  mock:
+    min-delay-ms: 2000            # 每次生成最少耗时（演示用，让状态流转看得见）
+    max-delay-ms: 6000
+    failure-marker: "#fail"       # 提示词含它则首次必失败，用于演示重试闭环
+
+  # --- 真实服务商接入位（默认关闭，填入密钥后打开即可）---
+  provider:
+    stable-diffusion:
+      enabled: false
+      base-url: http://127.0.0.1:7860
+      api-key: ""
+      timeout-seconds: 180
+
+  # --- 安全 ---
+  security:
+    token-ttl-hours: 168          # 令牌有效期 7 天
+    # ⚠️ 开发令牌：让前端 bypassLogin 模式（用一个固定假 token）也能调通后端接口。
+    # 【交付/上线前必须改成 false】，否则任何人拿这个字符串就能以演示账号身份调用所有接口
+    dev-token-enabled: true
+    dev-token: mock-token-for-scaffold
+    dev-username: demo            # 开发令牌对应的账号（由 DataSeeder 创建）
+
+# =============================================================================
+# 日志
+# =============================================================================
+logging:
+  level:
+    root: INFO
+    com.opc.server: DEBUG
+    # 调度与生成过程的日志太啰嗦，单独调高
+    com.opc.server.harness.HarnessScheduler: INFO
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
