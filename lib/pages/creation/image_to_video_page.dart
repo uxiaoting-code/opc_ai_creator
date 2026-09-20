@@ -390,7 +390,14 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
               width: double.infinity,
               // AppNetworkImage 内部就是 Image.network，
               // 另外补了加载中占位与加载失败兜底，避免破图
-              child: AppNetworkImage(url: displayUrl, fit: BoxFit.contain),
+              child: AppNetworkImage(
+                url: displayUrl,
+                fit: BoxFit.contain,
+                // 失败时把**真实请求地址**显示出来，而不是只给一个破图图标。
+                // 之前这里失败是"哑"的：看不出是地址拼错了、后端没这个文件、
+                // 还是后端没起 —— 把地址亮出来可以直接粘到浏览器验证。
+                errorWidget: _RemoteImageError(url: displayUrl),
+              ),
             ),
           ),
         ),
@@ -917,6 +924,50 @@ class _FieldLabel extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 远端首帧图加载失败时的占位。
+///
+/// 存在的意义是**让失败可见**：把真正请求的地址显示出来，
+/// 一眼就能判断是地址拼错、后端没有这个文件，还是后端压根没起。
+class _RemoteImageError extends StatelessWidget {
+  const _RemoteImageError({required this.url});
+
+  /// 实际请求的完整地址（已拼过 AppConfig.resolveAssetUrl）。
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      color: AppColors.statusFailed.withValues(alpha: 0.06),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.broken_image_outlined,
+            color: AppColors.statusFailed,
+            size: 28,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text('首帧图加载失败', style: theme.textTheme.bodySmall),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            url,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
