@@ -29,6 +29,7 @@
 |------|------|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 目录结构、13 个页面路由表、环境切换、双端兼容约束对照 |
 | [docs/DATABASE.md](docs/DATABASE.md) | 7 张表的 DDL、Harness 状态机、AI 服务商解耦设计 |
+| docs/api.md | 项目接口文档，包含文生图、图生视频、创作历史查询接口 |
 
 ## 快速开始
 
