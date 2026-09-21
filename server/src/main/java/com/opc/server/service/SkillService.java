@@ -45,6 +45,11 @@ public class SkillService {
                         STATUS_ONLINE, type);
 
         return skills.stream()
+                // 跳过 type 无法识别的脏数据行（转换器会把它降级成 null）。
+                // 这类行对用户没有任何意义 —— 与其让前端拿到一条 type=null 的线路
+                // 去猜它是什么类型，不如干脆不展示。转换器那边会打 WARN 日志，
+                // 运维照着日志去修数据即可，用户无感。
+                .filter(skill -> skill.getType() != null)
                 .limit(limit == null || limit <= 0 ? Long.MAX_VALUE : limit)
                 .map(SkillResponse::from)
                 .toList();

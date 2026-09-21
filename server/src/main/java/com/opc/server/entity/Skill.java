@@ -1,10 +1,10 @@
 package com.opc.server.entity;
 
 import com.opc.server.entity.enums.SkillType;
+import com.opc.server.entity.enums.SkillTypeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -41,8 +41,13 @@ public class Skill extends BaseEntity {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    /** 适用类型：文生图 / 图生视频 */
-    @Enumerated(EnumType.STRING)
+    /**
+     * 适用类型：文生图 / 图生视频。
+     *
+     * <p>这里用 {@link SkillTypeConverter} 而不是 {@code @Enumerated(EnumType.STRING)} ——
+     * 后者读到无法识别的值会直接抛异常，表里一行脏数据就能把整个列表接口搞成 500。
+     */
+    @Convert(converter = SkillTypeConverter.class)
     @Column(name = "type", nullable = false, length = 20)
     private SkillType type;
 

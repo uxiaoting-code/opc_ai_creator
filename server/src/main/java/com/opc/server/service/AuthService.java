@@ -23,8 +23,14 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    /** 新用户注册赠送的算力点。 */
-    private static final int INITIAL_CREDITS = 200;
+    /**
+     * 新用户注册赠送的算力点。
+     *
+     * <p>给得宽裕是**故意的**：这是课设演示环境，文生图一次 10 点、
+     * 图生视频一次 15 点。初始值太小的话演示到一半就会卡在
+     * 「算力点不足」，反而看不到完整链路。
+     */
+    private static final int INITIAL_CREDITS = 10000;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;

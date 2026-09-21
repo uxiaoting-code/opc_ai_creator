@@ -78,7 +78,7 @@ public class DataSeeder implements ApplicationRunner {
                 .password(passwordEncoder.encode("demo123"))
                 .nickname("课设演示账号")
                 .role("USER")
-                .credits(200)
+                .credits(10000)
                 .status(1)
                 .deleted(false)
                 .build();
@@ -88,7 +88,7 @@ public class DataSeeder implements ApplicationRunner {
                 .password(passwordEncoder.encode("admin123"))
                 .nickname("管理员")
                 .role("ADMIN")
-                .credits(9999)
+                .credits(10000)
                 .status(1)
                 .deleted(false)
                 .build();

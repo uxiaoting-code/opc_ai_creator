@@ -10,8 +10,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+// Jackson 3：databind/core 的包名是 tools.jackson.*，注解仍是 com.fasterxml.jackson.annotation.*
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * 任务状态的持久化操作。<b>所有写库动作集中在这里。</b>
@@ -28,10 +32,14 @@ public class TaskStateService {
 
     private final AiTaskRepository taskRepository;
     private final WorkRepository workRepository;
+    private final ObjectMapper objectMapper;
 
-    public TaskStateService(AiTaskRepository taskRepository, WorkRepository workRepository) {
+    public TaskStateService(AiTaskRepository taskRepository,
+                            WorkRepository workRepository,
+                            ObjectMapper objectMapper) {
         this.taskRepository = taskRepository;
         this.workRepository = workRepository;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -83,10 +91,61 @@ public class TaskStateService {
                         result.thumbnailUrl()));
         work.setResourceUrl(result.resultUrl());
         work.setCoverUrl(result.thumbnailUrl());
+        // 把生成结果的尺寸 / 视频时长同步进作品记录。
+        // 这两样前端都要用：画廊瀑布流靠宽高比排版，视频卡片靠 duration 显示时长角标。
+        applyResultMeta(work, result);
         workRepository.save(work);
 
         log.info("任务 {} 生成成功 url={} 耗时={}ms",
                 taskId, result.resultUrl(), result.elapsedMs());
+    }
+
+    /**
+     * 把结果元信息（宽高、视频时长）写进作品记录。
+     *
+     * <p>数据来源是 {@link AiTaskResult#resultJson()} —— 服务商在结果里顺手带回的元信息。
+     * 图片结果形如 {@code {"width":1024,"height":1024,...}}，
+     * 视频结果形如 {@code {"width":640,"height":360,"durationSec":3}}。
+     *
+     * <p><b>为什么值得费这一步</b>：作品表的 {@code width / height / duration} 三列
+     * 之前从来没有被写入过，一直是 null。后果是前端画廊的瀑布流拿不到真实宽高比，
+     * 只能用一个伪随机比例凑合排版；视频卡片也显示不出时长角标。
+     * 与其在前端写一堆补偿逻辑，不如在后端把字段补上 —— 数据本来就有，只是没落库。
+     *
+     * <p>解析失败只记日志、**不影响任务成功**：元信息是锦上添花，
+     * 不能因为它把已经生成好的作品丢掉。
+     */
+    private void applyResultMeta(Work work, AiTaskResult result) {
+        String json = result.resultJson();
+        if (json == null || json.isBlank()) {
+            return;
+        }
+
+        try {
+            Map<String, Object> meta = objectMapper.readValue(
+                    json, new TypeReference<Map<String, Object>>() {
+                    });
+
+            Integer width = asInt(meta.get("width"));
+            Integer height = asInt(meta.get("height"));
+            if (width != null && height != null) {
+                work.setWidth(width);
+                work.setHeight(height);
+            }
+
+            // 只有视频结果才带 durationSec，图片结果没有这个键
+            Integer durationSec = asInt(meta.get("durationSec"));
+            if (durationSec != null) {
+                work.setDuration(durationSec);
+            }
+        } catch (Exception e) {
+            log.warn("解析任务结果元信息失败 taskId={}: {}", work.getTaskId(), e.getMessage());
+        }
+    }
+
+    /** 宽松地把 JSON 里的数字取成 Integer：可能是 Integer/Long/Double，取不到就返回 null。 */
+    private static Integer asInt(Object value) {
+        return value instanceof Number number ? number.intValue() : null;
     }
 
     /** 标记失败，记录原因供前端展示。 */

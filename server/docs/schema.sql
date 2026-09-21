@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS `t_user` (
   `email`      VARCHAR(100)          DEFAULT NULL   COMMENT '邮箱',
   `phone`      VARCHAR(20)           DEFAULT NULL   COMMENT '手机号',
   `role`       VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色：USER / ADMIN',
-  `credits`    INT          NOT NULL DEFAULT 200    COMMENT '剩余算力点，创建任务时扣减',
+  `credits`    INT          NOT NULL DEFAULT 10000  COMMENT '剩余算力点，创建任务时扣减',
   `status`     TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0禁用',
   `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

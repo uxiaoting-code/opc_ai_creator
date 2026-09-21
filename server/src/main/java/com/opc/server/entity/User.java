@@ -55,10 +55,17 @@ public class User extends BaseEntity {
     @Builder.Default
     private String role = "USER";
 
-    /** 剩余算力点，创建 AI 任务时扣减 */
+    /**
+     * 剩余算力点，创建 AI 任务时扣减。
+     *
+     * <p>这个默认值只在「构造 User 时没显式给 credits」时兜底；
+     * 注册流程实际用的是 {@code AuthService.INITIAL_CREDITS}，
+     * 三处（这里 / AuthService / schema.sql 的建表默认值）要保持一致，
+     * 否则走不同路径创建的用户初始算力点会不一样。
+     */
     @Column(name = "credits", nullable = false)
     @Builder.Default
-    private Integer credits = 200;
+    private Integer credits = 10000;
 
     /** 1 正常 / 0 禁用 */
     @Column(name = "status", nullable = false)
