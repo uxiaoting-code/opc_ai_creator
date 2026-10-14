@@ -363,57 +363,55 @@ CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
 
 ## 共享文件切分（防合并冲突）
 
-### 4.1 归属表（**前后端分法版**）
+### 4.1 归属表（**已定稿**：前后端 + 3 个 CRUD 后端模块）
 
-> 本表按「**一人写 `server/`，一人写 `web/` + `lib/`**」划分。
-> （`docs/ADMIN_PLAN.md` 里那张表是按"纵切"写的，**以本表为准**。）
+> **分工已定，别再看别处：**
+> - **后端线**：`server/` 主体 —— 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关
+> - **前端线**：`web/` + `lib/`，**外加 3 个纯 CRUD 后端模块** —— 素材库后台 / 用户管理 / 系统设置 + `PromptController`
+>
+> 这样两边 ≈ **21 : 19 人天**，基本持平；否则后端 26、前端 13，后端会变成唯一瓶颈。
+>
+> （`docs/ADMIN_PLAN.md` 里那张分工表是"业务纵切"版，**已作废**，以本表为准。）
 
 | 文件 | 归属 | 规则 |
 |---|---|---|
-| `server/**`（除下面单列的） | **后端独占** | 前端不碰 `server/` 下任何文件 |
-| `server/docs/schema.sql` | 后端独占 | 追加 5 张新表的 `CREATE TABLE`（见冻结项 ①②③） |
-| `common/ErrorCode.java` | 后端独占 | 按 §0.4 码段加新码，别用别人的段 |
-| `entity/User.java` | 后端独占 | 新增列 `last_active_at` |
-| `security/AuthInterceptor.java` | 后端独占 | `/api/admin/**` 的 ADMIN 校验 + dev-token 隔离 |
-| `config/WebConfig.java` | 后端独占 | 拦截器注册路径调整 |
-| `ai/**`（`AiProviderRouter` + 新增 `HttpApiProvider`） | 后端独占 | 前端一行不碰 |
-| `harness/**` | 后端独占 | 补算力流水时只加一行调用，不改状态机 |
-| `application.yml` | 后端独占 | 加管理端配置；交付前关 `dev-token-enabled` |
-| `init/DataSeeder.java` | 后端独占 | 前后端分法下只有后端碰 `server/`，**不用拆类**（若削峰则见下方提示） |
-| `web/**`（除下面单列的） | **前端独占** | 后端不碰 `web/` 下任何文件 |
-| `web/index.html` | 前端独占 | 保留原型 7 页结构；追加 5 个新页 `<section>` |
-| `web/css/admin.css` | 前端独占 | 新样式追加到文件末尾，别重排已有规则 |
-| `web/js/api.js` | 前端独占 | 统一 baseURL + Authorization + 错误 toast + `USE_MOCK` 开关 |
-| `web/js/util.js` | 前端独占 | `formatCredits()` 等全站工具 |
-| `web/js/pages/*.js` | 前端独占 | 一页一个文件，别都堆进 `admin.js` |
-| `web/mock/*.json` | 前端独占 | mock 层，字段照 `api-admin.md` 抄 |
-| `lib/**`（Flutter App） | 前端（**收尾阶段**） | 前面阶段谁都不动；收尾只补 2 个占位页 + 设置页 |
-| `docs/api-admin.md` | **双方** | 唯一真共享文件。**改接口先改它**，并在「变更记录」加一行 |
-| `docs/admin-freeze.md` | 双方 | 本文件。改冻结项要两人都同意 |
-
-> 💡 **若采用"前端接手 3 个 CRUD 模块"削峰**（见 `ADMIN_PLAN.md` §5 的取舍）：
-> 把 `admin/material/`、`admin/user/`、`admin/setting/` 三个包 + `PromptController` 划给前端。
-> 此时 **`ErrorCode.java`、`schema.sql`、`DataSeeder.java` 变成两人共写**，于是：
-> ① 按 §0.4 码段各用各的；② `schema.sql` 只追加自己的表；③ `DataSeeder` 拆成 `CoreSeeder` / `CrudSeeder` 两个类。
+| `server/**`（除下面单列的） | **后端线** | 前端线不碰 |
+| `server/.../admin/material/`（素材库后台） | **前端线** | 3 个后端模块之一 |
+| `server/.../admin/user/`（用户管理） | **前端线** | 同上 |
+| `server/.../admin/setting/`（系统设置） | **前端线** | 同上 |
+| `controller/PromptController.java` | **前端线** | 照 `SkillController` 抄，最简单的一个 |
+| `server/docs/schema.sql` | **两人共写** | 各自只**追加**自己的表：后端线追加冻结项①②③ 的 5 张；前端线追加标签/分类相关表 |
+| `common/ErrorCode.java` | **两人共写** | 各用各的码段：后端线 6000-6499 / 6700-6799；前端线 6500-6599（见 `api-admin.md` §0.4） |
+| `init/DataSeeder.java` | **两人共写** | **必须拆成 `CoreSeeder`（后端线）/ `CrudSeeder`（前端线）两个类**，各自 `@Component` + `@Order` |
+| `entity/User.java` | 后端线 | 新增列 `last_active_at`；前端线只读使用 |
+| `security/AuthInterceptor.java` | 后端线 | `/api/admin/**` 的 ADMIN 校验 + dev-token 隔离 |
+| `config/WebConfig.java` | 后端线 | 拦截器注册路径调整 |
+| `ai/**`（`AiProviderRouter` + 新增 `HttpApiProvider`） | 后端线 | 含模型配置的接线改造 |
+| `harness/**` | 后端线 | 补算力流水时只加一行调用，不改状态机 |
+| `application.yml` | 后端线 | 前端线有需求提给后端线 |
+| `web/**`（原型、`js/api.js`、`js/pages/*`、`mock/`） | **前端线** | 后端线不碰 |
+| `lib/**`（Flutter App） | 前端线（**收尾阶段**） | 前面阶段谁都不动；收尾只补 2 个占位页 + 设置页 |
+| `docs/api-admin.md` | **两人共写** | 唯一真共享文档。**改接口先改它**，并在「变更记录」加一行 |
+| `docs/admin-freeze.md` | 两人共写 | 本文件。改冻结项要两人都同意 |
 
 ### 4.2 关键目录的归属（一眼看懂）
 
 ```
 server/src/main/java/com/opc/server/
 ├── admin/
-│   ├── provider/   ← 后端（模型配置）
-│   ├── debug/      ← 后端（调试）
-│   ├── mcp/        ← 后端（MCP）
-│   ├── gateway/    ← 后端（网关）
-│   ├── credit/     ← 后端（账单/算力/概览）
-│   ├── tool/       ← 后端（工具库 + ToolKeys）
-│   ├── agent/      ← 后端（智能体工作台）
-│   ├── kb/         ← 后端（知识库）
-│   ├── material/   ← 后端（素材库后台）
-│   └── user/       ← 后端（用户管理）+ setting/（系统设置）
-├── ai/             ← 后端独占（改造）
-├── harness/        ← 后端独占（补流水）
-└── security/       ← 后端独占
+│   ├── provider/   ← 后端线（模型配置）
+│   ├── debug/      ← 后端线（调试）
+│   ├── mcp/        ← 后端线（MCP）
+│   ├── gateway/    ← 后端线（网关）
+│   ├── credit/     ← 后端线（账单/算力/概览）
+│   ├── tool/       ← 后端线（工具库 + ToolKeys）
+│   ├── agent/      ← 后端线（智能体工作台）
+│   ├── kb/         ← 后端线（知识库）
+│   ├── material/   ← 前端线（素材库后台）
+│   └── user/       ← 前端线（用户管理）+ setting/（系统设置）
+├── ai/             ← 后端线独占（改造）
+├── harness/        ← 后端线独占（补流水）
+└── security/       ← 后端线独占
 
 web/
 ├── css/admin.css   ← 前端独占（新样式追加到末尾）

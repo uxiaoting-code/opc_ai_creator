@@ -41,7 +41,7 @@ OPC（一人公司）场景的 AI 内容生产平台，由三部分组成：
 开发顺序（详见 `docs/ADMIN_PLAN.md`）：
 管理端地基 → 模型/API 配置 → 智能体工作台 → 调试面板 → MCP → 知识库/素材库 → 算力运营 → 对外网关 → App 收尾
 
-分工：**前后端**（一人 `server/`，一人 `web/` + `lib/`），文件归属见 `docs/admin-freeze.md` §4.1。
+分工（已定稿）：**一人 `server/` 主体**（模型配置/工作台/调试/MCP/知识库/概览·算力·账单/网关），**另一人 `web/` + `lib/` + 3 个纯 CRUD 后端模块**（素材库后台/用户管理/系统设置 + `PromptController`）。文件归属见 `docs/admin-freeze.md` §4.1。
 
 ---
 
