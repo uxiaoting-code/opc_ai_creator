@@ -48,3 +48,10 @@ app.*.map.json
 .widget_preview/
 
 server/data/uploads/
+
+# 旧 Flutter web 产物（内容已在 git 历史中，本地留档即可）
+/web_old/
+
+# H2 本地数据库文件（每次启动都会变，不进版本库）
+server/data/*.db
+server/data/*.trace.db
