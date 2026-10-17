@@ -100,6 +100,7 @@ public class WebConfig implements WebMvcConfigurer {
      * 注册登录拦截器。
      *
      * <p>只拦 {@code /api/**}，放行登录与注册 —— 没登录的人正是要去调这两个接口。
+     * 管理端只放行 {@code /api/admin/auth/login}，其余 {@code /api/admin/**} 都要求 ADMIN 角色。
      * 静态资源 {@code /upload/**} 也不拦：图片要能被 {@code <img>} 直接加载，
      * 而 img 标签是不会带 Authorization 头的。
      */
@@ -110,6 +111,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/auth/login",
                         "/api/auth/register",
+                        "/api/admin/auth/login",
                         "/api/health"
                 );
     }

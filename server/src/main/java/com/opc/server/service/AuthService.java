@@ -105,6 +105,39 @@ public class AuthService {
         return AuthResponse.of(token, UserResponse.from(user));
     }
 
+    /**
+     * 管理员登录。
+     *
+     * <p>与 C 端登录的区别只有一条：<b>必须校验 {@code role = ADMIN}</b>。
+     * 校验顺序刻意是「先验密码、再验角色」—— 否则攻击者能靠返回值的差异
+     * 枚举出「这个账号存在但不是管理员」。
+     */
+    @Transactional(readOnly = true)
+    public AuthResponse loginAdmin(LoginRequest request) {
+        String username = request.username().trim();
+
+        User user = userRepository.findByUsernameAndDeletedFalse(username)
+                .orElseThrow(() -> new BizException(ErrorCode.PASSWORD_ERROR,
+                        "账号或密码错误"));
+
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new BizException(ErrorCode.ACCOUNT_DISABLED);
+        }
+
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BizException(ErrorCode.PASSWORD_ERROR, "账号或密码错误");
+        }
+
+        if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
+            throw BizException.forbidden(ErrorCode.ADMIN_FORBIDDEN);
+        }
+
+        String token = tokenService.issue(user.getId(), user.getUsername());
+        log.info("管理员登录 id={} username={}", user.getId(), user.getUsername());
+
+        return AuthResponse.of(token, UserResponse.from(user));
+    }
+
     /** 退出登录：吊销令牌。 */
     public void logout(String token) {
         tokenService.revoke(token);

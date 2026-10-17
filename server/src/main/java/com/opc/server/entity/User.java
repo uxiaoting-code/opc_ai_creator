@@ -10,6 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户，对应 {@code t_user}。
  */
@@ -71,6 +73,15 @@ public class User extends BaseEntity {
     @Column(name = "status", nullable = false)
     @Builder.Default
     private Integer status = 1;
+
+    /**
+     * 最近活跃时间。
+     *
+     * <p>由 {@code AuthInterceptor} 在鉴权成功时节流更新（同一用户 5 分钟内只写一次），
+     * 管理端「用户管理」页的「最近活跃」列读的就是它。
+     */
+    @Column(name = "last_active_at")
+    private LocalDateTime lastActiveAt;
 
     /**
      * 逻辑删除：false 未删 / true 已删。

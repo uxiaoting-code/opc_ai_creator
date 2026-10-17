@@ -43,6 +43,20 @@ public class BizException extends RuntimeException {
         return new BizException(ErrorCode.UNAUTHORIZED, message, HttpStatus.UNAUTHORIZED);
     }
 
+    /**
+     * 无权限（HTTP 403）。
+     *
+     * <p>管理端专用：非 ADMIN 访问 /api/admin/**、或非管理员尝试登录后台时抛这个。
+     */
+    public static BizException forbidden(ErrorCode errorCode) {
+        return new BizException(errorCode, errorCode.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    /** 无权限，自定义提示（HTTP 403）。 */
+    public static BizException forbidden(String message) {
+        return new BizException(ErrorCode.FORBIDDEN, message, HttpStatus.FORBIDDEN);
+    }
+
     public static BizException notFound(ErrorCode errorCode) {
         return new BizException(errorCode);
     }

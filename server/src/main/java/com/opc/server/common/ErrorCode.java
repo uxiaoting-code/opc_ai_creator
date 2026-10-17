@@ -39,7 +39,14 @@ public enum ErrorCode {
     FILE_SAVE_FAILED(4004, "文件保存失败"),
 
     // --- 作品 ---
-    WORK_NOT_FOUND(5001, "作品不存在");
+    WORK_NOT_FOUND(5001, "作品不存在"),
+
+    // --- 管理端通用（9000-9099，公共段）---
+    ADMIN_LOGIN_REQUIRED(9001, "请先以管理员身份登录"),
+    ADMIN_FORBIDDEN(9002, "该账号不是管理员，无权访问后台"),
+    ADMIN_PARAM_INVALID(9003, "参数不合法"),
+    ADMIN_RESOURCE_NOT_FOUND(9004, "目标资源不存在或已被删除"),
+    ADMIN_OPERATION_NOT_ALLOWED(9005, "当前状态不允许该操作");
 
     private final int code;
     private final String message;

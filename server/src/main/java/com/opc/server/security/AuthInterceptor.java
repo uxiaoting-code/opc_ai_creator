@@ -1,6 +1,7 @@
 package com.opc.server.security;
 
 import com.opc.server.common.BizException;
+import com.opc.server.common.ErrorCode;
 import com.opc.server.entity.User;
 import com.opc.server.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -30,6 +33,9 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+
+    /** 「最近活跃」写库节流：同一用户 5 分钟内只更新一次。 */
+    private static final long LAST_ACTIVE_THROTTLE_MINUTES = 5;
 
     private final TokenService tokenService;
     private final UserRepository userRepository;
@@ -74,13 +80,20 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         String token = extractToken(request);
+        boolean adminPath = isAdminPath(request);
 
-        // ---- 开发令牌：映射到演示账号 ----
+        // ---- 开发令牌：只允许 C 端，绝不能进管理端 ----
+        // 这是交付前的关键安全点：拿固定字符串就能以 demo 身份进后台，等于后台没有鉴权。
         if (devTokenEnabled && devToken.equals(token)) {
+            if (adminPath) {
+                throw BizException.forbidden(
+                        "管理端不允许使用开发令牌，请使用管理员账号登录");
+            }
             User demoUser = userRepository.findByUsernameAndDeletedFalse(devUsername)
                     .orElseThrow(() -> BizException.unauthorized(
                             "开发令牌对应的演示账号不存在，请先执行数据初始化"));
             UserContext.set(demoUser.getId());
+            touchLastActive(demoUser);
             return true;
         }
 
@@ -90,7 +103,20 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw BizException.unauthorized("登录已过期，请重新登录");
         }
 
-        UserContext.set(userId.get());
+        User user = userRepository.findByIdAndDeletedFalse(userId.get())
+                .orElseThrow(() -> BizException.unauthorized("账号不存在或已被删除"));
+
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new BizException(ErrorCode.ACCOUNT_DISABLED);
+        }
+
+        // ---- 管理端必须是 ADMIN ----
+        if (adminPath && !"ADMIN".equalsIgnoreCase(user.getRole())) {
+            throw BizException.forbidden(ErrorCode.ADMIN_FORBIDDEN);
+        }
+
+        UserContext.set(user.getId());
+        touchLastActive(user);
         return true;
     }
 
@@ -105,6 +131,29 @@ public class AuthInterceptor implements HandlerInterceptor {
                                 Object handler,
                                 Exception ex) {
         UserContext.clear();
+    }
+
+    /** 是否请求的是管理端接口（登录接口已在 WebConfig 里排除）。 */
+    private boolean isAdminPath(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri != null && (uri.equals("/api/admin") || uri.startsWith("/api/admin/"));
+    }
+
+    /**
+     * 节流更新「最近活跃时间」。
+     *
+     * <p>每个请求都写库会把数据库打满，所以同一用户 5 分钟内只写一次。
+     * 管理端「用户管理」页的「最近活跃」列就靠它。
+     */
+    private void touchLastActive(User user) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime last = user.getLastActiveAt();
+        if (last != null
+                && Duration.between(last, now).toMinutes() < LAST_ACTIVE_THROTTLE_MINUTES) {
+            return;
+        }
+        user.setLastActiveAt(now);
+        userRepository.save(user);
     }
 
     /** 从请求头里取出 Bearer 令牌。 */

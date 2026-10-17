@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS `t_user` (
   `status`     TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1正常 0禁用',
   `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `last_active_at` DATETIME          DEFAULT NULL   COMMENT '最近活跃时间（鉴权成功时节流更新）',
   `deleted`    TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删 1已删',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`),
@@ -266,7 +267,159 @@ CREATE TABLE IF NOT EXISTS `t_work` (
 
 
 -- =============================================================================
---  校验：执行完后确认 7 张表都在
+--  8. t_ai_provider_config 模型/API 配置表（管理端 P0 追加，需求 3.1）
+--     与 t_skill 的关系：t_skill 是「创作线路」（面向 App 用户），
+--     本表是「可接入的模型通道」（面向运营人员）。两者不是一回事，不要合并。
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_ai_provider_config` (
+  `id`                     BIGINT        NOT NULL AUTO_INCREMENT COMMENT '配置ID',
+  `name`                   VARCHAR(100)  NOT NULL                COMMENT '模型名称，如 TT Image 2',
+  `vendor`                 VARCHAR(50)            DEFAULT NULL   COMMENT '厂商，如 字节跳动',
+  `type`                   VARCHAR(20)   NOT NULL               COMMENT 'CHAT/IMAGE/VIDEO/AUDIO',
+  `channel`                VARCHAR(50)            DEFAULT NULL   COMMENT '渠道标识，如 DE-TT-oai-pro',
+  `model_name`             VARCHAR(100)           DEFAULT NULL   COMMENT '传给服务商的模型名',
+  `base_url`               VARCHAR(255)           DEFAULT NULL   COMMENT '服务地址',
+  `provider_impl`          VARCHAR(50)   NOT NULL DEFAULT 'mock' COMMENT '走哪个Java实现：mock/stable-diffusion/http',
+  `auth_type`              VARCHAR(20)   NOT NULL DEFAULT 'NONE' COMMENT 'NONE/API_KEY/OAUTH/CUSTOM_HEADER',
+  `api_key`                VARCHAR(255)           DEFAULT NULL   COMMENT '密钥（展示时脱敏）',
+  `header_name`            VARCHAR(100)           DEFAULT NULL   COMMENT '自定义头名',
+  `header_value`           VARCHAR(255)           DEFAULT NULL   COMMENT '自定义头值',
+  `oauth_token_url`        VARCHAR(255)           DEFAULT NULL,
+  `oauth_client_id`        VARCHAR(100)           DEFAULT NULL,
+  `oauth_client_secret`    VARCHAR(255)           DEFAULT NULL,
+  `request_method`         VARCHAR(10)   NOT NULL DEFAULT 'POST',
+  `request_path`           VARCHAR(255)           DEFAULT NULL   COMMENT '请求路径，支持 {{变量}}',
+  `request_content_type`   VARCHAR(100)  NOT NULL DEFAULT 'application/json',
+  `request_query_json`     VARCHAR(2000)          DEFAULT NULL,
+  `request_headers_json`   VARCHAR(2000)          DEFAULT NULL,
+  `request_body_json`      VARCHAR(4000)          DEFAULT NULL   COMMENT '请求体模板，含 {{prompt}} 等变量',
+  `response_success_path`  VARCHAR(255)           DEFAULT NULL   COMMENT '成功判定路径，如 data.0.url',
+  `response_result_url_path` VARCHAR(255)         DEFAULT NULL   COMMENT '结果地址提取路径',
+  `response_thumb_path`    VARCHAR(255)           DEFAULT NULL,
+  `response_error_path`    VARCHAR(255)           DEFAULT NULL   COMMENT '错误信息提取路径',
+  `response_task_id_path`  VARCHAR(255)           DEFAULT NULL   COMMENT '异步任务ID路径',
+  `input_price`            DECIMAL(10,4)          DEFAULT NULL,
+  `output_price`           DECIMAL(10,4)          DEFAULT NULL,
+  `price_unit`             VARCHAR(20)   NOT NULL DEFAULT 'TOKEN' COMMENT 'TOKEN/SECOND/CALL',
+  `timeout_seconds`        INT           NOT NULL DEFAULT 180,
+  `online`                 TINYINT       NOT NULL DEFAULT 0      COMMENT '1上架 0下线',
+  `sort_order`             INT           NOT NULL DEFAULT 0,
+  `remark`                 VARCHAR(500)           DEFAULT NULL,
+  `deleted`                TINYINT       NOT NULL DEFAULT 0,
+  `created_at`             DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`             DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_channel` (`channel`),
+  KEY `idx_type_online` (`type`, `online`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='模型API配置表';
+
+
+-- =============================================================================
+--  9. t_agent 智能体表（管理端 P0 追加，需求 3.5）
+--     注意：与 t_skill（App 的创作线路）是完全不同的两个概念，不要混淆、不要合并。
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_agent` (
+  `id`                 BIGINT       NOT NULL AUTO_INCREMENT,
+  `name`               VARCHAR(100) NOT NULL               COMMENT '智能体名称',
+  `code`               VARCHAR(50)  NOT NULL               COMMENT '英文标识，用于API调用',
+  `category`           VARCHAR(30)  NOT NULL DEFAULT 'OTHER' COMMENT 'CUSTOMER_SERVICE/MARKETING/DESIGN/DATA_ANALYSIS/OTHER',
+  `description`        VARCHAR(500)          DEFAULT NULL,
+  `icon`               VARCHAR(20)           DEFAULT NULL  COMMENT 'emoji 头像',
+  `model_provider_id`  BIGINT                DEFAULT NULL  COMMENT '绑定模型，指向 t_ai_provider_config.id',
+  `system_prompt`      TEXT                  DEFAULT NULL,
+  `greeting`           VARCHAR(500)          DEFAULT NULL  COMMENT '开场白',
+  `base_cost`          DECIMAL(10,2) NOT NULL DEFAULT 0    COMMENT '单次调用基础算力',
+  `max_rounds`         INT          NOT NULL DEFAULT 8,
+  `timeout_seconds`    INT          NOT NULL DEFAULT 60,
+  `daily_quota`        INT          NOT NULL DEFAULT 5000,
+  `allow_user_skill`   TINYINT      NOT NULL DEFAULT 0,
+  `log_full_conversation` TINYINT   NOT NULL DEFAULT 1,
+  `status`             VARCHAR(20)  NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT/PUBLISHED/OFFLINE',
+  `current_version`    INT          NOT NULL DEFAULT 1,
+  `today_calls`        INT          NOT NULL DEFAULT 0     COMMENT '今日调用（可由 t_call_log 聚合，先留列便于演示）',
+  `avg_elapsed_ms`     BIGINT                DEFAULT NULL,
+  `success_rate`       DECIMAL(5,2)         DEFAULT NULL,
+  `deleted`            TINYINT      NOT NULL DEFAULT 0,
+  `created_at`         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_code` (`code`),
+  KEY `idx_category_status` (`category`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='智能体表';
+
+
+-- =============================================================================
+--  10. t_agent_node 智能体节点表（工作台编排的最小单元）
+--      node 不区分「内置/模型/MCP/知识库」四种类型，统一用 tool_source + tool_ref_id 定位，
+--      这样工作台只需要一套渲染逻辑，新增能力来源不用改工作台。
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_agent_node` (
+  `id`                  BIGINT       NOT NULL AUTO_INCREMENT,
+  `agent_id`            BIGINT       NOT NULL,
+  `node_key`            VARCHAR(50)  NOT NULL               COMMENT '节点标识，编排内唯一，如 n1',
+  `name`                VARCHAR(100) NOT NULL               COMMENT '节点显示名，如 意图识别',
+  `tool_source`         VARCHAR(20)  NOT NULL               COMMENT 'MODEL/KNOWLEDGE/MCP/BUILTIN',
+  `tool_ref_id`         BIGINT                DEFAULT NULL  COMMENT '对应表id，BUILTIN 为 null',
+  `tool_key`            VARCHAR(100) NOT NULL               COMMENT '工具标识，见 admin-freeze.md 2.2',
+  `tool_name_snapshot`  VARCHAR(100)          DEFAULT NULL  COMMENT '引用时的名称快照，防原对象被删后显示不出来',
+  `params_json`         VARCHAR(4000)         DEFAULT NULL  COMMENT '节点参数',
+  `enabled`             TINYINT      NOT NULL DEFAULT 1,
+  `order_index`         INT          NOT NULL DEFAULT 0     COMMENT '顺序，从小到大执行',
+  `route_keywords`      VARCHAR(255)          DEFAULT NULL  COMMENT '条件路由：命中这些关键词(逗号分隔)时改走目标节点',
+  `route_target_key`    VARCHAR(50)           DEFAULT NULL  COMMENT '条件路由的目标 node_key',
+  `created_at`          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_agent_node` (`agent_id`, `node_key`),
+  KEY `idx_agent_order` (`agent_id`, `order_index`),
+  KEY `idx_tool` (`tool_source`, `tool_ref_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='智能体节点表';
+
+
+-- =============================================================================
+--  11. t_agent_version 智能体版本表（需求 3.5「版本保存和回滚」）
+--     保存编排时自动存一份快照（nodes 全量 JSON），回滚 = 用快照覆盖当前编排。
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_agent_version` (
+  `id`            BIGINT       NOT NULL AUTO_INCREMENT,
+  `agent_id`      BIGINT       NOT NULL,
+  `version_no`    INT          NOT NULL,
+  `snapshot_json` TEXT         NOT NULL COMMENT '整份编排快照（基础信息 + billing + nodes）',
+  `remark`        VARCHAR(255)          DEFAULT NULL,
+  `operator`      VARCHAR(50)           DEFAULT NULL COMMENT '谁保存的',
+  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_agent_version` (`agent_id`, `version_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='智能体版本表';
+
+
+-- =============================================================================
+--  12. t_credit_transaction 算力流水表（管理端 P0 追加，需求 1.3「算力计量」）
+--     规则：任何算力变动都必须落一条流水 —— 用户充值、任务消耗、退款、后台加算力。
+--     账单页、算力统计页、用户「累计消费」全部从这张表算，不再各算各的。
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
+  `id`             BIGINT       NOT NULL AUTO_INCREMENT,
+  `user_id`        BIGINT       NOT NULL,
+  `type`           VARCHAR(20)  NOT NULL               COMMENT 'RECHARGE/CONSUME/REFUND/GIFT/ADMIN_ADJUST',
+  `amount`         INT          NOT NULL               COMMENT '算力变动，正数增加负数减少',
+  `balance_after`  INT          NOT NULL               COMMENT '变动后余额，对账用',
+  `money_amount`   DECIMAL(10,2)         DEFAULT NULL  COMMENT '对应金额（元），消耗类可为空',
+  `order_no`       VARCHAR(40)           DEFAULT NULL  COMMENT '订单号 P/C/R + yyyyMMdd + 序号',
+  `channel`        VARCHAR(30)           DEFAULT NULL  COMMENT '微信支付/支付宝/算力余额/后台调整',
+  `status`         VARCHAR(20)  NOT NULL DEFAULT 'SUCCESS' COMMENT 'SUCCESS/PENDING/FAILED',
+  `remark`         VARCHAR(255)          DEFAULT NULL,
+  `ref_task_id`    BIGINT                DEFAULT NULL  COMMENT '消耗时关联的任务ID',
+  `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_created` (`user_id`, `created_at`),
+  KEY `idx_type_created` (`type`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='算力流水表';
+
+-- =============================================================================
+--  校验：执行完后确认 12 张表都在（7 张 C 端 + 5 张管理端）
 -- =============================================================================
 -- SHOW TABLES;
 -- SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES
