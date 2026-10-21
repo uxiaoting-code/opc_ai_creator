@@ -1,0 +1,6 @@
+{
+  "list": [
+    { "id": 1, "name": "平台规则库", "description": "客服 / 合规", "documentCount": 12, "chunkCount": 386, "boundAgentCount": 2, "updatedAt": "2026-10-19T09:40:00" },
+    { "id": 2, "name": "电商选品资料", "description": "营销 / 选品", "documentCount": 8, "chunkCount": 214, "boundAgentCount": 1, "updatedAt": "2026-10-18T18:20:00" }
+  ]
+}

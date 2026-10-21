@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../pages/auth/login_register_page.dart';
 import '../../pages/creation/image_to_video_page.dart';
 import '../../pages/creation/text_to_image_page.dart';
+import '../../pages/dev/component_gallery_page.dart';
 import '../../pages/gallery/gallery_page.dart';
 import '../../pages/gallery/work_detail_page.dart';
 import '../../pages/home/home_page.dart';
@@ -211,6 +212,8 @@ class AppRouter {
         builder: (context, state) => TextToImagePage(
           // 从 Skill 市场/首页跳进来时可带上线路 ID
           skillId: state.uri.queryParameters['skillId'],
+          // 首页快捷创作带进来的提示词
+          prompt: state.uri.queryParameters['prompt'],
         ),
       ),
 
@@ -222,10 +225,9 @@ class AppRouter {
         name: RouteNames.imageToVideo,
         builder: (context, state) => ImageToVideoPage(
           skillId: state.uri.queryParameters['skillId'],
+          prompt: state.uri.queryParameters['prompt'],
         ),
       ),
-
-
 
       // ==========【在这里插入素材选择弹窗页面路由】==========
       GoRoute(
@@ -261,10 +263,20 @@ class AppRouter {
         name: RouteNames.settings,
         builder: (context, state) => const SettingsPage(),
       ),
+
+      // =====================================================================
+      // 开发用：组件预览（不计入 13 个业务页面，不影响测试）
+      // =====================================================================
+      GoRoute(
+        path: RouteNames.componentGalleryPath,
+        name: RouteNames.componentGallery,
+        builder: (context, state) => const ComponentGalleryPage(),
+      ),
     ],
 
     // 未知路径兜底
-    errorBuilder: (context, state) => _RouteNotFoundPage(location: state.uri.toString()),
+    errorBuilder: (context, state) =>
+        _RouteNotFoundPage(location: state.uri.toString()),
   );
 }
 
@@ -285,8 +297,11 @@ class _RouteNotFoundPage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.wrong_location_outlined,
-                  size: 56, color: AppColors.statusFailed),
+              const Icon(
+                Icons.wrong_location_outlined,
+                size: 56,
+                color: AppColors.statusFailed,
+              ),
               const SizedBox(height: 16),
               Text('找不到路由', style: theme.textTheme.titleLarge),
               const SizedBox(height: 8),

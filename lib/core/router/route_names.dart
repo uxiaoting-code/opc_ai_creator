@@ -70,6 +70,9 @@ class RouteNames {
   /// 13. 任务详情
   static const String taskDetail = 'taskDetail';
 
+  /// 开发用：组件预览页（不算 13 个业务页面）
+  static const String componentGallery = 'componentGallery';
+
   // --- 路径 ---
 
   static const String loginPath = '/login';
@@ -83,6 +86,9 @@ class RouteNames {
   static const String skillMarketPath = '/skills';
   static const String profilePath = '/profile';
   static const String settingsPath = '/settings';
+
+  /// 开发用组件预览页
+  static const String componentGalleryPath = '/dev/components';
 
   /// 作品详情：/gallery/:workId
   static const String workDetailSegment = ':workId';

@@ -1,415 +1,46 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>星枢 AI 聚合平台 · 服务端后台</title>
-<link rel="stylesheet" href="css/admin.css" />
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="OPC AI 创作平台 · 多模态创作 App">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="OPC AI 创作平台">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>OPC AI 创作平台</title>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
 
-<!-- ===== 登录 ===== -->
-<div class="login-view" id="view-login">
-  <div class="login-card">
-    <div class="lg-logo">⬡</div>
-    <h1>服务端后台</h1>
-    <p class="lg-sub">星枢 AI 聚合平台 · 运营管理控制台</p>
-    <label class="lg-label">管理员账号</label>
-    <input class="lg-input" id="lg-user" type="text" value="admin" />
-    <label class="lg-label">登录密码</label>
-    <input class="lg-input" id="lg-pass" type="password" value="admin@2026" />
-    <button class="lg-btn" id="btn-admin-login">登 录</button>
-    <p class="lg-tip">仅限运营人员使用 · 登录行为将被审计</p>
-  </div>
-</div>
-
-<!-- ===== 主应用 ===== -->
-<div class="admin-app hidden" id="view-app">
-  <aside class="adm-side">
-    <div class="adm-brand"><span class="adm-logo">⬡</span><div><strong>星枢 AI 聚合平台</strong><em>服务端后台 v2.4</em></div></div>
-    <nav class="adm-nav">
-      <button class="anv active" data-pg="dash"><i>📊</i>数据概览</button>
-      <button class="anv" data-pg="users"><i>👥</i>用户管理</button>
-      <button class="anv" data-pg="bills"><i>🧾</i>账单管理</button>
-      <button class="anv" data-pg="models"><i>🧠</i>大模型配置</button>
-      <button class="anv" data-pg="agents"><i>🤖</i>智能体 Skill 配置</button>
-      <button class="anv" data-pg="usage"><i>⚡</i>算力使用</button>
-      <button class="anv" data-pg="settings"><i>⚙</i>系统设置</button>
-    </nav>
-    <div class="adm-side-foot"><span class="dot-ok"></span>服务运行正常 · 3 节点</div>
-  </aside>
-
-  <div class="adm-main">
-    <header class="adm-top">
-      <strong id="pg-title">数据概览</strong>
-      <div class="adm-top-r">
-        <span class="adm-env">生产环境</span>
-        <span class="adm-admin"><i>🛡</i>超级管理员</span>
-        <button class="adm-exit" id="btn-admin-exit">退出</button>
-      </div>
-    </header>
-
-    <!-- ===== 数据概览 ===== -->
-    <section class="page" id="pg-dash">
-      <div class="stat-row">
-        <div class="stat-card"><em>总用户数</em><strong>12,846</strong><span class="up">↑ 3.2% 较昨日</span></div>
-        <div class="stat-card"><em>今日活跃用户</em><strong>1,932</strong><span class="up">↑ 8.4% 较昨日</span></div>
-        <div class="stat-card gold"><em>今日营收（元）</em><strong>48,210</strong><span class="up">↑ 12.6% 较昨日</span></div>
-        <div class="stat-card teal"><em>今日算力消耗</em><strong>926 万</strong><span class="down">↓ 2.1% 较昨日</span></div>
-      </div>
-      <div class="dash-grid">
-        <div class="panel">
-          <div class="panel-head"><strong>近 14 日营收趋势</strong><span class="ph-hint">单位：元</span></div>
-          <div class="bar-chart">
-            <i style="height:38%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:61%"></i><i style="height:57%"></i><i style="height:70%"></i><i style="height:66%"></i><i style="height:74%"></i><i style="height:69%"></i><i style="height:82%"></i><i style="height:78%"></i><i style="height:88%"></i><i style="height:84%"></i><i class="now" style="height:96%"></i>
-          </div>
-          <div class="bar-axis"><span>09-01</span><span>09-07</span><span>09-14</span></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><strong>模型调用占比</strong><span class="ph-hint">今日</span></div>
-          <div class="share-list">
-            <div class="share-row"><em>TT Image 2 系列</em><span class="share-bar"><i style="width:38%"></i></span><b>38%</b></div>
-            <div class="share-row"><em>GEM 3.7 flash</em><span class="share-bar"><i style="width:26%"></i></span><b>26%</b></div>
-            <div class="share-row"><em>即梦 3.5 Pro</em><span class="share-bar"><i style="width:18%"></i></span><b>18%</b></div>
-            <div class="share-row"><em>纳米香蕉 Pro</em><span class="share-bar"><i style="width:11%"></i></span><b>11%</b></div>
-            <div class="share-row"><em>其他模型</em><span class="share-bar"><i style="width:7%"></i></span><b>7%</b></div>
-          </div>
-        </div>
-      </div>
-      <div class="dash-grid">
-        <div class="panel">
-          <div class="panel-head"><strong>最近订单</strong><button class="ph-link" data-goto="bills">查看全部</button></div>
-          <table class="tbl mini">
-            <thead><tr><th>订单号</th><th>用户</th><th>类型</th><th>金额</th><th>时间</th></tr></thead>
-            <tbody>
-              <tr><td>P20260914001</td><td>未知仙女座</td><td><span class="bdg teal">充值</span></td><td>¥ 198</td><td>12:41</td></tr>
-              <tr><td>C20260914088</td><td>出海老王</td><td><span class="bdg gold">消耗</span></td><td>-¥ 12.6</td><td>12:38</td></tr>
-              <tr><td>P20260914002</td><td>摸鱼设计师</td><td><span class="bdg teal">充值</span></td><td>¥ 68</td><td>12:22</td></tr>
-              <tr><td>R20260914003</td><td>测试账号01</td><td><span class="bdg red">退款</span></td><td>¥ 30</td><td>11:57</td></tr>
-              <tr><td>C20260914087</td><td>短视频工厂</td><td><span class="bdg gold">消耗</span></td><td>-¥ 86.4</td><td>11:40</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><strong>系统告警</strong><span class="ph-hint">近 24 小时</span></div>
-          <div class="alert-list">
-            <div class="alert-row warn"><i>⚠</i><div><strong>渠道 KJ-gp 成功率跌破 95%</strong><em>10:26 · 已自动降权，流量切换至 DE-TT-oai-pro</em></div></div>
-            <div class="alert-row err"><i>⛔</i><div><strong>渠道 TX-y3 超时率突增</strong><em>09:12 · 触发自动容错，暂停接单 5 分钟</em></div></div>
-            <div class="alert-row ok"><i>✓</i><div><strong>每日对账任务完成</strong><em>04:00 · 账单 12,842 笔，差异 0 笔</em></div></div>
-            <div class="alert-row ok"><i>✓</i><div><strong>模型 TT Image 2.5 官转通道上线</strong><em>昨日 20:15 · 计费配置已同步</em></div></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== 用户管理 ===== -->
-    <section class="page hidden" id="pg-users">
-      <div class="toolbar">
-        <div class="tb-search"><span>🔍</span><input id="user-search" type="text" placeholder="搜索昵称 / 手机号 / UID..." /></div>
-        <select class="tb-select" id="user-status"><option value="">全部状态</option><option value="正常">正常</option><option value="冻结">冻结</option></select>
-        <span class="tb-spacer"></span>
-        <button class="btn teal" id="btn-user-add">＋ 新增用户</button>
-        <button class="btn ghost" id="btn-user-export"> 导出</button>
-      </div>
-      <div class="panel flat">
-        <table class="tbl" id="user-table">
-          <thead><tr><th>UID</th><th>用户</th><th>算力余额</th><th>累计消费</th><th>状态</th><th>注册日期</th><th>最近活跃</th><th>操作</th></tr></thead>
-          <tbody>
-            <tr><td>100231</td><td><span class="u-cell"><i class="u-ava a1">未</i><div><strong>未知仙女座</strong><em>186****3000</em></div></span></td><td><b class="num teal">27.02</b></td><td>¥ 1,286</td><td><span class="bdg teal st">正常</span></td><td>2026-03-14</td><td>5 分钟前</td><td class="ops"><button class="op addc">加算力</button><button class="op freeze">冻结</button><button class="op reset">重置密码</button></td></tr>
-            <tr><td>100188</td><td><span class="u-cell"><i class="u-ava a2">出</i><div><strong>出海老王</strong><em>139****8821</em></div></span></td><td><b class="num teal">412.50</b></td><td>¥ 8,940</td><td><span class="bdg teal st">正常</span></td><td>2026-02-02</td><td>12 分钟前</td><td class="ops"><button class="op addc">加算力</button><button class="op freeze">冻结</button><button class="op reset">重置密码</button></td></tr>
-            <tr><td>100455</td><td><span class="u-cell"><i class="u-ava a3">摸</i><div><strong>摸鱼设计师</strong><em>150****6642</em></div></span></td><td><b class="num teal">6.80</b></td><td>¥ 642</td><td><span class="bdg teal st">正常</span></td><td>2026-05-19</td><td>1 小时前</td><td class="ops"><button class="op addc">加算力</button><button class="op freeze">冻结</button><button class="op reset">重置密码</button></td></tr>
-            <tr><td>100072</td><td><span class="u-cell"><i class="u-ava a4">短</i><div><strong>短视频工厂</strong><em>187****0913</em></div></span></td><td><b class="num teal">2,310.00</b></td><td>¥ 26,480</td><td><span class="bdg teal st">正常</span></td><td>2026-01-08</td><td>28 分钟前</td><td class="ops"><button class="op addc">加算力</button><button class="op freeze">冻结</button><button class="op reset">重置密码</button></td></tr>
-            <tr><td>100913</td><td><span class="u-cell"><i class="u-ava a5">测</i><div><strong>测试账号01</strong><em>100****0001</em></div></span></td><td><b class="num teal">0.00</b></td><td>¥ 30</td><td><span class="bdg red st">冻结</span></td><td>2026-08-30</td><td>3 天前</td><td class="ops"><button class="op addc">加算力</button><button class="op freeze">解冻</button><button class="op reset">重置密码</button></td></tr>
-            <tr><td>100640</td><td><span class="u-cell"><i class="u-ava a6">跨</i><div><strong>跨境合规小助手</strong><em>176****4470</em></div></span></td><td><b class="num teal">88.16</b></td><td>¥ 2,150</td><td><span class="bdg teal st">正常</span></td><td>2026-06-11</td><td>2 小时前</td><td class="ops"><button class="op addc">加算力</button><button class="op freeze">冻结</button><button class="op reset">重置密码</button></td></tr>
-            <tr><td>100777</td><td><span class="u-cell"><i class="u-ava a1">独</i><div><strong>独立开发者K</strong><em>158****2210</em></div></span></td><td><b class="num teal">152.40</b></td><td>¥ 3,860</td><td><span class="bdg teal st">正常</span></td><td>2026-04-23</td><td>昨天</td><td class="ops"><button class="op addc">加算力</button><button class="op freeze">冻结</button><button class="op reset">重置密码</button></td></tr>
-          </tbody>
-        </table>
-        <div class="pager"><span>共 12,846 条</span><div class="pg-btns"><button>«</button><button class="on">1</button><button>2</button><button>3</button><button>…</button><button>1285</button><button>»</button></div></div>
-      </div>
-    </section>
-
-    <!-- ===== 账单管理 ===== -->
-    <section class="page hidden" id="pg-bills">
-      <div class="toolbar">
-        <div class="seg" id="bill-tabs">
-          <button class="on" data-type="">全部</button><button data-type="充值">充值</button><button data-type="消耗">消耗</button><button data-type="退款">退款</button>
-        </div>
-        <span class="tb-spacer"></span>
-        <input class="tb-date" type="date" value="2026-09-14" /> ~ <input class="tb-date" type="date" value="2026-09-14" />
-        <button class="btn ghost">📤 导出对账单</button>
-      </div>
-      <div class="panel flat">
-        <table class="tbl" id="bill-table">
-          <thead><tr><th>订单号</th><th>用户</th><th>类型</th><th>金额</th><th>算力变动</th><th>支付渠道</th><th>状态</th><th>时间</th></tr></thead>
-          <tbody>
-            <tr data-type="充值"><td>P20260914001</td><td>未知仙女座</td><td><span class="bdg teal">充值</span></td><td>¥ 198.00</td><td class="pos">+200.00</td><td>微信支付</td><td><span class="bdg teal">成功</span></td><td>2026-09-14 12:41</td></tr>
-            <tr data-type="消耗"><td>C20260914088</td><td>出海老王</td><td><span class="bdg gold">消耗</span></td><td>-¥ 12.60</td><td class="neg">-12.60</td><td>算力余额</td><td><span class="bdg teal">成功</span></td><td>2026-09-14 12:38</td></tr>
-            <tr data-type="充值"><td>P20260914002</td><td>摸鱼设计师</td><td><span class="bdg teal">充值</span></td><td>¥ 68.00</td><td class="pos">+68.00</td><td>支付宝</td><td><span class="bdg teal">成功</span></td><td>2026-09-14 12:22</td></tr>
-            <tr data-type="退款"><td>R20260914003</td><td>测试账号01</td><td><span class="bdg red">退款</span></td><td>¥ 30.00</td><td class="neg">-30.00</td><td>原路退回</td><td><span class="bdg gold">处理中</span></td><td>2026-09-14 11:57</td></tr>
-            <tr data-type="消耗"><td>C20260914087</td><td>短视频工厂</td><td><span class="bdg gold">消耗</span></td><td>-¥ 86.40</td><td class="neg">-86.40</td><td>算力余额</td><td><span class="bdg teal">成功</span></td><td>2026-09-14 11:40</td></tr>
-            <tr data-type="消耗"><td>C20260914086</td><td>独立开发者K</td><td><span class="bdg gold">消耗</span></td><td>-¥ 3.24</td><td class="neg">-3.24</td><td>算力余额</td><td><span class="bdg teal">成功</span></td><td>2026-09-14 11:31</td></tr>
-            <tr data-type="充值"><td>P20260914004</td><td>跨境合规小助手</td><td><span class="bdg teal">充值</span></td><td>¥ 498.00</td><td class="pos">+520.00</td><td>微信支付</td><td><span class="bdg teal">成功</span></td><td>2026-09-14 10:58</td></tr>
-            <tr data-type="消耗"><td>C20260914085</td><td>未知仙女座</td><td><span class="bdg gold">消耗</span></td><td>-¥ 0.19</td><td class="neg">-0.19</td><td>算力余额</td><td><span class="bdg teal">成功</span></td><td>2026-09-14 10:44</td></tr>
-          </tbody>
-        </table>
-        <div class="pager"><span>今日 12,842 笔 · 合计 +¥48,210 / -¥39,606</span><div class="pg-btns"><button>«</button><button class="on">1</button><button>2</button><button>3</button><button>»</button></div></div>
-      </div>
-    </section>
-
-    <!-- ===== 大模型配置 ===== -->
-    <section class="page hidden" id="pg-models">
-      <div class="toolbar">
-        <div class="tb-search"><span>🔍</span><input id="model-search" type="text" placeholder="搜索模型 / 厂商..." /></div>
-        <select class="tb-select" id="model-type"><option value="">全部类型</option><option>聊天</option><option>图片</option><option>视频</option><option>音频</option></select>
-        <span class="tb-spacer"></span>
-        <button class="btn teal" id="btn-model-add">＋ 接入新模型</button>
-      </div>
-      <div class="panel flat">
-        <table class="tbl" id="model-table">
-          <thead><tr><th>模型</th><th>类型</th><th>渠道</th><th>输入价 / 百万token</th><th>输出价 / 百万token</th><th>今日调用</th><th>成功率</th><th>上架</th><th>操作</th></tr></thead>
-          <tbody>
-            <tr data-type="图片"><td><strong>TT Image 2</strong><em>字节跳动</em></td><td><span class="bdg purple">图片</span></td><td>DE-TT-oai-pro</td><td>77.28</td><td>284.00</td><td>48,210</td><td><b class="num green">92.2%</b></td><td><button class="sw on"></button></td><td class="ops"><button class="op edit">编辑</button><button class="op price">调价</button></td></tr>
-            <tr data-type="聊天"><td><strong>GEM 3.7 flash</strong><em>Google</em></td><td><span class="bdg teal">聊天</span></td><td>KJ-gp</td><td>115.92</td><td>428.90</td><td>32,904</td><td><b class="num green">100%</b></td><td><button class="sw on"></button></td><td class="ops"><button class="op edit">编辑</button><button class="op price">调价</button></td></tr>
-            <tr data-type="视频"><td><strong>即梦 3.5 Pro</strong><em>字节跳动</em></td><td><span class="bdg pink">视频</span></td><td>DE-JM-raw</td><td colspan="2">0.1932 ~ 0.8694 / 秒</td><td>9,132</td><td><b class="num green">97.4%</b></td><td><button class="sw on"></button></td><td class="ops"><button class="op edit">编辑</button><button class="op price">调价</button></td></tr>
-            <tr data-type="图片"><td><strong>纳米香蕉 Pro</strong><em>Google</em></td><td><span class="bdg purple">图片</span></td><td>TX-y3</td><td>113.99</td><td>421.18</td><td>14,077</td><td><b class="num green">100%</b></td><td><button class="sw on"></button></td><td class="ops"><button class="op edit">编辑</button><button class="op price">调价</button></td></tr>
-            <tr data-type="音频"><td><strong>海螺 语音克隆 2.8</strong><em>MiniMax</em></td><td><span class="bdg gold">音频</span></td><td>MM-voice-cn</td><td colspan="2">按 token 计费</td><td>3,208</td><td><b class="num green">99.1%</b></td><td><button class="sw on"></button></td><td class="ops"><button class="op edit">编辑</button><button class="op price">调价</button></td></tr>
-            <tr data-type="聊天"><td><strong>GEM 3.5 flash</strong><em>Google</em></td><td><span class="bdg teal">聊天</span></td><td>TX-y3</td><td>113.99</td><td>421.18</td><td>21,540</td><td><b class="num green">100%</b></td><td><button class="sw on"></button></td><td class="ops"><button class="op edit">编辑</button><button class="op price">调价</button></td></tr>
-            <tr data-type="图片"><td><strong>TT Image 2.5 官转</strong><em>字节跳动</em></td><td><span class="bdg purple">图片</span></td><td>DE-TT-official</td><td>88.00</td><td>312.00</td><td>6,842</td><td><b class="num gold">94.8%</b></td><td><button class="sw"></button></td><td class="ops"><button class="op edit">编辑</button><button class="op price">调价</button></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ===== 智能体 Skill 配置 ===== -->
-    <section class="page hidden" id="pg-agents">
-
-      <!-- 第一层：智能体列表 -->
-      <div id="agents-list-view">
-        <div class="toolbar">
-          <div class="tb-search"><span>🔍</span><input id="agent-search" type="text" placeholder="搜索智能体名称 / 标识 / 绑定模型..." /></div>
-          <select class="tb-select" id="agent-type"><option value="">全部</option><option>客服</option><option>营销</option><option>设计</option><option>数据分析</option><option>其他</option></select>
-          <select class="tb-select" id="agent-status"><option value="">全部</option><option>已发布</option><option>草稿</option><option>已下线</option></select>
-          <span class="tb-spacer"></span>
-          <button class="btn teal" id="btn-agent-add">＋ 新建智能体</button>
-          <button class="btn ghost" id="btn-agent-import">⬆ 导入配置 JSON</button>
-        </div>
-        <div class="panel flat">
-          <table class="tbl" id="agent-table">
-            <thead><tr><th>智能体</th><th>分类</th><th>编排模型数</th><th>已启用 Skill</th><th>今日调用</th><th>平均耗时</th><th>成功率</th><th>状态</th><th>操作</th></tr></thead>
-            <tbody>
-              <tr data-type="营销" data-status="已发布"><td><strong>跨境电商选品助手</strong><em>cross-border-picker</em></td><td><span class="bdg teal">营销</span></td><td>2</td><td>4</td><td>12,408</td><td>3.2s</td><td><b class="num green">98.6%</b></td><td><span class="bdg teal st">已发布</span></td><td class="ops"><button class="op edit">配置</button><button class="op reset">调试</button><button class="op addc">复制</button><button class="op freeze">下线</button></td></tr>
-              <tr data-type="营销" data-status="已发布"><td><strong>短视频脚本生成器</strong><em>short-video-script</em></td><td><span class="bdg teal">营销</span></td><td>1</td><td>3</td><td>8,932</td><td>1.8s</td><td><b class="num green">99.4%</b></td><td><span class="bdg teal st">已发布</span></td><td class="ops"><button class="op edit">配置</button><button class="op reset">调试</button><button class="op addc">复制</button><button class="op freeze">下线</button></td></tr>
-              <tr data-type="客服" data-status="已发布"><td><strong>智能客服小星</strong><em>cs-xiaoxing</em></td><td><span class="bdg blue">客服</span></td><td>1</td><td>6</td><td>24,107</td><td>0.9s</td><td><b class="num green">99.9%</b></td><td><span class="bdg teal st">已发布</span></td><td class="ops"><button class="op edit">配置</button><button class="op reset">调试</button><button class="op addc">复制</button><button class="op freeze">下线</button></td></tr>
-              <tr data-type="设计" data-status="已发布"><td><strong>海报批量生成 Agent</strong><em>poster-batch</em></td><td><span class="bdg pink">设计</span></td><td>2</td><td>2</td><td>5,640</td><td>6.4s</td><td><b class="num gold">96.2%</b></td><td><span class="bdg teal st">已发布</span></td><td class="ops"><button class="op edit">配置</button><button class="op reset">调试</button><button class="op addc">复制</button><button class="op freeze">下线</button></td></tr>
-              <tr data-type="数据分析" data-status="草稿"><td><strong>财报解读助手</strong><em>fin-report-reader</em></td><td><span class="bdg purple">数据分析</span></td><td>1</td><td>5</td><td>1,208</td><td>4.1s</td><td><b class="num green">97.8%</b></td><td><span class="bdg gold st">草稿</span></td><td class="ops"><button class="op edit">配置</button><button class="op reset">调试</button><button class="op addc">复制</button><button class="op freeze">发布</button></td></tr>
-              <tr data-type="营销" data-status="已发布"><td><strong>多语言文案本地化</strong><em>copy-localize</em></td><td><span class="bdg teal">营销</span></td><td>1</td><td>3</td><td>3,417</td><td>2.2s</td><td><b class="num green">99.1%</b></td><td><span class="bdg teal st">已发布</span></td><td class="ops"><button class="op edit">配置</button><button class="op reset">调试</button><button class="op addc">复制</button><button class="op freeze">下线</button></td></tr>
-              <tr data-type="营销" data-status="已下线"><td><strong>旧版选品助手 v1</strong><em>picker-legacy-v1</em></td><td><span class="bdg teal">营销</span></td><td>2</td><td>4</td><td>0</td><td>—</td><td><b class="num">—</b></td><td><span class="bdg red st">已下线</span></td><td class="ops"><button class="op edit">配置</button><button class="op reset">调试</button><button class="op addc">复制</button><button class="op freeze">发布</button></td></tr>
-            </tbody>
-          </table>
-          <div class="pager"><span>共 7 个智能体 · 已发布 5 / 草稿 1 / 已下线 1</span><div class="pg-btns"><button>«</button><button class="on">1</button><button>2</button><button>»</button></div></div>
-        </div>
-      </div>
-
-      <!-- 第二层：Skill 编排详情 -->
-      <div id="agents-detail-view" class="hidden">
-        <div class="agent-bar">
-          <button class="back" id="agent-back">← 返回智能体列表</button>
-          <strong id="agent-detail-name">跨境电商选品助手</strong>
-          <span class="bdg teal st" id="agent-detail-status">已发布</span>
-          <span class="grow"></span>
-          <button class="btn ghost" id="agent-save">保存编排</button>
-          <button class="btn teal" id="agent-publish">发布</button>
-        </div>
-
-        <div class="agent-detail-grid">
-          <!-- 左栏：基础信息 -->
-          <div class="panel">
-            <div class="panel-head"><strong>基础信息</strong></div>
-            <label class="f-label">智能体名称</label>
-            <input class="f-input" id="ad-name" type="text" value="跨境电商选品助手" />
-            <label class="f-label">智能体标识（英文，用于 API 调用）</label>
-            <input class="f-input" id="ad-key" type="text" value="cross-border-picker" />
-            <div class="dlg-2col" style="margin:0">
-              <div><label class="f-label">分类</label><select class="f-input" id="ad-type"><option>客服</option><option selected>营销</option><option>设计</option><option>数据分析</option><option>其他</option></select></div>
-              <div><label class="f-label">绑定模型</label><select class="f-input" id="ad-model"><option>GEM 3.7 flash</option><option>TT Image 2</option><option>即梦 3.5 Pro</option><option>纳米香蕉 Pro</option><option>海螺 语音克隆 2.8</option></select></div>
-            </div>
-            <label class="f-label">头像 / 图标</label>
-            <div class="emoji-pick" id="ad-emoji">
-              <button class="emo on" data-emo="🤖">🤖</button><button class="emo" data-emo="🛒">🛒</button><button class="emo" data-emo="🎯">🎯</button><button class="emo" data-emo="🎨">🎨</button><button class="emo" data-emo="📊">📊</button><button class="emo" data-emo="💬">💬</button><button class="emo" data-emo="🚀">🚀</button><button class="emo" data-emo="⚡">⚡</button>
-            </div>
-            <label class="f-label">系统提示词（System Prompt）</label>
-            <textarea class="f-textarea tall" id="ad-prompt">你是跨境电商选品专家，熟悉欧美、东南亚主流平台的选品逻辑、合规要求与物流成本。请结合联网搜索、商品库查询与出图能力，为用户输出可落地的选品建议。</textarea>
-            <label class="f-label">开场白</label>
-            <textarea class="f-textarea" id="ad-greeting">你好，告诉我目标市场与品类，我来帮你选品。</textarea>
-          </div>
-
-          <!-- 中栏：Skill 编排 -->
-          <div class="panel">
-            <div class="panel-head"><strong>Skill 编排</strong><span class="ph-hint" id="ad-skill-count">4 个 Skill · 3 启用</span></div>
-            <div class="skill-list" id="ad-skill-list"></div>
-            <button class="btn ghost add-skill" id="btn-add-skill">＋ 添加 Skill</button>
-          </div>
-
-          <!-- 右栏：调用与计费 -->
-          <div class="panel">
-            <div class="panel-head"><strong>调用与计费</strong></div>
-            <label class="f-label">单次调用基础算力</label>
-            <input class="f-input" id="ad-base-cost" type="number" step="0.1" value="2.0" />
-            <label class="f-label">各 Skill 附加算力（汇总）</label>
-            <div class="cost-sum" id="ad-skill-cost">3.8 算力 / 次</div>
-            <div class="dlg-2col" style="margin:0">
-              <div><label class="f-label">最大轮次</label><input class="f-input" id="ad-max-rounds" type="number" value="8" /></div>
-              <div><label class="f-label">超时时间（秒）</label><input class="f-input" id="ad-timeout" type="number" value="60" /></div>
-            </div>
-            <label class="f-label">每日调用上限</label>
-            <input class="f-input" id="ad-quota" type="number" value="5000" />
-            <div class="sw-row"><span>允许用户自定义 Skill</span><button class="sw"></button></div>
-            <div class="sw-row"><span>记录完整对话日志</span><button class="sw on"></button></div>
-          </div>
-        </div>
-
-        <!-- 底部：实时预览 -->
-        <div class="panel">
-          <div class="panel-head"><strong>调用流程实时预览</strong><span class="ph-hint">静态示意</span></div>
-          <div class="chat-preview">
-            <div class="bub user">帮我在东南亚市场找一款适合夏天的家居爆品，并生成一张主图。</div>
-            <div class="bub bot">正在为你分析目标市场与品类趋势……
-              <span class="tool-trace">① 联网搜索（Web Search）→ 抓取东南亚夏季家居热销榜<br>② 商品库查询（MySQL）→ 匹配平台在售 SKU 与利润率<br>③ 调用 TT Image 2 出图 → 生成主图 1 张</span>
-            </div>
-            <div class="bub bot">已为你锁定 3 款高潜品类（附利润率与竞品数），并生成主图草稿。建议优先测款「便携折叠收纳箱」，毛利率约 42%。<span class="tool-trace">本次调用共消耗 5.8 算力 · 耗时约 3.2s</span></div>
-          </div>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ===== 算力使用 ===== -->
-    <section class="page hidden" id="pg-usage">
-      <div class="stat-row">
-        <div class="stat-card teal"><em>今日消耗算力</em><strong>926 万</strong><span class="down">↓ 2.1%</span></div>
-        <div class="stat-card"><em>昨日消耗算力</em><strong>946 万</strong><span>环比持平</span></div>
-        <div class="stat-card"><em>本月累计消耗</em><strong>1.28 亿</strong><span>↑ 6.8%</span></div>
-        <div class="stat-card gold"><em>平台算力库存</em><strong>4.6 亿</strong><span>预计可用 36 天</span></div>
-      </div>
-      <div class="dash-grid">
-        <div class="panel">
-          <div class="panel-head"><strong>分模型算力消耗</strong><span class="ph-hint">今日</span></div>
-          <table class="tbl mini">
-            <thead><tr><th>模型</th><th>调用次数</th><th>输入 token</th><th>输出 token</th><th>消耗算力</th><th style="width:120px">占比</th></tr></thead>
-            <tbody>
-              <tr><td>TT Image 2 系列</td><td>48,210</td><td>31.2 亿</td><td>9.8 亿</td><td><b class="num teal">352 万</b></td><td><span class="share-bar"><i style="width:38%"></i></span></td></tr>
-              <tr><td>GEM 3.7 flash</td><td>32,904</td><td>18.6 亿</td><td>24.1 亿</td><td><b class="num teal">241 万</b></td><td><span class="share-bar"><i style="width:26%"></i></span></td></tr>
-              <tr><td>即梦 3.5 Pro</td><td>9,132</td><td>—</td><td>—</td><td><b class="num teal">167 万</b></td><td><span class="share-bar"><i style="width:18%"></i></span></td></tr>
-              <tr><td>纳米香蕉 Pro</td><td>14,077</td><td>8.9 亿</td><td>2.2 亿</td><td><b class="num teal">102 万</b></td><td><span class="share-bar"><i style="width:11%"></i></span></td></tr>
-              <tr><td>其他</td><td>12,408</td><td>4.1 亿</td><td>3.6 亿</td><td><b class="num teal">64 万</b></td><td><span class="share-bar"><i style="width:7%"></i></span></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><strong>用户消耗 TOP 8</strong><span class="ph-hint">今日</span></div>
-          <div class="top-list">
-            <div class="top-row"><b>1</b><em>短视频工厂</em><span class="share-bar"><i style="width:92%"></i></span><strong>186.4 万</strong></div>
-            <div class="top-row"><b>2</b><em>出海老王</em><span class="share-bar"><i style="width:64%"></i></span><strong>129.7 万</strong></div>
-            <div class="top-row"><b>3</b><em>独立开发者K</em><span class="share-bar"><i style="width:41%"></i></span><strong>83.2 万</strong></div>
-            <div class="top-row"><b>4</b><em>跨境合规小助手</em><span class="share-bar"><i style="width:28%"></i></span><strong>56.8 万</strong></div>
-            <div class="top-row"><b>5</b><em>摸鱼设计师</em><span class="share-bar"><i style="width:17%"></i></span><strong>34.5 万</strong></div>
-            <div class="top-row"><b>6</b><em>未知仙女座</em><span class="share-bar"><i style="width:9%"></i></span><strong>18.1 万</strong></div>
-            <div class="top-row"><b>7</b><em>海报突击队</em><span class="share-bar"><i style="width:6%"></i></span><strong>12.4 万</strong></div>
-            <div class="top-row"><b>8</b><em>测试账号01</em><span class="share-bar"><i style="width:2%"></i></span><strong>3.0 万</strong></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== 系统设置 ===== -->
-    <section class="page hidden" id="pg-settings">
-      <div class="dash-grid">
-        <div class="panel">
-          <div class="panel-head"><strong>平台参数</strong></div>
-          <label class="f-label">平台名称</label>
-          <input class="f-input" type="text" value="星枢 AI 聚合引擎" />
-          <label class="f-label">新用户注册赠送算力</label>
-          <input class="f-input" type="number" value="27.02" />
-          <label class="f-label">充值赠送比例（%）</label>
-          <input class="f-input" type="number" value="5" />
-          <label class="f-label">算力单价（元 / 算力）</label>
-          <input class="f-input" type="number" value="1" />
-          <button class="btn teal" style="margin-top:16px">保存参数</button>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><strong>公告与维护</strong></div>
-          <label class="f-label">系统公告（前台弹窗展示）</label>
-          <textarea class="f-textarea">TT Image 2.5 官转通道已上线，按 token 精准计费；9 月 15 日 02:00-04:00 渠道维护，期间自动容错切换。</textarea>
-          <div class="sw-row"><span>开启新用户注册</span><button class="sw on"></button></div>
-          <div class="sw-row"><span>开启充值通道</span><button class="sw on"></button></div>
-          <div class="sw-row"><span>维护模式（前台只读）</span><button class="sw"></button></div>
-          <button class="btn teal" style="margin-top:16px">发布公告</button>
-        </div>
-      </div>
-    </section>
-  </div>
-</div>
-
-<!-- ===== 加算力弹窗 ===== -->
-<div class="mask hidden" id="modal-addc">
-  <div class="dlg">
-    <div class="dlg-head"><strong>为用户加算力</strong><button class="dlg-x" data-close="modal-addc">✕</button></div>
-    <p class="dlg-user" id="addc-user">未知仙女座（UID 100231）</p>
-    <label class="f-label">增加算力值</label>
-    <input class="f-input" id="addc-val" type="number" value="100" />
-    <label class="f-label">备注原因</label>
-    <input class="f-input" type="text" placeholder="如：活动补偿 / 客服工单 #1024" />
-    <div class="dlg-foot"><button class="btn ghost" data-close="modal-addc">取消</button><button class="btn teal" id="addc-ok">确认加算力</button></div>
-  </div>
-</div>
-
-<!-- ===== 接入模型弹窗 ===== -->
-<div class="mask hidden" id="modal-model">
-  <div class="dlg">
-    <div class="dlg-head"><strong>接入新模型</strong><button class="dlg-x" data-close="modal-model">✕</button></div>
-    <label class="f-label">模型名称</label>
-    <input class="f-input" id="md-name" type="text" placeholder="如：TT Video 4.0" />
-    <div class="dlg-2col">
-      <div><label class="f-label">类型</label><select class="f-input" id="md-type"><option>聊天</option><option>图片</option><option>视频</option><option>音频</option></select></div>
-      <div><label class="f-label">渠道</label><input class="f-input" id="md-ch" type="text" placeholder="DE-XX-01" /></div>
-    </div>
-    <div class="dlg-2col">
-      <div><label class="f-label">输入价 / 百万token</label><input class="f-input" id="md-in" type="number" value="80" /></div>
-      <div><label class="f-label">输出价 / 百万token</label><input class="f-input" id="md-out" type="number" value="300" /></div>
-    </div>
-    <div class="dlg-foot"><button class="btn ghost" data-close="modal-model">取消</button><button class="btn teal" id="md-ok">确认接入</button></div>
-  </div>
-</div>
-
-<!-- ===== 新建智能体弹窗 ===== -->
-<div class="mask hidden" id="modal-agent">
-  <div class="dlg">
-    <div class="dlg-head"><strong>新建智能体</strong><button class="dlg-x" data-close="modal-agent">✕</button></div>
-    <label class="f-label">智能体名称</label>
-    <input class="f-input" id="ag-name" type="text" placeholder="如：跨境电商选品助手" />
-    <label class="f-label">智能体标识（英文）</label>
-    <input class="f-input" id="ag-key" type="text" placeholder="cross-border-picker" />
-    <label class="f-label">分类</label>
-    <select class="f-input" id="ag-type"><option>客服</option><option selected>营销</option><option>设计</option><option>数据分析</option><option>其他</option></select>
-    <label class="f-label">一句话描述</label>
-    <input class="f-input" id="ag-desc" type="text" placeholder="这个智能体能做什么？" />
-    <div class="dlg-foot"><button class="btn ghost" data-close="modal-agent">取消</button><button class="btn teal" id="ag-ok">确认创建</button></div>
-  </div>
-</div>
-
-<!-- ===== 添加 Skill 弹窗 ===== -->
-<div class="mask hidden" id="modal-skill">
-  <div class="dlg wide">
-    <div class="dlg-head"><strong>添加 Skill</strong><button class="dlg-x" data-close="modal-skill">✕</button></div>
-    <div class="skill-filter">
-      <div class="tb-search"><span>🔍</span><input id="skill-search" type="text" placeholder="搜索 Skill 名称..." /></div>
-      <select class="tb-select" id="skill-type"><option value="">全部类型</option><option>模型调用</option><option>联网搜索</option><option>知识库检索</option><option>代码执行</option><option>图像处理</option><option>数据查询</option><option>HTTP 请求</option><option>人工审核</option></select>
-    </div>
-    <div class="skill-picker" id="skill-picker"></div>
-    <div class="dlg-foot"><button class="btn ghost" data-close="modal-skill">关闭</button></div>
-  </div>
-</div>
-
-<script src="js/admin.js"></script>
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

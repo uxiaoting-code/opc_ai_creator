@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -36,10 +38,13 @@ import '../../widgets/scaffold_page.dart';
 /// 生成依然是异步的，所以这里不显示结果：提交成功立刻带 taskId 跳任务详情页，
 /// 由详情页轮询「排队 → 生成中 → 成功」，成功后用视频播放器展示。
 class ImageToVideoPage extends StatefulWidget {
-  const ImageToVideoPage({super.key, this.skillId});
+  const ImageToVideoPage({super.key, this.skillId, this.prompt});
 
   /// 从路由 query 参数带进来的 Skill 线路 ID，为空表示用户还没选线路。
   final String? skillId;
+
+  /// 从首页快捷创作带进来的提示词，进页面直接填好。
+  final String? prompt;
 
   @override
   State<ImageToVideoPage> createState() => _ImageToVideoPageState();
@@ -73,6 +78,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
 
     // 路由参数是字符串，转不成数字就当没带（而不是崩掉）
     _selectedSkillId = int.tryParse(widget.skillId ?? '');
+    _promptController.text = widget.prompt ?? '';
 
     // 放到首帧之后再触发加载：Provider 的 load() 内部会 notifyListeners()，
     // 在 initState 里同步触发会在 build 期间标记依赖组件为脏，直接报错。
@@ -130,21 +136,20 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
     });
   }
 
-    // 从素材库选择首帧图
-    Future<void> _openSelectMaterial() async {
-      if (_submitting) return;
-      final selectedUrl = await context.push('/select-material');
-      if(selectedUrl != null && selectedUrl is String) {
-        // 拿到素材返回的图片url，更新到首帧
-        setState(() {
-          _refImageUrl = selectedUrl;
-          // 因为是后端已经存在的素材，不需要本地文件，本地预览需要单独处理
-          _refImage = null;
-          _refImageBytes = null;
-        });
-      }
+  // 从素材库选择首帧图
+  Future<void> _openSelectMaterial() async {
+    if (_submitting) return;
+    final selectedUrl = await context.push('/select-material');
+    if (selectedUrl != null && selectedUrl is String) {
+      // 拿到素材返回的图片url，更新到首帧
+      setState(() {
+        _refImageUrl = selectedUrl;
+        // 因为是后端已经存在的素材，不需要本地文件，本地预览需要单独处理
+        _refImage = null;
+        _refImageBytes = null;
+      });
     }
-
+  }
 
   void _previewImage() {
     final bytes = _refImageBytes;
@@ -195,11 +200,11 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
 
       // ---- 第二步：创建任务 ----
       final task = await context.read<TaskRepository>().createImageToVideo(
-            skillId: _selectedSkillId,
-            prompt: prompt,
-            negativePrompt: _negativeController.text.trim(),
-            refImageUrl: refUrl,
-          );
+        skillId: _selectedSkillId,
+        prompt: prompt,
+        negativePrompt: _negativeController.text.trim(),
+        refImageUrl: refUrl,
+      );
 
       if (!mounted) return;
 
@@ -294,6 +299,8 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _buildModeSwitch(),
+              const SizedBox(height: AppSpacing.md),
               _buildImageSection(),
               const SizedBox(height: AppSpacing.xl),
               _buildSkillSection(skillProvider, skills, selectedSkill),
@@ -309,6 +316,104 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildModeSwitch() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkBackground.withValues(alpha: 0.6)
+            : AppColors.sageTint.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      ),
+      child: Row(
+        children: [
+          _modePill(
+            theme,
+            isDark,
+            active: false,
+            icon: CupertinoIcons.photo,
+            label: '图片',
+            onTap: _switchToImage,
+          ),
+          _modePill(
+            theme,
+            isDark,
+            active: true,
+            icon: CupertinoIcons.videocam,
+            label: '视频',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modePill(
+    ThemeData theme,
+    bool isDark, {
+    required bool active,
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+  }) {
+    final child = AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: active
+            ? (isDark ? AppColors.darkSurface : Colors.white)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        boxShadow: active ? AppColors.shadowSoft : null,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: active ? AppColors.sage : AppColors.taupe,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: active ? AppColors.charcoal : AppColors.taupe,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+    return Expanded(
+      child: onTap == null
+          ? child
+          : InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+              child: child,
+            ),
+    );
+  }
+
+  void _switchToImage() {
+    final query = <String, String>{};
+    final prompt = _promptController.text.trim();
+    if (prompt.isNotEmpty) query['prompt'] = prompt;
+    if (_selectedSkillId != null) {
+      query['skillId'] = '$_selectedSkillId';
+    }
+    HapticFeedback.selectionClick();
+    context.pushReplacement(
+      Uri(
+        path: RouteNames.textToImagePath,
+        queryParameters: query.isEmpty ? null : query,
+      ).toString(),
     );
   }
 
@@ -377,10 +482,8 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
           // 点图放大看细节，确认选对了再提交
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => ImagePreviewPage(
-                imageUrl: displayUrl,
-                title: '首帧参考图',
-              ),
+              builder: (_) =>
+                  ImagePreviewPage(imageUrl: displayUrl, title: '首帧参考图'),
             ),
           ),
           child: ClipRRect(
@@ -402,10 +505,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          '已选素材图片（来自素材库）',
-          style: theme.textTheme.bodySmall,
-        ),
+        Text('已选素材图片（来自素材库）', style: theme.textTheme.bodySmall),
         Wrap(
           alignment: WrapAlignment.end,
           spacing: AppSpacing.sm,
@@ -426,7 +526,6 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
       ],
     );
   }
-
 
   /// 还没选图：给相册 / 拍照两个入口。
   Widget _buildEmptyPicker(ThemeData theme) {
@@ -449,10 +548,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
           const SizedBox(height: AppSpacing.sm),
           Text('上传一张图片作为首帧', style: theme.textTheme.bodyMedium),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            '支持 jpg / png / webp，10MB 以内',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('支持 jpg / png / webp，10MB 以内', style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.lg),
           // 用 Wrap 而不是 Row：
           // Row 在主轴方向会给子组件**无限宽**的约束，而 OutlinedButton.icon
@@ -473,17 +569,18 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
                 label: const Text('从相册选择'),
               ),
               OutlinedButton.icon(
-                onPressed:
-                    _submitting ? null : () => _pickImage(ImageSource.camera),
+                onPressed: _submitting
+                    ? null
+                    : () => _pickImage(ImageSource.camera),
                 icon: const Icon(Icons.photo_camera_outlined, size: 18),
                 label: const Text('拍照'),
               ),
               // ==========在这里插入新按钮==========
-                             OutlinedButton.icon(
-                               onPressed: _submitting ? null : _openSelectMaterial,
-                               icon: const Icon(Icons.collections_outlined, size: 18),
-                               label: const Text('从素材库选择'),
-                             ),
+              OutlinedButton.icon(
+                onPressed: _submitting ? null : _openSelectMaterial,
+                icon: const Icon(Icons.collections_outlined, size: 18),
+                label: const Text('从素材库选择'),
+              ),
             ],
           ),
         ],
@@ -524,13 +621,18 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.statusSuccess.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusPill,
+                        ),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.cloud_done_rounded,
-                              size: 13, color: Colors.white),
+                          Icon(
+                            Icons.cloud_done_rounded,
+                            size: 13,
+                            color: Colors.white,
+                          ),
                           SizedBox(width: 3),
                           Text(
                             '已上传',
@@ -636,12 +738,17 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
       decoration: BoxDecoration(
         color: AppColors.statusFailed.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.statusFailed.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.statusFailed.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline,
-              size: 18, color: AppColors.statusFailed),
+          const Icon(
+            Icons.error_outline,
+            size: 18,
+            color: AppColors.statusFailed,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
@@ -695,10 +802,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
                       ),
                     ),
                     if (skill.modelName != null)
-                      Text(
-                        skill.modelName!,
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      Text(skill.modelName!, style: theme.textTheme.bodySmall),
                   ],
                 ),
               ),
@@ -731,9 +835,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
           // 前端先拦一道，用户体验好过提交后收 400
           maxLength: 2000,
           textInputAction: TextInputAction.newline,
-          decoration: _inputDecoration(
-            hintText: '例如：镜头缓慢推进，人物头发随风飘动，背景霓虹灯闪烁',
-          ),
+          decoration: _inputDecoration(hintText: '例如：镜头缓慢推进，人物头发随风飘动，背景霓虹灯闪烁'),
         ),
       ],
     );
@@ -761,9 +863,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
           // 与后端 @Size(max = 1000) 对齐
           maxLength: 1000,
           textInputAction: TextInputAction.newline,
-          decoration: _inputDecoration(
-            hintText: '例如：画面抖动、人物变形、闪烁、低分辨率',
-          ),
+          decoration: _inputDecoration(hintText: '例如：画面抖动、人物变形、闪烁、低分辨率'),
         ),
       ],
     );
@@ -785,7 +885,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.28),
@@ -801,7 +901,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
               shadowColor: Colors.transparent,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
               ),
             ),
             child: _submitting
@@ -868,23 +968,24 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
       hintText: hintText,
       hintStyle: theme.textTheme.bodySmall,
       filled: true,
-      fillColor: theme.cardTheme.color,
+      fillColor: (theme.cardTheme.color ?? theme.colorScheme.surface)
+          .withValues(alpha: 0.82),
       alignLabelWithHint: true,
       contentPadding: const EdgeInsets.all(AppSpacing.lg),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: BorderSide(
           color: theme.dividerTheme.color ?? AppColors.lightBorder,
         ),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: BorderSide(
           color: theme.dividerTheme.color ?? AppColors.lightBorder,
         ),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
       ),
     );

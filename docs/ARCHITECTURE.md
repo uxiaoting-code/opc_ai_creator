@@ -107,7 +107,8 @@ opc_ai_creator/
 ├── test/
 │   └── widget_test.dart               # 脚手架冒烟测试（路由表 + 登录守卫）
 │
-└── android/  web/  ...                # 平台工程目录
+└── android/  web/  ...                # 平台工程目录（web/ 是 Flutter Web 启动壳，
+                                      #   后台控制台在 admin-web/，两者不要混用）
 ```
 
 ### 分层依赖方向

@@ -17,8 +17,8 @@ class MobileViewport extends StatelessWidget {
 
   final Widget child;
 
-  /// Web 宽屏时两侧的留白色，用深色以突出中间的「手机屏」。
-  static const Color _frameBackground = Color(0xFF0B0D12);
+  /// Web 宽屏时两侧的留白色：用原型的暖灰米色，突出中间的「手机屏」。
+  static const Color _frameBackground = Color(0xFFEDE9E1);
 
   @override
   Widget build(BuildContext context) {

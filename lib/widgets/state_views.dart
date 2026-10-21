@@ -70,7 +70,7 @@ class EmptyView extends StatelessWidget {
               width: 88,
               height: 88,
               decoration: const BoxDecoration(
-                color: Color(0x146C4DF6),
+                color: AppColors.sageTint,
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 40, color: AppColors.primary),
@@ -124,8 +124,11 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                size: 56, color: AppColors.statusFailed),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 56,
+              color: AppColors.statusFailed,
+            ),
             const SizedBox(height: AppSpacing.lg),
             Text('出错了', style: theme.textTheme.titleMedium),
             const SizedBox(height: AppSpacing.sm),
@@ -170,12 +173,9 @@ class StatusChip extends StatelessWidget {
   final bool dense;
 
   /// 生成中状态带一个小转圈。
-  const StatusChip.loading({
-    super.key,
-    this.label = '生成中',
-    this.dense = false,
-  })  : color = AppColors.statusRunning,
-        icon = null;
+  const StatusChip.loading({super.key, this.label = '生成中', this.dense = false})
+    : color = AppColors.statusRunning,
+      icon = null;
 
   @override
   Widget build(BuildContext context) {

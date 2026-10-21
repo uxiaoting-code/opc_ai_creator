@@ -1,0 +1,91 @@
+{
+  "list": [
+    {
+      "id": 1,
+      "name": "TT Image 2",
+      "vendor": "字节跳动",
+      "type": "IMAGE",
+      "typeLabel": "图片",
+      "channel": "DE-TT-oai-pro",
+      "inputPrice": 77.28,
+      "outputPrice": 284,
+      "priceUnit": "TOKEN",
+      "todayCalls": 48210,
+      "successRate": 92.2,
+      "online": true
+    },
+    {
+      "id": 2,
+      "name": "GEM 3.7 flash",
+      "vendor": "Google",
+      "type": "CHAT",
+      "typeLabel": "聊天",
+      "channel": "KJ-gp",
+      "inputPrice": 115.92,
+      "outputPrice": 428.9,
+      "priceUnit": "TOKEN",
+      "todayCalls": 32904,
+      "successRate": 100,
+      "online": true
+    },
+    {
+      "id": 3,
+      "name": "即梦 3.5 Pro",
+      "vendor": "字节跳动",
+      "type": "VIDEO",
+      "typeLabel": "视频",
+      "channel": "DE-JM-raw",
+      "inputPrice": 0.1932,
+      "outputPrice": 0.8694,
+      "priceUnit": "SECOND",
+      "todayCalls": 9132,
+      "successRate": 97.4,
+      "online": true
+    },
+    {
+      "id": 4,
+      "name": "纳米香蕉 Pro",
+      "vendor": "Google",
+      "type": "IMAGE",
+      "typeLabel": "图片",
+      "channel": "TX-y3",
+      "inputPrice": 113.99,
+      "outputPrice": 421.18,
+      "priceUnit": "TOKEN",
+      "todayCalls": 14077,
+      "successRate": 100,
+      "online": true
+    },
+    {
+      "id": 5,
+      "name": "海螺 语音克隆 2.8",
+      "vendor": "MiniMax",
+      "type": "AUDIO",
+      "typeLabel": "音频",
+      "channel": "MM-voice-cn",
+      "inputPrice": null,
+      "outputPrice": null,
+      "priceUnit": "TOKEN",
+      "todayCalls": 3208,
+      "successRate": 99.1,
+      "online": true
+    },
+    {
+      "id": 6,
+      "name": "TT Image 2.5 官转",
+      "vendor": "字节跳动",
+      "type": "IMAGE",
+      "typeLabel": "图片",
+      "channel": "DE-TT-official",
+      "inputPrice": 88,
+      "outputPrice": 312,
+      "priceUnit": "TOKEN",
+      "todayCalls": 6842,
+      "successRate": 94.8,
+      "online": false
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 6
+}

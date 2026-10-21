@@ -2,7 +2,7 @@
 
 > 冻结日期：2026-10-14（v1）
 > 配套文件：`docs/api-admin.md`（接口契约）、`docs/ADMIN_PLAN.md`（盘点/顺序/分工）
-> 分工口径：**按"前后端"分**（一人 `server/`，一人 `web/` + `lib/`），归属见 §4.1
+> 分工口径：**按"前后端"分**（一人 `server/`，一人 `admin-web/` + `lib/`），归属见 §4.1
 >
 > **为什么要有这份文件**：接口契约只解决"接口长什么样"。如果两人各写各的数据结构，
 > 到合并那天才会发现工作台节点引用不了模型配置、MCP 工具、内置工具 ——
@@ -304,10 +304,10 @@ UI 形态：**列表 + 启用开关 + 上/下移按钮 + 这行的条件填两�
 | 把 `credits` 改成 `BigDecimal` / 小数 | 保持 `Integer`，全程整数 |
 | 页面里再定义一套"万/亿"的存储口径 | **接口一律返回原始点数（number）** |
 | 为了对上原型的「926 万」去改数据库里的数 | 只改**展示**，见 3.3 |
-| 前端各页自己写一套数字格式化 | 统一走 `web/js/util.js` 的 `formatCredits()` |
+| 前端各页自己写一套数字格式化 | 统一走 `admin-web/js/util.js` 的 `formatCredits()` |
 | 把 App 端 10/15 点的语义改掉 | 保持原语义，只在管理端做展示换算 |
 
-### 3.3 展示规则（前端 `web/js/util.js`）
+### 3.3 展示规则（前端 `admin-web/js/util.js`）
 
 ```js
 // 接口返回多少就是多少，只在这一处做显示转换
@@ -367,7 +367,7 @@ CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
 
 > **分工已定，别再看别处：**
 > - **后端线**：`server/` 主体 —— 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关
-> - **前端线**：`web/` + `lib/`，**外加 3 个纯 CRUD 后端模块** —— 素材库后台 / 用户管理 / 系统设置 + `PromptController`
+> - **前端线**：`admin-web/` + `lib/`，**外加 3 个纯 CRUD 后端模块** —— 素材库后台 / 用户管理 / 系统设置 + `PromptController`
 >
 > 这样两边 ≈ **21 : 19 人天**，基本持平；否则后端 26、前端 13，后端会变成唯一瓶颈。
 >
@@ -389,7 +389,7 @@ CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
 | `ai/**`（`AiProviderRouter` + 新增 `HttpApiProvider`） | 后端线 | 含模型配置的接线改造 |
 | `harness/**` | 后端线 | 补算力流水时只加一行调用，不改状态机 |
 | `application.yml` | 后端线 | 前端线有需求提给后端线 |
-| `web/**`（原型、`js/api.js`、`js/pages/*`、`mock/`） | **前端线** | 后端线不碰 |
+| `admin-web/**`（原型、`js/api.js`、`js/pages/*`、`mock/`） | **前端线** | 后端线不碰 |
 | `lib/**`（Flutter App） | 前端线（**收尾阶段**） | 前面阶段谁都不动；收尾只补 2 个占位页 + 设置页 |
 | `docs/api-admin.md` | **两人共写** | 唯一真共享文档。**改接口先改它**，并在「变更记录」加一行 |
 | `docs/admin-freeze.md` | 两人共写 | 本文件。改冻结项要两人都同意 |
@@ -413,7 +413,7 @@ server/src/main/java/com/opc/server/
 ├── harness/        ← 后端线独占（补流水）
 └── security/       ← 后端线独占
 
-web/
+admin-web/
 ├── css/admin.css   ← 前端独占（新样式追加到末尾）
 ├── js/api.js       ← 前端建，全站共用
 ├── js/util.js      ← 前端（formatCredits 等）
@@ -436,9 +436,9 @@ web/
 - [ ] 三项冻结都确认无异议：① `AiProviderConfig` 字段 ② 工具统一抽象 ③ 算力口径
 - [ ] 建分支 `codex/admin-backend`
 - [ ] `docs/api-admin.md` 的「变更记录」已建好
-- [ ] `server/`（后端独占）与 `web/`（前端独占）的归属已确认；`docs/api-admin.md` 是唯一共享文档
-- [ ] `web/index.html` 追加 5 个新页 `<section>` 的位置已确认
+- [ ] `server/`（后端独占）与 `admin-web/`（前端独占）的归属已确认；`docs/api-admin.md` 是唯一共享文档
+- [ ] `admin-web/index.html` 追加 5 个新页 `<section>` 的位置已确认
 - [ ] 确认**红线**：不删 `MockAiProvider`、不改 `t_skill` 语义、不改坏 `/api/**` 22 个 C 端接口
-- [ ] 跑一次基线：`./mvnw spring-boot:run` 能起、`flutter run -d chrome` 能跑、`web/index.html` 能打开
+- [ ] 跑一次基线：`./mvnw spring-boot:run` 能起、`flutter run -d chrome` 能跑、`admin-web/index.html` 能打开
 
 > 基线跑通后再开工。**如果开工第一天基线就是坏的，先修基线，别急着写新功能。**

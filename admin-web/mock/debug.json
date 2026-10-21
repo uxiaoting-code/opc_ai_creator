@@ -1,0 +1,6 @@
+{
+  "list": [
+    { "sessionId": "s-20261019-001", "agentName": "跨境电商选品助手", "status": "SUCCESS", "elapsedMs": 3200, "credits": 5.8, "createdAt": "2026-10-19T10:24:00" },
+    { "sessionId": "s-20261019-002", "agentName": "短视频脚本生成器", "status": "RUNNING", "elapsedMs": 1800, "credits": 2.1, "createdAt": "2026-10-19T10:31:00" }
+  ]
+}

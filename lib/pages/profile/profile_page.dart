@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -147,9 +148,11 @@ class _ProfilePageState extends State<ProfilePage> {
           width: 64,
           height: 64,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: AppColors.primaryGradient,
             shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: AppColors.shadowSoft,
           ),
           child: Text(
             user?.avatarInitial ?? '?',
@@ -214,11 +217,12 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+        boxShadow: AppColors.shadowButton,
       ),
       child: Row(
         children: [
-          const Icon(Icons.bolt_rounded, color: Colors.white, size: 26),
+          const Icon(CupertinoIcons.bolt_fill, color: Colors.white, size: 24),
           const SizedBox(width: AppSpacing.sm),
           Text(
             '剩余算力点',
@@ -249,50 +253,38 @@ class _ProfilePageState extends State<ProfilePage> {
           ? Row(
               children: [
                 Expanded(
-                  child: Text(
-                    _statsError!,
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  child: Text(_statsError!, style: theme.textTheme.bodySmall),
                 ),
                 TextButton(onPressed: _loadStats, child: const Text('重试')),
               ],
             )
           : _loadingStats
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Center(
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
-                      ),
-                    ),
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
                   ),
-                )
-              : Row(
-                  children: [
-                    Expanded(
-                      child: _StatTile(
-                        label: '累计任务',
-                        value: '$_totalTasks',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatTile(
-                        label: '生成成功',
-                        value: '$_successTasks',
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatTile(
-                        label: '成功率',
-                        value: _successRate,
-                      ),
-                    ),
-                  ],
                 ),
+              ),
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: _StatTile(label: '累计任务', value: '$_totalTasks'),
+                ),
+                Expanded(
+                  child: _StatTile(label: '生成成功', value: '$_successTasks'),
+                ),
+                Expanded(
+                  child: _StatTile(label: '成功率', value: _successRate),
+                ),
+              ],
+            ),
     );
   }
 
@@ -304,26 +296,26 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           _EntryRow(
-            icon: Icons.playlist_play_rounded,
+            icon: CupertinoIcons.square_list,
             title: '我的任务',
             subtitle: '排队 / 生成中 / 成功 / 失败',
             // 任务列表是底部 Tab 分支，跨分支跳转必须用 go
             onTap: () => context.go(RouteNames.taskListPath),
           ),
           _EntryRow(
-            icon: Icons.grid_view_rounded,
+            icon: CupertinoIcons.square_grid_2x2,
             title: '我的作品',
             subtitle: '画廊里的图片与视频',
             onTap: () => context.go(RouteNames.galleryPath),
           ),
           _EntryRow(
-            icon: Icons.photo_library_rounded,
+            icon: CupertinoIcons.photo,
             title: '我的素材',
             subtitle: '创作时用到的参考图',
             onTap: () => context.go(RouteNames.materialsPath),
           ),
           _EntryRow(
-            icon: Icons.settings_rounded,
+            icon: CupertinoIcons.gear,
             title: '设置',
             subtitle: '主题、环境信息',
             // 设置是顶层路由，push 就能正常返回
@@ -344,9 +336,7 @@ class _ProfilePageState extends State<ProfilePage> {
       label: const Text('退出登录'),
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.statusFailed,
-        side: BorderSide(
-          color: AppColors.statusFailed.withValues(alpha: 0.4),
-        ),
+        side: BorderSide(color: AppColors.statusFailed.withValues(alpha: 0.4)),
         minimumSize: const Size.fromHeight(AppSpacing.touchTargetMin),
       ),
     );
@@ -372,15 +362,21 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        color: isDark
+            ? AppColors.darkSurface.withValues(alpha: 0.82)
+            : AppColors.glass,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
         border: Border.all(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
+          color: isDark
+              ? AppColors.darkBorder
+              : Colors.white.withValues(alpha: 0.7),
         ),
+        boxShadow: AppColors.shadowSoft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -463,14 +459,12 @@ class _EntryRow extends StatelessWidget {
               children: [
                 Icon(icon, size: 20, color: AppColors.primary),
                 const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(title, style: theme.textTheme.bodyLarge),
-                ),
+                Expanded(child: Text(title, style: theme.textTheme.bodyLarge)),
                 Text(subtitle, style: theme.textTheme.bodySmall),
                 const SizedBox(width: AppSpacing.xs),
                 Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
+                  CupertinoIcons.chevron_right,
+                  size: 15,
                   color: theme.textTheme.bodySmall?.color,
                 ),
               ],

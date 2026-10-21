@@ -13,7 +13,10 @@ OPC（一人公司）场景的 AI 内容生产平台，由三部分组成：
 |---|---|---|---|
 | 终端 App（前台） | `lib/` | Flutter 3（Web + Android 双端） | 13 页，11 页完成，2 页占位 |
 | 后端 API（C 端） | `server/` | Spring Boot 4.1.1 + Java 21 + Spring Data JPA + H2/MySQL | 22 个接口，已跑通 |
-| **后台控制台（管理端）** | `web/` | 原生 HTML + CSS + JS | ⚠️ 老师给的**静态原型**，**本轮要做的就是它** |
+| **后台控制台（管理端）** | `admin-web/` | 原生 HTML + CSS + JS | ⚠️ 老师给的**静态原型**，**本轮要做的就是它** |
+
+> 目录提醒：`web/` 是 Flutter Web 的启动壳（里面必须有 `flutter_bootstrap.js`），**不是后台控制台**。
+> 后台在 `admin-web/`。运行 App 用 `flutter run -d chrome`，打开后台用 `admin-web/index.html`。
 
 ---
 
@@ -23,7 +26,7 @@ OPC（一人公司）场景的 AI 内容生产平台，由三部分组成：
 |---|---|
 | `docs/requirements-opc-admin.pdf` | **老师给的需求文档**：《OPC 文生图/图生视频 App 后台需求文档》 |
 | `_req_doc.txt` | 上面那份 PDF 的**全文文本提取版**（检索、引用用这个更方便） |
-| `web/` | **老师给的高保真原型**（7 个页面）。管理端 UI 以它为准，**不要自己重新设计** |
+| `admin-web/` | **老师给的高保真原型**（7 个页面）。管理端 UI 以它为准，**不要自己重新设计** |
 | `docs/api-admin.md` | **管理端接口契约（已冻结）**：12 个页面的接口 / 字段 / 错误码 / 枚举 |
 | `docs/admin-freeze.md` | **三项共用模型冻结** + 共享文件切分 + 开工检查清单 |
 | `docs/ADMIN_PLAN.md` | 现状盘点、开发顺序、两人分工 |
@@ -36,12 +39,12 @@ OPC（一人公司）场景的 AI 内容生产平台，由三部分组成：
 
 ## 三、当前任务
 
-把 `web/` 的后台原型**变成能用的后台**：页面结构、字段、交互照原型，数据接真库。
+把 `admin-web/` 的后台原型**变成能用的后台**：页面结构、字段、交互照原型，数据接真库。
 
 开发顺序（详见 `docs/ADMIN_PLAN.md`）：
 管理端地基 → 模型/API 配置 → 智能体工作台 → 调试面板 → MCP → 知识库/素材库 → 算力运营 → 对外网关 → App 收尾
 
-分工（已定稿）：**一人 `server/` 主体**（模型配置/工作台/调试/MCP/知识库/概览·算力·账单/网关），**另一人 `web/` + `lib/` + 3 个纯 CRUD 后端模块**（素材库后台/用户管理/系统设置 + `PromptController`）。文件归属见 `docs/admin-freeze.md` §4.1。
+分工（已定稿）：**一人 `server/` 主体**（模型配置/工作台/调试/MCP/知识库/概览·算力·账单/网关），**另一人 `admin-web/` + `lib/` + 3 个纯 CRUD 后端模块**（素材库后台/用户管理/系统设置 + `PromptController`）。文件归属见 `docs/admin-freeze.md` §4.1。
 
 ---
 
@@ -64,7 +67,7 @@ cd server
 # → 健康检查 http://localhost:8080/api/health
 # → 接口文档 http://localhost:8080/doc.html
 
-# 控制台原型：直接用浏览器打开 web/index.html（或用 VS Code 的 Live Server）
+# 控制台原型：直接用浏览器打开 admin-web/index.html（或用 VS Code 的 Live Server）
 
 # Flutter App
 flutter pub get

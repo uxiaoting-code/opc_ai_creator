@@ -1,7 +1,7 @@
 # OPC AI 后台 · 开发排期（5 周主线 + 3 天缓冲）
 
 > 定稿日期：2026-10-17
-> 分工：**后端线** = `server/` 主体；**前端线** = `web/` + `lib/` + 3 个纯 CRUD 后端模块
+> 分工：**后端线** = `server/` 主体；**前端线** = `admin-web/` + `lib/` + 3 个纯 CRUD 后端模块
 > 口径：每周 5 个工作日、每天 6~8 小时有效投入。
 > ⚠️ 如果实际是课余时间（每天 2~3 小时），整体时间 **×2~2.5**（约 10~12 周）。
 >
@@ -13,7 +13,7 @@
 
 | | 后端线（你） | 前端线（搭档） |
 |---|---|---|
-| 主目录 | `server/` 主体 | `web/` + `lib/` |
+| 主目录 | `server/` 主体 | `admin-web/` + `lib/` |
 | 外加 | — | `server/.../admin/{material,user,setting}` + `PromptController` |
 | 负责模块 | 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关 | 控制台 12 页 / App 收尾 / 素材库后台 / 用户管理 / 系统设置 |
 | 错误码段 | 6000-6499、6700-6799 | 6500-6599 |
@@ -73,19 +73,19 @@
 
 ### 前端线（搭档）
 
-- [ ] Day 1~2：**Flutter 组件第一批**（老师明确要求优先）
-  - [ ] 组件预览页 `lib/pages/dev/component_gallery_page.dart`
-  - [ ] `PromptInputCard` / `SkillSelector` / `SizePicker` / `ParamSliderRow`
-  - [ ] `GenerateBar` / `ResultPreviewCard` / `TaskStatusCard` / `CreditChip`
-  - [ ] 组件只依赖 `data/models`，**不 import** `api_client` / `repository` / `provider`
-  - [ ] 列出 `docs/COMPONENTS.md` 组件清单
-- [ ] Day 3~5：**Web P0**
-  - [ ] `web/js/api.js`（baseURL + Authorization + 统一错误 + `USE_MOCK` 开关）
-  - [ ] `web/js/util.js`（`formatCredits()` 等）
-  - [ ] 拆 `admin.js` → `web/js/pages/*.js`
-  - [ ] 登录页走 `api.js`（mock 模式可假登录）
-  - [ ] `web/mock/*.json`（字段照 `api-admin.md`）
-  - [ ] `index.html` 侧栏追加 5 个新页入口
+- [x] Day 1~2：**Flutter 组件第一批**（老师明确要求优先）
+  - [x] 组件预览页 `lib/pages/dev/component_gallery_page.dart`
+  - [x] `PromptInputCard` / `SkillSelector` / `SizePicker` / `ParamSliderRow`
+  - [x] `GenerateBar` / `ResultPreviewCard` / `TaskStatusCard` / `CreditChip`
+  - [x] 组件只依赖 `data/models`，**不 import** `api_client` / `repository` / `provider`
+  - [x] 列出 `docs/COMPONENTS.md` 组件清单
+- [x] Day 3~5：**Web P0**
+  - [x] `admin-web/js/api.js`（baseURL + Authorization + 统一错误 + `USE_MOCK` 开关）
+  - [x] `admin-web/js/util.js`（`formatCredits()` 等）
+  - [x] 拆 `admin.js` → `admin-web/js/pages/*.js`
+  - [x] 登录页走 `api.js`（mock 模式可假登录）
+  - [x] `admin-web/mock/*.json`（字段照 `api-admin.md`）
+  - [x] `index.html` 侧栏追加 5 个新页入口
 
 ### 同步点
 

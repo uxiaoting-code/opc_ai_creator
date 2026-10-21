@@ -12,14 +12,16 @@ class AppSpacing {
   static const double xl = 24;
   static const double xxl = 32;
 
-  /// 页面统一的水平内边距。
-  static const double pagePadding = 16;
+  /// 页面统一的水平内边距（原型是 20）。
+  static const double pagePadding = 20;
 
   // --- 圆角 ---
-  static const double radiusSm = 8;
-  static const double radiusMd = 12;
+  static const double radiusSm = 10;
+  static const double radiusMd = 14;
   static const double radiusLg = 16;
   static const double radiusXl = 24;
+  static const double radiusCard = 20;
+  static const double radiusHero = 24;
   static const double radiusPill = 999;
 
   // --- 组件尺寸 ---
@@ -30,7 +32,7 @@ class AppSpacing {
   static const double touchTargetMin = 48;
 
   /// 底部导航栏高度。
-  static const double bottomNavHeight = 64;
+  static const double bottomNavHeight = 72;
 
   /// 页面最大内容宽度：Web 宽屏时居中收窄成手机比例。
   static const double mobileMaxWidth = 480;
