@@ -73,7 +73,7 @@ class MainShell extends StatelessWidget {
             child: SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+                padding: const EdgeInsets.fromLTRB(6, 7, 6, 6),
                 child: Row(
                   children: [
                     for (var i = 0; i < _items.length; i++)
@@ -134,37 +134,33 @@ class _NavButton extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: SizedBox(
+          height: 54,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedContainer(
+              AnimatedScale(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: active ? AppColors.sageTint : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                ),
+                scale: active ? 1.06 : 1,
                 child: Icon(
                   active ? item.activeIcon : item.icon,
-                  size: 22,
+                  size: 21,
                   color: active ? AppColors.sage : inactive,
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                item.label,
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                   color: active ? AppColors.sage : inactive,
+                  height: 1.1,
                 ),
+                child: Text(item.label),
               ),
             ],
           ),

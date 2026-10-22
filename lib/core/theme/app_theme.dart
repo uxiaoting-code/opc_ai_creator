@@ -50,9 +50,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: isDark
-          ? AppColors.darkBackground
-          : AppColors.warmBackground,
+      // 页面背景由 MobileViewport 的暖色光晕层统一提供，Scaffold 保持透明，
+      // 这样所有页面都能共用同一套模板背景，而不必自己重复画渐变。
+      scaffoldBackgroundColor: Colors.transparent,
       textTheme: textTheme,
       // iOS 没有 Material 的放射状水波纹，用轻微的按压高亮代替。
       splashFactory: NoSplash.splashFactory,
@@ -64,10 +64,10 @@ class AppTheme {
         foregroundColor: textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
-        titleSpacing: AppSpacing.lg,
+        centerTitle: true,
+        titleSpacing: AppSpacing.pagePadding,
         titleTextStyle: textTheme.titleMedium?.copyWith(
-          fontSize: 20,
+          fontSize: 16,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.01,
         ),
@@ -106,7 +106,9 @@ class AppTheme {
         }),
       ),
       cardTheme: CardThemeData(
-        color: surface,
+        color: isDark
+            ? AppColors.darkSurface.withValues(alpha: 0.84)
+            : AppColors.glass,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -189,6 +191,12 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.charcoal,
         contentTextStyle: const TextStyle(color: Colors.white),
+        insetPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.pagePadding,
+          AppSpacing.md,
+          AppSpacing.pagePadding,
+          AppSpacing.md,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),

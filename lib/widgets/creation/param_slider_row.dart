@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
 
 /// 一行“标题 + 滑杆 + 数值”的参数控件。
 class ParamSliderRow extends StatelessWidget {

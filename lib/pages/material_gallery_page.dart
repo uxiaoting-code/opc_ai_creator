@@ -10,6 +10,8 @@ import '../core/utils/media_utils.dart';
 import '../data/models/material_model.dart';
 import '../data/repositories/material_repository.dart';
 import '../widgets/media/media_viewers.dart';
+import '../widgets/premium/dashed_upload_card.dart';
+import '../widgets/premium/premium_top_bar.dart';
 import '../widgets/state_views.dart';
 
 /// 素材库 / 素材选择页。
@@ -80,9 +82,10 @@ class _MaterialGalleryPageState extends State<MaterialGalleryPage> {
     });
 
     try {
-      final list = await context
-          .read<MaterialRepository>()
-          .fetchMyMaterials(page: 0, size: _pageSize);
+      final list = await context.read<MaterialRepository>().fetchMyMaterials(
+        page: 0,
+        size: _pageSize,
+      );
       if (!mounted) return;
       setState(() {
         _items = list;
@@ -130,9 +133,9 @@ class _MaterialGalleryPageState extends State<MaterialGalleryPage> {
       // Web 上 XFile.path 是 `blob:` 开头的临时地址，后端根本拿不到；
       // 只有字节流能同时兼容 Android 与 Web。
       await context.read<MaterialRepository>().uploadImage(
-            bytes: bytes,
-            filename: MediaUtils.fileNameOf(file, fallback: 'material.jpg'),
-          );
+        bytes: bytes,
+        filename: MediaUtils.fileNameOf(file, fallback: 'material.jpg'),
+      );
       if (!mounted) return;
       _showMessage('上传成功');
       await _load();
@@ -203,23 +206,26 @@ class _MaterialGalleryPageState extends State<MaterialGalleryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('我的素材库'),
+      appBar: premiumTopBar(
+        title: '我的素材库',
+        onBack: canPop ? () => Navigator.of(context).pop() : null,
         actions: [
-          IconButton(
-            tooltip: '上传素材',
-            onPressed: _uploading ? null : _upload,
-            icon: _uploading
+          PremiumCircleAction(
+            icon: _uploading ? null : Icons.add_a_photo_outlined,
+            content: _uploading
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.primary,
+                      color: AppColors.sage,
                     ),
                   )
-                : const Icon(Icons.add_a_photo_outlined),
+                : null,
+            tooltip: '上传素材',
+            onPressed: _uploading ? null : _upload,
           ),
         ],
       ),
@@ -241,41 +247,87 @@ class _MaterialGalleryPageState extends State<MaterialGalleryPage> {
 
     // ---- 3. 空数据（也要能下拉刷新，所以包一层可滚动）----
     if (_items.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _load,
-        color: AppColors.primary,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: EmptyView(
-                icon: Icons.photo_library_outlined,
-                title: '还没有素材',
-                description: '点右上角上传一张图片，创作时就能直接选用',
-                actionLabel: '上传素材',
-                onAction: _upload,
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.pagePadding),
+        child: DashedUploadCard(
+          height: 260,
+          onTap: _upload,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.add_photo_alternate_outlined,
+                size: 38,
+                color: AppColors.sage,
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                _uploading ? '正在上传素材…' : '上传第一张素材',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '上传后可以直接用作图生视频首帧',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
         ),
       );
     }
 
     // ---- 4. 网格渲染 ----
-    return RefreshIndicator(
-      onRefresh: _load,
-      color: AppColors.primary,
-      // StaggeredGrid.count 没有 padding 参数，边距只能包在外面
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.pagePadding),
-        child: StaggeredGrid.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: AppSpacing.sm,
-          crossAxisSpacing: AppSpacing.sm,
-          children: [for (final item in _items) _buildTile(item)],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.pagePadding,
+            AppSpacing.sm,
+            AppSpacing.pagePadding,
+            AppSpacing.sm,
+          ),
+          child: DashedUploadCard(
+            height: 92,
+            onTap: _upload,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.add_photo_alternate_outlined,
+                  color: AppColors.sage,
+                  size: 24,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  _uploading ? '正在上传…' : '继续上传素材',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _load,
+            color: AppColors.primary,
+            // StaggeredGrid.count 没有 padding 参数，边距只能包在外面
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.pagePadding,
+                0,
+                AppSpacing.pagePadding,
+                AppSpacing.pagePadding,
+              ),
+              child: StaggeredGrid.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: AppSpacing.sm,
+                crossAxisSpacing: AppSpacing.sm,
+                children: [for (final item in _items) _buildTile(item)],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -331,6 +383,19 @@ class _MaterialGalleryPageState extends State<MaterialGalleryPage> {
                 url: AppConfig.resolveAssetUrl(item.url),
                 fit: BoxFit.cover,
               ),
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.center,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0x99000000)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               Positioned(
                 right: 4,
                 top: 4,
@@ -339,9 +404,40 @@ class _MaterialGalleryPageState extends State<MaterialGalleryPage> {
                   child: const CircleAvatar(
                     radius: 14,
                     backgroundColor: Colors.black45,
-                    child: Icon(Icons.delete_outline,
-                        color: Colors.white, size: 16),
+                    child: Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
+                ),
+              ),
+              Positioned(
+                left: AppSpacing.sm,
+                right: AppSpacing.sm,
+                bottom: AppSpacing.sm,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (item.fileSize != null)
+                      Text(
+                        MediaUtils.formatFileSize(item.fileSize!),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 9,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],

@@ -26,9 +26,11 @@ class ResultPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isVideo = videoUrl != null && videoUrl!.isNotEmpty;
-    final url = isVideo ? videoUrl : imageUrl;
-    final hasUrl = url != null && url!.isNotEmpty;
+    final video = videoUrl;
+    final image = imageUrl;
+    final isVideo = video != null && video.isNotEmpty;
+    final url = isVideo ? video : image;
+    final hasUrl = url != null && url.isNotEmpty;
 
     return GestureDetector(
       onTap: onTap,
@@ -50,7 +52,7 @@ class ResultPreviewCard extends StatelessWidget {
                 children: [
                   if (hasUrl)
                     Image.network(
-                      url!,
+                      url,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => _placeholder(),
                     )

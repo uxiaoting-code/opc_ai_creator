@@ -14,6 +14,14 @@ import '../../data/models/skill_model.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/skill_provider.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/premium_choice_chip.dart';
+import '../../widgets/premium/premium_mode_switch.dart';
+import '../../widgets/premium/premium_select_sheet.dart';
+import '../../widgets/premium/premium_top_bar.dart';
+import '../../widgets/premium/pressable_scale.dart';
+
+enum _CreationMode { image, video }
 
 /// 页面 3：文生图创作页
 ///
@@ -175,7 +183,16 @@ class _TextToImagePageState extends State<TextToImagePage> {
     final enough = credits == null || credits >= _cost;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('文生图创作')),
+      appBar: premiumTopBar(
+        title: '文生图创作',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.homePath);
+          }
+        },
+      ),
       body: SafeArea(
         top: false,
         child: Column(
@@ -192,7 +209,24 @@ class _TextToImagePageState extends State<TextToImagePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildModeSwitch(),
+                    PremiumModeSwitch<_CreationMode>(
+                      value: _CreationMode.image,
+                      onChanged: (mode) {
+                        if (mode == _CreationMode.video) _switchToVideo();
+                      },
+                      options: const [
+                        PremiumModeOption(
+                          value: _CreationMode.image,
+                          label: '图片',
+                          icon: CupertinoIcons.photo,
+                        ),
+                        PremiumModeOption(
+                          value: _CreationMode.video,
+                          label: '视频',
+                          icon: CupertinoIcons.videocam,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     _buildPromptCard(),
                     const SizedBox(height: AppSpacing.lg),
@@ -222,94 +256,6 @@ class _TextToImagePageState extends State<TextToImagePage> {
     return null;
   }
 
-  // ---------------------------------------------------------------------------
-  // 模式切换：图片 / 视频
-  // ---------------------------------------------------------------------------
-
-  Widget _buildModeSwitch() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkBackground.withValues(alpha: 0.6)
-            : AppColors.sageTint.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      ),
-      child: Row(
-        children: [
-          _modePill(
-            theme,
-            isDark,
-            active: true,
-            icon: CupertinoIcons.photo,
-            label: '图片',
-          ),
-          _modePill(
-            theme,
-            isDark,
-            active: false,
-            icon: CupertinoIcons.videocam,
-            label: '视频',
-            onTap: _switchToVideo,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _modePill(
-    ThemeData theme,
-    bool isDark, {
-    required bool active,
-    required IconData icon,
-    required String label,
-    VoidCallback? onTap,
-  }) {
-    final child = AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: active
-            ? (isDark ? AppColors.darkSurface : Colors.white)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-        boxShadow: active ? AppColors.shadowSoft : null,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: active ? AppColors.sage : AppColors.taupe,
-          ),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: active ? AppColors.charcoal : AppColors.taupe,
-              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    return Expanded(
-      child: onTap == null
-          ? child
-          : InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-              child: child,
-            ),
-    );
-  }
-
   void _switchToVideo() {
     final query = <String, String>{};
     final prompt = _promptController.text.trim();
@@ -337,16 +283,10 @@ class _TextToImagePageState extends State<TextToImagePage> {
         ? AppColors.darkBorder
         : Colors.white.withValues(alpha: 0.72);
 
-    return Container(
+    return GlassPanel(
+      borderRadius: AppSpacing.radiusHero,
+      shadow: AppColors.shadowLift,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurface.withValues(alpha: 0.82)
-            : AppColors.glass,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
-        border: Border.all(color: borderColor),
-        boxShadow: AppColors.shadowLift,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -495,40 +435,13 @@ class _TextToImagePageState extends State<TextToImagePage> {
   }
 
   Widget _styleChip(String style, bool selected) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return InkWell(
+    return PremiumChoiceChip(
+      label: style,
+      selected: selected,
       onTap: () {
         HapticFeedback.selectionClick();
         setState(() => _selectedStyle = style);
       },
-      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.sageTint
-              : (isDark ? AppColors.darkSurface : AppColors.glass),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-          border: Border.all(
-            color: selected
-                ? AppColors.sage.withValues(alpha: 0.45)
-                : (isDark
-                      ? AppColors.darkBorder
-                      : Colors.white.withValues(alpha: 0.75)),
-          ),
-        ),
-        child: Text(
-          style,
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontSize: 12.5,
-            color: selected ? AppColors.sage : AppColors.taupe,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-      ),
     );
   }
 
@@ -634,10 +547,12 @@ class _TextToImagePageState extends State<TextToImagePage> {
     );
 
     if (onTap == null) return child;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      child: child,
+    return PressableScale(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        child: child,
+      ),
     );
   }
 
@@ -647,12 +562,22 @@ class _TextToImagePageState extends State<TextToImagePage> {
     required String current,
     required ValueChanged<String> onSelected,
   }) async {
-    final result = await showModalBottomSheet<String>(
+    final result = await showPremiumSelectSheet<String>(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) =>
-          _OptionSheet(title: title, options: options, current: current),
+      title: title,
+      subtitle: '选择后会更新本次生成参数',
+      selected: current,
+      options: [
+        for (final option in options)
+          PremiumSelectOption(
+            value: option,
+            title: option,
+            icon: option == current
+                ? Icons.check_circle_rounded
+                : Icons.circle_outlined,
+            highlighted: option == current,
+          ),
+      ],
     );
     if (result == null || !mounted) return;
     HapticFeedback.selectionClick();
@@ -700,19 +625,8 @@ class _TextToImagePageState extends State<TextToImagePage> {
   Widget _buildAdvancedSection() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurface.withValues(alpha: 0.82)
-            : AppColors.glass,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-        border: Border.all(
-          color: isDark
-              ? AppColors.darkBorder
-              : Colors.white.withValues(alpha: 0.72),
-        ),
-        boxShadow: AppColors.shadowSoft,
-      ),
+    return GlassPanel(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           InkWell(
@@ -818,74 +732,57 @@ class _TextToImagePageState extends State<TextToImagePage> {
             children: [
               Row(
                 children: [
-                  PopupMenuButton<int>(
-                    onSelected: (value) {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _selectedSkillId = value < 0 ? null : value;
-                      });
-                    },
-                    color: isDark
-                        ? AppColors.darkSurface
-                        : AppColors.lightSurface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    ),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem<int>(value: -1, child: Text('自动线路')),
-                      for (final skill in skills)
-                        PopupMenuItem<int>(
-                          value: skill.id,
-                          child: Text(
-                            skill.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                    child: Container(
-                      height: 34,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.darkBackground.withValues(alpha: 0.5)
-                            : Colors.white.withValues(alpha: 0.62),
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusPill,
-                        ),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : Colors.white.withValues(alpha: 0.9),
-                        ),
+                  PressableScale(
+                    child: InkWell(
+                      onTap: () => _openSkillPicker(skills),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusPill,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            CupertinoIcons.slider_horizontal_3,
-                            size: 14,
-                            color: AppColors.sage,
+                      child: Container(
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkBackground.withValues(alpha: 0.5)
+                              : Colors.white.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusPill,
                           ),
-                          const SizedBox(width: 5),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 150),
-                            child: Text(
-                              skillName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.textTheme.bodyLarge?.color,
-                                fontWeight: FontWeight.w600,
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.slider_horizontal_3,
+                              size: 14,
+                              color: AppColors.sage,
+                            ),
+                            const SizedBox(width: 5),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 150),
+                              child: Text(
+                                skillName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.textTheme.bodyLarge?.color,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            CupertinoIcons.chevron_down,
-                            size: 12,
-                            color: AppColors.taupe,
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 12,
+                              color: AppColors.taupe,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -961,6 +858,41 @@ class _TextToImagePageState extends State<TextToImagePage> {
         ),
       ),
     );
+  }
+
+  Future<void> _openSkillPicker(List<SkillModel> skills) async {
+    final result = await showPremiumSelectSheet<int>(
+      context: context,
+      title: '选择创作线路',
+      subtitle: '切换模型、采样参数和提示词模板',
+      selected: _selectedSkillId ?? -1,
+      options: [
+        const PremiumSelectOption(
+          value: -1,
+          title: '自动线路',
+          description: '使用后端默认模型与参数',
+          icon: CupertinoIcons.sparkles,
+        ),
+        for (final skill in skills)
+          PremiumSelectOption(
+            value: skill.id,
+            title: skill.name,
+            description: [
+              skill.modelName ?? '默认模型',
+              if (skill.steps != null) '${skill.steps} 步',
+              if (skill.width != null && skill.height != null)
+                '${skill.width}×${skill.height}',
+            ].join(' · '),
+            icon: CupertinoIcons.slider_horizontal_3,
+            badge: skill.id == _selectedSkillId ? '当前' : null,
+            trailing: skill.usageLabel,
+            highlighted: skill.id == _selectedSkillId,
+          ),
+      ],
+    );
+    if (result == null || !mounted) return;
+    HapticFeedback.selectionClick();
+    setState(() => _selectedSkillId = result < 0 ? null : result);
   }
 }
 
@@ -1041,90 +973,6 @@ class _SkillPreview extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _OptionSheet extends StatelessWidget {
-  const _OptionSheet({
-    required this.title,
-    required this.options,
-    required this.current,
-  });
-
-  final String title;
-  final List<String> options;
-  final String current;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.radiusHero),
-        ),
-        border: Border.all(
-          color: isDark
-              ? AppColors.darkBorder
-              : Colors.white.withValues(alpha: 0.8),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.pagePadding,
-        AppSpacing.sm,
-        AppSpacing.pagePadding,
-        AppSpacing.lg,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.taupe.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(title, style: theme.textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.sm),
-            for (final option in options)
-              InkWell(
-                onTap: () => Navigator.of(context).pop(option),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(option, style: theme.textTheme.bodyMedium),
-                      ),
-                      if (option == current)
-                        const Icon(
-                          CupertinoIcons.checkmark,
-                          size: 18,
-                          color: AppColors.sage,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }

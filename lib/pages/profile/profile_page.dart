@@ -10,6 +10,9 @@ import '../../core/theme/app_spacing.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/pressable_scale.dart';
+import '../../widgets/premium/premium_top_bar.dart';
 
 /// 页面 11：个人中心
 ///
@@ -111,7 +114,16 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = context.watch<AuthProvider>().user;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('个人中心')),
+      appBar: premiumTopBar(
+        title: '个人中心',
+        actions: [
+          PremiumCircleAction(
+            icon: CupertinoIcons.gear,
+            tooltip: '设置',
+            onPressed: () => context.push(RouteNames.settingsPath),
+          ),
+        ],
+      ),
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
@@ -290,40 +302,53 @@ class _ProfilePageState extends State<ProfilePage> {
 
   /// 功能入口。都指向底部导航的其它 Tab 或顶层路由。
   Widget _buildEntries() {
-    return _Card(
-      title: '我的',
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _EntryRow(
-            icon: CupertinoIcons.square_list,
-            title: '我的任务',
-            subtitle: '排队 / 生成中 / 成功 / 失败',
-            // 任务列表是底部 Tab 分支，跨分支跳转必须用 go
-            onTap: () => context.go(RouteNames.taskListPath),
-          ),
-          _EntryRow(
-            icon: CupertinoIcons.square_grid_2x2,
-            title: '我的作品',
-            subtitle: '画廊里的图片与视频',
-            onTap: () => context.go(RouteNames.galleryPath),
-          ),
-          _EntryRow(
-            icon: CupertinoIcons.photo,
-            title: '我的素材',
-            subtitle: '创作时用到的参考图',
-            onTap: () => context.go(RouteNames.materialsPath),
-          ),
-          _EntryRow(
-            icon: CupertinoIcons.gear,
-            title: '设置',
-            subtitle: '主题、环境信息',
-            // 设置是顶层路由，push 就能正常返回
-            onTap: () => context.push(RouteNames.settingsPath),
-            showDivider: false,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Text('快捷入口', style: Theme.of(context).textTheme.titleSmall),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: AppSpacing.md,
+          crossAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1.55,
+          children: [
+            _QuickEntryTile(
+              icon: CupertinoIcons.square_list,
+              title: '我的任务',
+              subtitle: '查看生成状态',
+              color: AppColors.sage,
+              onTap: () => context.go(RouteNames.taskListPath),
+            ),
+            _QuickEntryTile(
+              icon: CupertinoIcons.square_grid_2x2,
+              title: '我的作品',
+              subtitle: '图片与视频',
+              color: const Color(0xFF6E8B9A),
+              onTap: () => context.go(RouteNames.galleryPath),
+            ),
+            _QuickEntryTile(
+              icon: CupertinoIcons.photo,
+              title: '我的素材',
+              subtitle: '参考图素材',
+              color: const Color(0xFF8A7E9A),
+              onTap: () => context.go(RouteNames.materialsPath),
+            ),
+            _QuickEntryTile(
+              icon: CupertinoIcons.gear,
+              title: '设置',
+              subtitle: '主题与环境',
+              color: AppColors.gold,
+              onTap: () => context.push(RouteNames.settingsPath),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -349,51 +374,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
 /// 统一的白色信息卡。
 class _Card extends StatelessWidget {
-  const _Card({
-    required this.title,
-    required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.lg),
-  });
+  const _Card({required this.title, required this.child});
 
   final String title;
   final Widget child;
-  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurface.withValues(alpha: 0.82)
-            : AppColors.glass,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-        border: Border.all(
-          color: isDark
-              ? AppColors.darkBorder
-              : Colors.white.withValues(alpha: 0.7),
-        ),
-        boxShadow: AppColors.shadowSoft,
-      ),
+    return GlassPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            // padding 为 0 时标题需要自己补内边距，否则会贴着卡片边缘
-            padding: padding == EdgeInsets.zero
-                ? const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                  )
-                : EdgeInsets.zero,
-            child: Text(title, style: theme.textTheme.titleSmall),
-          ),
-          if (padding != EdgeInsets.zero) const SizedBox(height: AppSpacing.md),
+          Text(title, style: theme.textTheme.titleSmall),
+          const SizedBox(height: AppSpacing.md),
           child,
         ],
       ),
@@ -426,59 +420,63 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-/// 功能入口行。
-class _EntryRow extends StatelessWidget {
-  const _EntryRow({
+class _QuickEntryTile extends StatelessWidget {
+  const _QuickEntryTile({
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.color,
     required this.onTap,
-    this.showDivider = true,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final Color color;
   final VoidCallback onTap;
-  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
+    return PressableScale(
+      child: GlassPanel(
+        onTap: onTap,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Icon(icon, size: 20, color: color),
             ),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: AppColors.primary),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(child: Text(title, style: theme.textTheme.bodyLarge)),
-                Text(subtitle, style: theme.textTheme.bodySmall),
-                const SizedBox(width: AppSpacing.xs),
-                Icon(
-                  CupertinoIcons.chevron_right,
-                  size: 15,
-                  color: theme.textTheme.bodySmall?.color,
-                ),
-              ],
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (showDivider)
-            Divider(
-              height: 1,
-              thickness: 1,
-              indent: AppSpacing.lg,
-              endIndent: AppSpacing.lg,
-              color: theme.dividerTheme.color ?? AppColors.lightBorder,
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

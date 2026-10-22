@@ -10,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/platform_utils.dart';
 import '../../providers/theme_provider.dart';
+import '../../widgets/premium/glass_panel.dart';
 import '../../widgets/scaffold_page.dart';
 
 /// 页面 12：设置页
@@ -172,21 +173,7 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkSurface.withValues(alpha: 0.82)
-            : AppColors.glass,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-        border: Border.all(
-          color: isDark
-              ? AppColors.darkBorder
-              : Colors.white.withValues(alpha: 0.7),
-        ),
-        boxShadow: AppColors.shadowSoft,
-      ),
+    return GlassPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

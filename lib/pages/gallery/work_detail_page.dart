@@ -15,6 +15,8 @@ import '../../core/utils/time_utils.dart';
 import '../../data/models/work_model.dart';
 import '../../providers/work_provider.dart';
 import '../../widgets/media/media_viewers.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/premium_top_bar.dart';
 import '../../widgets/state_views.dart';
 
 /// 页面 10：作品详情页
@@ -177,30 +179,18 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
     final work = provider.findById(_workId) ?? _fetched;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: '返回画廊',
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: _goBack,
-        ),
-        title: Text(
-          work?.displayTitle ?? '作品详情',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+      appBar: premiumTopBar(
+        title: work?.displayTitle ?? '作品详情',
+        onBack: _goBack,
         actions: [
-          // 复制分享链接
-          IconButton(
+          PremiumCircleAction(
+            icon: Icons.link_rounded,
             tooltip: '复制链接',
-            icon: const Icon(Icons.link_rounded),
             onPressed: work == null ? null : _copyLink,
           ),
         ],
       ),
-      body: SafeArea(
-        bottom: false,
-        child: _buildBody(work),
-      ),
+      body: SafeArea(bottom: false, child: _buildBody(work)),
     );
   }
 
@@ -321,8 +311,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
             _KvRow(label: '视频时长', value: work.durationLabel!),
           if (size != null) _KvRow(label: '尺寸', value: size),
           _KvRow(label: '创建时间', value: createdAt.isEmpty ? '—' : createdAt),
-          if (work.isPublic)
-            _KvRow(label: '可见性', value: '已发布到公开画廊'),
+          if (work.isPublic) _KvRow(label: '可见性', value: '已发布到公开画廊'),
           const SizedBox(height: AppSpacing.sm),
           Text(
             work.isVideo ? '长按画面可全屏播放' : '双指缩放 / 滚轮可放大查看细节',
@@ -424,7 +413,9 @@ class _WorkVideoPlayerState extends State<_WorkVideoPlayer> {
     }
 
     try {
-      final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
+      );
       _videoController = controller;
 
       await controller.initialize();
@@ -484,10 +475,7 @@ class _WorkVideoPlayerState extends State<_WorkVideoPlayer> {
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
-      return _MediaMessage(
-        icon: Icons.videocam_off_outlined,
-        message: _error!,
-      );
+      return _MediaMessage(icon: Icons.videocam_off_outlined, message: _error!);
     }
 
     if (_initializing) {
@@ -541,11 +529,7 @@ class _MediaMessage extends StatelessWidget {
 
 /// 详情页统一的白色信息卡。
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
+  const _InfoCard({required this.title, required this.child, this.trailing});
 
   final String title;
   final Widget child;
@@ -557,15 +541,9 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
+    return GlassPanel(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
-        ),
-      ),
+      borderRadius: AppSpacing.radiusLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

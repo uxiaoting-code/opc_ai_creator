@@ -7,13 +7,21 @@ import 'package:provider/provider.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/network/api_exception.dart';
 import '../../data/models/skill_model.dart';
+import '../../data/models/task_model.dart';
 import '../../data/models/work_model.dart';
+import '../../data/repositories/task_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/skill_provider.dart';
 import '../../providers/work_provider.dart';
 import '../../widgets/cover_image.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/pressable_scale.dart';
+import '../../widgets/premium/premium_mode_switch.dart';
+import '../../widgets/premium/premium_choice_chip.dart';
+import '../../widgets/premium/premium_select_sheet.dart';
 import '../../widgets/section_header.dart';
 import 'widgets/creation_entry_card.dart';
 import 'widgets/feature_entry_card.dart';
@@ -53,9 +61,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  late final TaskRepository _taskRepository;
+  TaskModel? _activeTask;
+
   @override
   void initState() {
     super.initState();
+    _taskRepository = context.read<TaskRepository>();
     // 放到首帧之后再加载：
     // Provider 的 load() 内部会 notifyListeners()，
     // 如果在 initState 里同步触发，会在 build 期间标记依赖组件为脏，直接报错。
@@ -73,6 +85,7 @@ class _HomePageState extends State<HomePage> {
       context.read<SkillProvider>().loadIfNeeded(),
       context.read<WorkProvider>().loadIfNeeded(),
       context.read<NotificationProvider>().loadIfNeeded(),
+      _loadActiveTask(),
     ]);
   }
 
@@ -83,7 +96,21 @@ class _HomePageState extends State<HomePage> {
       context.read<SkillProvider>().refresh(),
       context.read<WorkProvider>().refresh(),
       context.read<NotificationProvider>().refresh(),
+      _loadActiveTask(),
     ]);
+  }
+
+  Future<void> _loadActiveTask() async {
+    try {
+      final page = await _taskRepository.fetchTasks(page: 1, pageSize: 20);
+      final active = page.list.where((task) => !task.finished).firstOrNull;
+      if (!mounted) return;
+      setState(() => _activeTask = active);
+    } on ApiException {
+      // 首页不应该因为任务提示条加载失败而打断创作入口。
+    } catch (_) {
+      // 同上，任务条是增强信息，失败时静默隐藏。
+    }
   }
 
   @override
@@ -121,6 +148,16 @@ class _HomePageState extends State<HomePage> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
                   children: [
+                    _buildQuickAccessSection(),
+                    if (_activeTask != null) ...[
+                      _ActiveTaskStrip(
+                        task: _activeTask!,
+                        onTap: () => context.go(
+                          RouteNames.taskDetailOf(_activeTask!.id),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     // ===== 原型首页的核心：灵感输入 + 模式切换 =====
                     _QuickCreateCard(
                       textToImageSkills: skills.textToImageSkills,
@@ -149,6 +186,52 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessSection() {
+    final entries = [
+      _QuickAccessEntry(
+        label: '文生图',
+        icon: CupertinoIcons.sparkles,
+        color: AppColors.sage,
+        onTap: () => context.push(RouteNames.textToImagePath),
+      ),
+      _QuickAccessEntry(
+        label: '图生视频',
+        icon: CupertinoIcons.videocam_fill,
+        color: AppColors.gold,
+        onTap: () => context.push(RouteNames.imageToVideoPath),
+      ),
+      _QuickAccessEntry(
+        label: '我的作品',
+        icon: CupertinoIcons.square_grid_2x2_fill,
+        color: const Color(0xFF6E8B9A),
+        onTap: () => context.go(RouteNames.galleryPath),
+      ),
+      _QuickAccessEntry(
+        label: '我的素材',
+        icon: CupertinoIcons.photo_fill_on_rectangle_fill,
+        color: const Color(0xFF8A7E9A),
+        onTap: () => context.go(RouteNames.materialsPath),
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.pagePadding,
+        AppSpacing.sm,
+        AppSpacing.pagePadding,
+        0,
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < entries.length; i++) ...[
+            Expanded(child: _QuickAccessTile(entry: entries[i])),
+            if (i != entries.length - 1) const SizedBox(width: AppSpacing.sm),
+          ],
+        ],
       ),
     );
   }
@@ -493,6 +576,14 @@ class _QuickCreateCardState extends State<_QuickCreateCard> {
   final TextEditingController _promptController = TextEditingController();
   _QuickMode _mode = _QuickMode.textToImage;
   int? _skillId;
+  int _inspirationIndex = 0;
+
+  static const List<String> _inspirations = [
+    '白色背景商品主图，柔和棚拍光，高级质感',
+    '雨夜霓虹街道，湿润路面倒影，电影感光效',
+    '国风水墨山水，留白构图，淡雅配色',
+    '镜头缓慢推进，暖光流动，细节清晰',
+  ];
 
   List<SkillModel> get _skills => _mode == _QuickMode.textToImage
       ? widget.textToImageSkills
@@ -535,6 +626,21 @@ class _QuickCreateCardState extends State<_QuickCreateCard> {
     widget.onGenerate(
       _QuickCreateRequest(mode: _mode, prompt: prompt, skillId: _skillId),
     );
+  }
+
+  void _fillInspiration() {
+    final inspiration = _inspirations[_inspirationIndex % _inspirations.length];
+    _inspirationIndex++;
+    _promptController.text = inspiration;
+    _promptController.selection = TextSelection.collapsed(
+      offset: inspiration.length,
+    );
+    setState(() {});
+  }
+
+  void _clearPrompt() {
+    _promptController.clear();
+    setState(() {});
   }
 
   @override
@@ -587,7 +693,22 @@ class _QuickCreateCardState extends State<_QuickCreateCard> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          _buildModeSwitch(theme, isDark),
+          PremiumModeSwitch<_QuickMode>(
+            value: _mode,
+            onChanged: _switchMode,
+            options: const [
+              PremiumModeOption(
+                value: _QuickMode.textToImage,
+                label: '文生图',
+                icon: CupertinoIcons.sparkles,
+              ),
+              PremiumModeOption(
+                value: _QuickMode.imageToVideo,
+                label: '图生视频',
+                icon: CupertinoIcons.videocam,
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           Container(
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -619,68 +740,91 @@ class _QuickCreateCardState extends State<_QuickCreateCard> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildSkillPicker(theme, isDark),
-                const SizedBox(width: AppSpacing.sm),
-                _pillContainer(
-                  theme,
-                  isDark,
-                  icon: Icons.aspect_ratio_rounded,
-                  label: '尺寸',
-                  value: '默认',
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                _pillContainer(
-                  theme,
-                  isDark,
-                  icon: _mode == _QuickMode.textToImage
-                      ? Icons.crop_original_rounded
-                      : Icons.timelapse_rounded,
-                  label: _mode == _QuickMode.textToImage ? '数量' : '时长',
-                  value: _mode == _QuickMode.textToImage ? '1 张' : '默认',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            height: AppSpacing.buttonHeight,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: insufficient
-                    ? const LinearGradient(
-                        colors: [Color(0xFFBDB5AA), Color(0xFFA79E92)],
-                      )
-                    : AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                boxShadow: insufficient ? null : AppColors.shadowButton,
+          Row(
+            children: [
+              _promptAction(
+                icon: CupertinoIcons.lightbulb,
+                label: '灵感示例',
+                onTap: _fillInspiration,
               ),
-              child: FilledButton(
-                onPressed: _generate,
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                  ),
-                ),
+              const SizedBox(width: AppSpacing.sm),
+              _promptAction(
+                icon: CupertinoIcons.arrow_counterclockwise,
+                label: '清空',
+                onTap: _clearPrompt,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              _buildSkillPicker(theme, isDark),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Icon(CupertinoIcons.sparkles, size: 18),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      _mode == _QuickMode.textToImage ? '开始生成图片' : '开始生成视频',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    const Icon(
+                      CupertinoIcons.slider_horizontal_3,
+                      size: 13,
+                      color: AppColors.taupe,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: Text(
+                        _mode == _QuickMode.textToImage
+                            ? '比例 / 清晰度下一步设置'
+                            : '首帧 / 运镜下一步设置',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall,
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          PressableScale(
+            child: SizedBox(
+              height: AppSpacing.buttonHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: insufficient
+                      ? const LinearGradient(
+                          colors: [Color(0xFFBDB5AA), Color(0xFFA79E92)],
+                        )
+                      : AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                  boxShadow: insufficient ? null : AppColors.shadowButton,
+                ),
+                child: FilledButton(
+                  onPressed: _generate,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusPill,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(CupertinoIcons.sparkles, size: 18),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        _mode == _QuickMode.textToImage ? '开始生成图片' : '开始生成视频',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -701,108 +845,69 @@ class _QuickCreateCardState extends State<_QuickCreateCard> {
     );
   }
 
-  Widget _buildModeSwitch(ThemeData theme, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkBackground.withValues(alpha: 0.6)
-            : AppColors.sageTint.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      ),
-      child: Row(
-        children: [
-          _modePill(
-            theme,
-            isDark,
-            _QuickMode.textToImage,
-            '文生图',
-            CupertinoIcons.sparkles,
-          ),
-          _modePill(
-            theme,
-            isDark,
-            _QuickMode.imageToVideo,
-            '图生视频',
-            CupertinoIcons.videocam,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _modePill(
-    ThemeData theme,
-    bool isDark,
-    _QuickMode mode,
-    String label,
-    IconData icon,
-  ) {
-    final active = _mode == mode;
-    return Expanded(
-      child: InkWell(
-        onTap: () => _switchMode(mode),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: active
-                ? (isDark ? AppColors.darkSurface : Colors.white)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-            boxShadow: active ? AppColors.shadowSoft : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: active ? AppColors.sage : AppColors.taupe,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: active ? AppColors.charcoal : AppColors.taupe,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  Widget _promptAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return PremiumChoiceChip(
+      label: label,
+      selected: false,
+      icon: icon,
+      compact: true,
+      onTap: onTap,
     );
   }
 
   Widget _buildSkillPicker(ThemeData theme, bool isDark) {
     final label = _selectedSkill?.name ?? '自动线路';
-    return PopupMenuButton<int>(
-      onSelected: (value) =>
-          setState(() => _skillId = value < 0 ? null : value),
-      color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      ),
-      itemBuilder: (context) => [
-        const PopupMenuItem<int>(value: -1, child: Text('自动线路')),
-        for (final skill in _skills)
-          PopupMenuItem<int>(
-            value: skill.id,
-            child: Text(skill.name, overflow: TextOverflow.ellipsis),
-          ),
-      ],
-      child: _pillContainer(
-        theme,
-        isDark,
-        icon: CupertinoIcons.slider_horizontal_3,
-        label: '线路',
-        value: label,
-        showCaret: true,
+    return PressableScale(
+      child: InkWell(
+        onTap: _openSkillPicker,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        child: _pillContainer(
+          theme,
+          isDark,
+          icon: CupertinoIcons.slider_horizontal_3,
+          label: '线路',
+          value: label,
+          showCaret: true,
+        ),
       ),
     );
+  }
+
+  Future<void> _openSkillPicker() async {
+    final result = await showPremiumSelectSheet<int>(
+      context: context,
+      title: '选择创作线路',
+      subtitle: '线路会决定模型和生成参数',
+      selected: _skillId ?? -1,
+      options: [
+        const PremiumSelectOption(
+          value: -1,
+          title: '自动线路',
+          description: '由后端使用默认线路和参数',
+          icon: CupertinoIcons.sparkles,
+        ),
+        for (final skill in _skills)
+          PremiumSelectOption(
+            value: skill.id,
+            title: skill.name,
+            description: [
+              skill.modelName ?? '默认模型',
+              if (skill.description != null) skill.description!,
+            ].join(' · '),
+            icon: skill.type == SkillType.textToImage
+                ? CupertinoIcons.photo
+                : CupertinoIcons.videocam,
+            trailing: skill.usageLabel,
+            highlighted: skill.id == _skillId,
+          ),
+      ],
+    );
+    if (result == null || !mounted) return;
+    setState(() => _skillId = result < 0 ? null : result);
   }
 
   Widget _pillContainer(
@@ -955,6 +1060,155 @@ class _SceneCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickAccessEntry {
+  const _QuickAccessEntry({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+}
+
+class _QuickAccessTile extends StatelessWidget {
+  const _QuickAccessTile({required this.entry});
+
+  final _QuickAccessEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PressableScale(
+      child: GlassPanel(
+        onTap: entry.onTap,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.md,
+        ),
+        borderRadius: AppSpacing.radiusLg,
+        child: Column(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: entry.color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Icon(entry.icon, size: 20, color: entry.color),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              entry.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.textTheme.bodyLarge?.color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveTaskStrip extends StatelessWidget {
+  const _ActiveTaskStrip({required this.task, required this.onTap});
+
+  final TaskModel task;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = task.status == TaskStatus.failed
+        ? AppColors.statusFailed
+        : task.status == TaskStatus.running
+        ? AppColors.gold
+        : AppColors.sage;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pagePadding),
+      child: PressableScale(
+        child: GlassPanel(
+          onTap: onTap,
+          borderRadius: AppSpacing.radiusLg,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${task.statusLabel ?? task.status.label} · ${task.typeLabel ?? task.type.label}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      (task.prompt == null || task.prompt!.isEmpty)
+                          ? '任务 ${task.taskNo}'
+                          : task.prompt!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (task.status == TaskStatus.running) ...[
+                Text(
+                  '${task.progress}%',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
+              const Icon(
+                CupertinoIcons.chevron_right,
+                size: 14,
+                color: AppColors.taupe,
+              ),
+            ],
           ),
         ),
       ),

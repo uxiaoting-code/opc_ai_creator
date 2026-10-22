@@ -162,6 +162,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--teal);}
 .tbl tbody tr:last-child td{border-bottom:none;}
 .tbl td strong{color:var(--text);font-weight:600;}
 .tbl td em{font-style:normal;}
+.tbl .empty-cell{padding:30px 14px;text-align:center;color:var(--muted);}
 .tbl.mini thead th{padding:9px 12px;}
 .tbl.mini tbody td{padding:10px 12px;}
 .num{font-variant-numeric:tabular-nums;font-weight:700;}

@@ -9,6 +9,9 @@ import '../../core/theme/app_spacing.dart';
 import '../../data/models/work_model.dart';
 import '../../providers/work_provider.dart';
 import '../../widgets/cover_image.dart';
+import '../../widgets/premium/premium_choice_chip.dart';
+import '../../widgets/premium/premium_top_bar.dart';
+import '../../widgets/premium/pressable_scale.dart';
 import '../../widgets/state_views.dart';
 
 /// 画廊筛选维度。
@@ -226,22 +229,23 @@ class _GalleryPageState extends State<GalleryPage> {
     final visible = _visibleWorksOf(provider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('作品画廊'),
+      appBar: premiumTopBar(
+        title: '作品画廊',
         actions: [
-          IconButton(
-            tooltip: '刷新',
-            onPressed: provider.isLoading ? null : _refresh,
-            icon: provider.isLoading
+          PremiumCircleAction(
+            icon: provider.isLoading ? null : Icons.refresh_rounded,
+            content: provider.isLoading
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.primary,
+                      color: AppColors.sage,
                     ),
                   )
-                : const Icon(Icons.refresh_rounded),
+                : null,
+            tooltip: '刷新',
+            onPressed: provider.isLoading ? null : _refresh,
           ),
         ],
       ),
@@ -285,35 +289,37 @@ class _GalleryPageState extends State<GalleryPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 用 Wrap 而不是 Row：芯片在窄屏上会自动折行。
-          // （Row 会给子组件无限宽约束，含内部 Flexible 的控件会直接报错）
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              for (final filter in WorkFilter.values)
-                ChoiceChip(
-                  label: Text(filter.label),
-                  selected: _filter == filter,
-                  onSelected: (_) => _changeFilter(filter),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var i = 0; i < WorkFilter.values.length; i++) ...[
+                  PremiumChoiceChip(
+                    label: WorkFilter.values[i].label,
+                    selected: _filter == WorkFilter.values[i],
+                    onTap: () => _changeFilter(WorkFilter.values[i]),
+                  ),
+                  if (i != WorkFilter.values.length - 1)
+                    const SizedBox(width: AppSpacing.sm),
+                ],
+                Container(
+                  width: 1,
+                  height: 20,
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  color: theme.dividerTheme.color ?? AppColors.lightBorder,
                 ),
-
-              // 筛选与排序之间的分隔线，避免两组芯片被看成一类
-              Container(
-                width: 1,
-                height: 20,
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                color: theme.dividerTheme.color ?? AppColors.lightBorder,
-              ),
-
-              for (final sort in WorkSort.values)
-                ChoiceChip(
-                  label: Text(sort.label),
-                  selected: _sort == sort,
-                  onSelected: (_) => _changeSort(sort),
-                ),
-            ],
+                for (var i = 0; i < WorkSort.values.length; i++) ...[
+                  PremiumChoiceChip(
+                    label: WorkSort.values[i].label,
+                    selected: _sort == WorkSort.values[i],
+                    onTap: () => _changeSort(WorkSort.values[i]),
+                    compact: true,
+                  ),
+                  if (i != WorkSort.values.length - 1)
+                    const SizedBox(width: AppSpacing.sm),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
@@ -474,88 +480,96 @@ class _WorkCard extends StatelessWidget {
         ? work.coverUrl
         : work.resourceUrl;
 
-    return Material(
-      color: theme.cardTheme.color,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: _aspectRatioOf(work),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CoverImage(
-                    seed: 'work_${work.id}',
-                    url: cover,
-                    icon: work.isVideo
-                        ? Icons.movie_outlined
-                        : Icons.image_outlined,
-                  ),
+    return PressableScale(
+      child: Material(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: _aspectRatioOf(work),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CoverImage(
+                      seed: 'work_${work.id}',
+                      url: cover,
+                      icon: work.isVideo
+                          ? Icons.movie_outlined
+                          : Icons.image_outlined,
+                    ),
 
-                  // 底部渐变压暗，保证角标文字在任何封面上都看得清
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.center,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.6),
-                        ],
+                    // 底部渐变压暗，保证角标文字在任何封面上都看得清
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.center,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.6),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  // 右上角：视频时长
-                  if (work.isVideo && work.durationLabel != null)
+                    // 右上角：视频时长
+                    if (work.isVideo && work.durationLabel != null)
+                      Positioned(
+                        right: AppSpacing.sm,
+                        top: AppSpacing.sm,
+                        child: _Pill(text: work.durationLabel!),
+                      ),
+
                     Positioned(
-                      right: AppSpacing.sm,
+                      left: AppSpacing.sm,
                       top: AppSpacing.sm,
-                      child: _Pill(text: work.durationLabel!),
+                      child: _Pill(text: work.isVideo ? '视频' : '图片'),
                     ),
 
-                  // 视频中央播放角标
-                  if (work.isVideo)
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.black.withValues(alpha: 0.42),
+                    // 视频中央播放角标
+                    if (work.isVideo)
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withValues(alpha: 0.42),
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
+                      ),
+
+                    // 左下角：标题
+                    Positioned(
+                      left: AppSpacing.sm,
+                      right: AppSpacing.sm,
+                      bottom: AppSpacing.sm,
+                      child: Text(
+                        work.displayTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
                           color: Colors.white,
-                          size: 26,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-
-                  // 左下角：标题
-                  Positioned(
-                    left: AppSpacing.sm,
-                    right: AppSpacing.sm,
-                    bottom: AppSpacing.sm,
-                    child: Text(
-                      work.displayTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

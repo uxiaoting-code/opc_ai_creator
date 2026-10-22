@@ -12,7 +12,10 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/time_utils.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/task_repository.dart';
-import '../../widgets/cover_image.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/premium_choice_chip.dart';
+import '../../widgets/premium/premium_top_bar.dart';
+import '../../widgets/premium/pressable_scale.dart';
 import '../../widgets/state_views.dart';
 
 /// 页面 5：我的任务列表页（Harness 任务状态）
@@ -327,22 +330,23 @@ class _TaskListPageState extends State<TaskListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('我的任务'),
+      appBar: premiumTopBar(
+        title: '我的任务',
         actions: [
-          IconButton(
-            tooltip: '刷新',
-            onPressed: _loading ? null : _loadFirstPage,
-            icon: _loading
+          PremiumCircleAction(
+            icon: _loading ? null : Icons.refresh_rounded,
+            content: _loading
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.primary,
+                      color: AppColors.sage,
                     ),
                   )
-                : const Icon(Icons.refresh_rounded),
+                : null,
+            tooltip: '刷新',
+            onPressed: _loading ? null : _loadFirstPage,
           ),
         ],
       ),
@@ -372,18 +376,21 @@ class _TaskListPageState extends State<TaskListPage> {
         AppSpacing.pagePadding,
         AppSpacing.sm,
       ),
-      // 用 Wrap 而不是 Row：芯片在窄屏上会自动折行
-      child: Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.xs,
-        children: [
-          for (final filter in _filters)
-            ChoiceChip(
-              label: Text(filter?.label ?? '全部'),
-              selected: _status == filter,
-              onSelected: (_) => _changeFilter(filter),
-            ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var i = 0; i < _filters.length; i++) ...[
+              PremiumChoiceChip(
+                label: _filters[i]?.label ?? '全部',
+                selected: _status == _filters[i],
+                onTap: () => _changeFilter(_filters[i]),
+              ),
+              if (i != _filters.length - 1)
+                const SizedBox(width: AppSpacing.sm),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -521,157 +528,190 @@ class _TaskCard extends StatelessWidget {
     final theme = Theme.of(context);
     final color = _statusColor(task.status);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return PressableScale(
+      child: GlassPanel(
+        onTap: onTap,
+        borderRadius: AppSpacing.radiusLg,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 缩略图：成功后是结果图，没出结果时是渐变占位
-                    SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: CoverImage(
-                        seed: 'task_${task.id}',
-                        url: _thumbUrlOf(task),
-                        icon: task.type.isVideo
-                            ? Icons.movie_outlined
-                            : Icons.image_outlined,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 提示词是后端拼过线路模板的最终提示词，取首段当标题
-                          Text(
-                            _titleOf(task),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyLarge,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            [
-                              task.typeLabel ?? task.type.label,
-                              if (task.skillName != null) task.skillName!,
-                              TimeUtils.relative(task.createdAt),
-                            ].join(' · '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    StatusChip(label: task.displayStatusLabel, color: color),
-                  ],
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Icon(
+                    task.type.isVideo
+                        ? Icons.movie_outlined
+                        : Icons.image_outlined,
+                    color: color,
+                    size: 21,
+                  ),
                 ),
-
-                // 生成中：进度条 + 百分比
-                if (task.status == TaskStatus.running) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                    child: LinearProgressIndicator(
-                      value: task.progressRatio,
-                      minHeight: 5,
-                      backgroundColor: color.withValues(alpha: 0.15),
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${task.progress}%', style: theme.textTheme.bodySmall),
-                      const Spacer(),
-                      if (task.durationLabel != null)
-                        Text('已耗时 ${task.durationLabel}',
-                            style: theme.textTheme.bodySmall),
+                      Text(
+                        task.skillName ?? task.typeLabel ?? task.type.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '任务 ${task.taskNo}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall,
+                      ),
                     ],
                   ),
-                ],
-
-                // 失败原因：直接展示后端给的 errorMsg
-                if (task.status == TaskStatus.failed &&
-                    task.errorMsg != null &&
-                    task.errorMsg!.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    task.errorMsg!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.statusFailed,
-                    ),
-                  ),
-                ],
-
-                // 可重试 / 可取消时才出现操作区。
-                // 判据用后端给的 canRetry / canCancel ——
-                // 状态机规则只有后端一份，前端不要自己再算一遍。
-                if (onRetry != null || onCancel != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  // 用 Wrap 而不是 Row：按钮含内部 Flexible，
-                  // 在 Row 里会拿到无限宽约束而报错
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.xs,
-                    children: [
-                      if (onCancel != null)
-                        TextButton(
-                          onPressed: busy ? null : onCancel,
-                          child: const Text('取消任务'),
-                        ),
-                      if (onRetry != null)
-                        FilledButton.tonal(
-                          onPressed: busy ? null : onRetry,
-                          child: const Text('重新生成'),
-                        ),
-                    ],
-                  ),
-                ],
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                StatusChip(label: task.displayStatusLabel, color: color),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              _descriptionOf(task),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: [
+                _TaskMetaTag(
+                  icon: task.type.isVideo
+                      ? Icons.videocam_outlined
+                      : Icons.photo_outlined,
+                  label: task.typeLabel ?? task.type.label,
+                ),
+                _TaskMetaTag(
+                  icon: Icons.schedule_rounded,
+                  label: TimeUtils.relative(task.createdAt),
+                ),
+              ],
+            ),
+
+            // 生成中：进度条 + 百分比
+            if (task.status == TaskStatus.running) ...[
+              const SizedBox(height: AppSpacing.md),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                child: LinearProgressIndicator(
+                  value: task.progressRatio,
+                  minHeight: 5,
+                  backgroundColor: color.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Text('${task.progress}%', style: theme.textTheme.bodySmall),
+                  const Spacer(),
+                  if (task.durationLabel != null)
+                    Text(
+                      '已耗时 ${task.durationLabel}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ],
+
+            // 失败原因：直接展示后端给的 errorMsg
+            if (task.status == TaskStatus.failed &&
+                task.errorMsg != null &&
+                task.errorMsg!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                task.errorMsg!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.statusFailed,
+                ),
+              ),
+            ],
+
+            // 可重试 / 可取消时才出现操作区。
+            // 判据用后端给的 canRetry / canCancel ——
+            // 状态机规则只有后端一份，前端不要自己再算一遍。
+            if (onRetry != null || onCancel != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              // 用 Wrap 而不是 Row：按钮含内部 Flexible，
+              // 在 Row 里会拿到无限宽约束而报错
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  if (onCancel != null)
+                    TextButton(
+                      onPressed: busy ? null : onCancel,
+                      child: const Text('取消任务'),
+                    ),
+                  if (onRetry != null)
+                    FilledButton.tonal(
+                      onPressed: busy ? null : onRetry,
+                      child: const Text('重新生成'),
+                    ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  /// 缩略图地址。后端给的是 `/upload/xxx.png` 相对路径，要拼成绝对地址。
-  static String? _thumbUrlOf(TaskModel task) {
-    final raw = task.displayImageUrl;
-    if (raw == null || raw.isEmpty) return null;
-    return AppConfig.resolveAssetUrl(raw);
-  }
-
-  /// 卡片标题：取提示词首段。后端已经把线路模板拼进 prompt 了，
-  /// 所以这里展示的就是最终送去生成的那句话。
-  static String _titleOf(TaskModel task) {
+  /// 卡片摘要：后端已经把线路模板拼进 prompt，这里直接展示最终提示词。
+  static String _descriptionOf(TaskModel task) {
     final prompt = task.prompt;
-    if (prompt == null || prompt.isEmpty) return '未命名任务';
-    final trimmed = prompt.trim();
-    return trimmed.length > 24 ? '${trimmed.substring(0, 24)}…' : trimmed;
+    if (prompt == null || prompt.trim().isEmpty) return '暂无提示词记录';
+    return prompt.trim();
+  }
+}
+
+class _TaskMetaTag extends StatelessWidget {
+  const _TaskMetaTag({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.glass,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppColors.taupe),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: AppColors.taupe),
+          ),
+        ],
+      ),
+    );
   }
 }
 

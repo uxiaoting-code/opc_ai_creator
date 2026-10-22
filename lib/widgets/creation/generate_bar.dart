@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../premium/pressable_scale.dart';
 
 /// 底部固定生成栏：算力消耗 + 渐变主按钮。
 ///
@@ -14,6 +15,7 @@ class GenerateBar extends StatelessWidget {
     required this.onGenerate,
     this.credits,
     this.submitting = false,
+    this.submittingLabel = '正在提交…',
     this.label = '开始生成',
     this.hint,
     this.leading,
@@ -22,6 +24,7 @@ class GenerateBar extends StatelessWidget {
   final int creditCost;
   final int? credits;
   final bool submitting;
+  final String submittingLabel;
   final String label;
   final VoidCallback? onGenerate;
   final String? hint;
@@ -32,6 +35,7 @@ class GenerateBar extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final enough = credits == null || credits! >= creditCost;
+    final hintText = hint;
 
     return Container(
       decoration: BoxDecoration(
@@ -61,7 +65,7 @@ class GenerateBar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  if (leading != null) leading!,
+                  ?leading,
                   const Spacer(),
                   Text(
                     '预计消耗 $creditCost 算力',
@@ -70,65 +74,71 @@ class GenerateBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              SizedBox(
-                height: AppSpacing.buttonHeight,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: enough
-                        ? AppColors.primaryGradient
-                        : const LinearGradient(
-                            colors: [Color(0xFFBDB5AA), Color(0xFFA79E92)],
+              PressableScale(
+                child: SizedBox(
+                  height: AppSpacing.buttonHeight,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: enough
+                          ? AppColors.primaryGradient
+                          : const LinearGradient(
+                              colors: [Color(0xFFBDB5AA), Color(0xFFA79E92)],
+                            ),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusPill,
+                      ),
+                      boxShadow: enough ? AppColors.shadowButton : null,
+                    ),
+                    child: FilledButton(
+                      onPressed: submitting || !enough ? null : onGenerate,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusPill,
                           ),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                    boxShadow: enough ? AppColors.shadowButton : null,
-                  ),
-                  child: FilledButton(
-                    onPressed: submitting || !enough ? null : onGenerate,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusPill,
                         ),
                       ),
-                    ),
-                    child: submitting
-                        ? const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+                      child: submitting
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: AppSpacing.md),
-                              Text('正在提交…'),
-                            ],
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(CupertinoIcons.sparkles, size: 18),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(label),
-                            ],
-                          ),
+                                const SizedBox(width: AppSpacing.md),
+                                Text(submittingLabel),
+                              ],
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(CupertinoIcons.sparkles, size: 18),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(label),
+                              ],
+                            ),
+                    ),
                   ),
                 ),
               ),
-              if (hint != null) ...[
-                const SizedBox(height: 5),
-                Text(
-                  hint!,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.labelSmall,
-                ),
-              ],
+              Padding(
+                padding: EdgeInsets.only(top: hintText == null ? 0 : 5),
+                child: hintText == null
+                    ? const SizedBox.shrink()
+                    : Text(
+                        hintText,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelSmall,
+                      ),
+              ),
             ],
           ),
         ),
