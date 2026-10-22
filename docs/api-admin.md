@@ -259,6 +259,9 @@
 | **POST** | **`/api/admin/providers/{id}/test`** | `{prompt?}` → 见下，**需求 3.1 第 5 步，答辩必演** |
 | PUT | `/api/admin/providers/{id}/online` / `/offline` | — |
 | PUT | `/api/admin/providers/{id}/pricing` | `{inputPrice, outputPrice, priceUnit}` |
+| DELETE | `/api/admin/providers/{id}` | 逻辑删除（契约补充能力，方便运营清理误接入的模型） |
+
+> 说明：`todayCalls` / `successRate` 依赖调用日志表（P3 调试面板才建）。P1 阶段列表返回 `0` / `null`，前端显示「—」。
 
 **`providerImpl` 是这一页的关键**：它决定"走哪个 Java 实现"，取值与 `ProviderNames` 对齐：
 
@@ -594,5 +597,6 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 | 日期 | 版本 | 改动 | 谁 |
 |---|---|---|---|
 | 2026-10-14 | v1 | 首次冻结：通用约定 + 错误码分段 + 枚举字典 + 12 个页面的完整接口契约 | — |
+| 2026-10-22 | v1.1 | P1 实现：模型配置 CRUD / 鉴权 / 请求响应模板 / 连通性测试 / HttpApiProvider；补充 DELETE 接口；注明 todayCalls/successRate 在 P3 前返回 0/null | 后端线 |
 
 > 规则：接口一旦开工，**改字段名 = 改契约**，必须两人同时改代码 + 在这里记一行。

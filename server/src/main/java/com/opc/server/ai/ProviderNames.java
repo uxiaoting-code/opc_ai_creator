@@ -22,6 +22,9 @@ public final class ProviderNames {
     /** 本地模拟实现，不需要任何密钥，课设默认走这个 */
     public static final String MOCK = "mock";
 
+    /** 配置驱动的通用 HTTP 实现：读 t_ai_provider_config 的请求/响应模板 */
+    public static final String HTTP = "http";
+
     /** Stable Diffusion 系（自建或云端 SD WebUI / ComfyUI） */
     public static final String STABLE_DIFFUSION = "stable-diffusion";
 

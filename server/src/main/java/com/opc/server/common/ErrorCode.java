@@ -41,6 +41,13 @@ public enum ErrorCode {
     // --- 作品 ---
     WORK_NOT_FOUND(5001, "作品不存在"),
 
+    // --- 管理端：模型 / API 配置（6000-6099，后端线专用）---
+    PROVIDER_CONFIG_NOT_FOUND(6001, "模型配置不存在"),
+    PROVIDER_TEST_FAILED(6002, "连通性测试失败"),
+    PROVIDER_CHANNEL_EXISTS(6003, "渠道标识已存在"),
+    PROVIDER_OFFLINE(6004, "该模型未上架"),
+    PROVIDER_IMPL_UNSUPPORTED(6005, "不支持的 providerImpl"),
+
     // --- 管理端通用（9000-9099，公共段）---
     ADMIN_LOGIN_REQUIRED(9001, "请先以管理员身份登录"),
     ADMIN_FORBIDDEN(9002, "该账号不是管理员，无权访问后台"),

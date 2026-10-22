@@ -72,6 +72,29 @@ public class AiProviderRouter {
         throw new IllegalStateException("没有可用的 AI 服务商实现，至少需要注册一个 " + ProviderNames.MOCK);
     }
 
+    /**
+     * 按 {@code t_ai_provider_config} 的配置路由。
+     *
+     * <p>{@code providerImpl = "http"} 时返回一个绑定了运行时配置的包装器；
+     * 其他实现（mock / stable-diffusion）继续走原来的按名字路由。
+     * <b>原 {@link #route(String)} 一行不改</b>，App 现有 6 条创作线路不受影响。
+     */
+    public AiProvider routeByConfig(ProviderRuntimeConfig config) {
+        if (config == null) {
+            return route(null);
+        }
+        String impl = config.providerImpl();
+        if (ProviderNames.HTTP.equalsIgnoreCase(impl)) {
+            AiProvider provider = providerMap.get(ProviderNames.HTTP);
+            if (provider instanceof ConfigAwareAiProvider aware) {
+                return new ConfiguredAiProvider(aware, config);
+            }
+            log.warn("http 服务商未注册，降级到 {}", ProviderNames.MOCK);
+            return route(ProviderNames.MOCK);
+        }
+        return route(impl);
+    }
+
     /** 已注册的服务商标识集合，设置页可以展示出来。 */
     public Set<String> availableProviders() {
         return providerMap.keySet();

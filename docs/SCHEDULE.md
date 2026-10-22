@@ -64,12 +64,12 @@
   - [x] `mock-token-for-scaffold` 调管理接口 → HTTP 403
   - [x] 无 token → HTTP 401
   - [x] C 端回归：`/api/skills` 200、`/api/auth/profile` 200、`/api/health` 200
-- [ ] Day 3~5：**P1 模型/API 配置**（开始）
-  - [ ] `AiProviderConfig` 实体 + Repository
-  - [ ] 列表 / 新增 / 详情 / 修改
-  - [ ] 鉴权配置、请求模板、响应模板
-  - [ ] 连通性测试 `POST /api/admin/providers/{id}/test`
-  - [ ] `AiProviderRouter.routeByConfig()` + 新增 `HttpApiProvider`
+- [x] Day 3~5：**P1 模型/API 配置**（2026-10-22 完成并验收）
+  - [x] `AiProviderConfig` 实体 + Repository
+  - [x] 列表 / 新增 / 详情 / 修改
+  - [x] 鉴权配置、请求模板、响应模板
+  - [x] 连通性测试 `POST /api/admin/providers/{id}/test`
+  - [x] `AiProviderRouter.routeByConfig()` + 新增 `HttpApiProvider`
 
 ### 前端线（搭档）
 
@@ -89,8 +89,8 @@
 
 ### 同步点
 
-- [ ] **Day 2 末**：P0 联合验收（前端真登录）
-- [ ] **Day 5 末**：mock 层验收（12 页能点通）
+- [x] **Day 2 末**：P0 联合验收（前端真登录）—— 2026-10-22 通过（login/profile 200；数据接口待 P1+ 逐页接入）
+- [x] **Day 5 末**：mock 层验收（12 页能点通）—— 2026-10-22 通过
 
 ---
 
@@ -98,7 +98,7 @@
 
 ### 后端线（你）
 
-- [ ] P1 收尾（连通性测试 + 路由改造 + `HttpApiProvider`）
+- [x] P1 收尾（连通性测试 + 路由改造 + `HttpApiProvider`）—— 已随 2026-10-22 一并完成
 - [ ] **【交付】** 模型配置全套接口 → push + 群里说一声
 - [ ] P2 智能体工作台（开始）
   - [ ] `Agent` / `AgentNode` / `AgentVersion` 实体
