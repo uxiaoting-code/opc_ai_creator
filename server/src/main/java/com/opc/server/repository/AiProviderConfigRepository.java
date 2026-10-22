@@ -15,6 +15,8 @@ public interface AiProviderConfigRepository
 
     Optional<AiProviderConfig> findByIdAndDeletedFalse(Long id);
 
+    Optional<AiProviderConfig> findByChannelAndDeletedFalse(String channel);
+
     boolean existsByChannelAndDeletedFalse(String channel);
 
     boolean existsByChannelAndDeletedFalseAndIdNot(String channel, Long id);

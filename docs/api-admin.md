@@ -319,6 +319,7 @@
 | POST | `/api/admin/agents` | `{name, code, category, description, icon}` 新建（原型弹窗 5 个字段） |
 | POST | `/api/admin/agents/import` | 导入配置 JSON（原型有「导入配置 JSON」按钮，体量小，可用文件上传） |
 | POST | `/api/admin/agents/{id}/duplicate` | 复制 |
+| DELETE | `/api/admin/agents/{id}` | 逻辑删除（契约补充能力） |
 | POST | `/api/admin/agents/{id}/publish` / `/offline` | 发布 / 下线 |
 | GET | `/api/admin/agents/{id}/versions` | 版本列表 `[{versionNo, createdAt, remark, operator}]` |
 | POST | `/api/admin/agents/{id}/versions/{versionNo}/rollback` | 回滚 |
@@ -598,5 +599,6 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 |---|---|---|---|
 | 2026-10-14 | v1 | 首次冻结：通用约定 + 错误码分段 + 枚举字典 + 12 个页面的完整接口契约 | — |
 | 2026-10-22 | v1.1 | P1 实现：模型配置 CRUD / 鉴权 / 请求响应模板 / 连通性测试 / HttpApiProvider；补充 DELETE 接口；注明 todayCalls/successRate 在 P3 前返回 0/null | 后端线 |
+| 2026-10-22 | v1.2 | P2 实现：Agent / AgentNode / AgentVersion、编排保存、发布/复制/版本回滚、统一工具库、编排预览；补充 DELETE /api/admin/agents/{id} | 后端线 |
 
 > 规则：接口一旦开工，**改字段名 = 改契约**，必须两人同时改代码 + 在这里记一行。

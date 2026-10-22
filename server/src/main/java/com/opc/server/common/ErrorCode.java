@@ -48,6 +48,15 @@ public enum ErrorCode {
     PROVIDER_OFFLINE(6004, "该模型未上架"),
     PROVIDER_IMPL_UNSUPPORTED(6005, "不支持的 providerImpl"),
 
+    // --- 管理端：智能体工作台（6300-6399，后端线专用）---
+    AGENT_NOT_FOUND(6301, "智能体不存在"),
+    AGENT_CODE_EXISTS(6302, "智能体标识已存在"),
+    AGENT_STATUS_ILLEGAL(6303, "当前智能体状态不允许该操作"),
+    AGENT_NODE_NOT_FOUND(6304, "编排节点不存在"),
+    AGENT_NODE_KEY_DUPLICATE(6305, "节点标识重复"),
+    AGENT_VERSION_NOT_FOUND(6306, "智能体版本不存在"),
+    AGENT_NO_NODES(6307, "智能体至少需要一个启用节点才能发布"),
+
     // --- 管理端通用（9000-9099，公共段）---
     ADMIN_LOGIN_REQUIRED(9001, "请先以管理员身份登录"),
     ADMIN_FORBIDDEN(9002, "该账号不是管理员，无权访问后台"),
