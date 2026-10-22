@@ -102,9 +102,9 @@
 ### 后端线（你）
 
 - [x] P1 收尾（连通性测试 + 路由改造 + `HttpApiProvider`）—— 已随 2026-10-22 一并完成
-- [ ] **【交付】** 模型配置全套接口（代码已完成，待推送）
-  - [ ] 更新 `docs/api-admin.md` 变更记录
-  - [ ] `git commit` + `git push`
+- [x] **【交付】** 模型配置全套接口（2026-10-22 已推送）
+  - [x] 更新 `docs/api-admin.md` 变更记录
+  - [x] `git commit` + `git push`
   - [ ] 搭档开工前 `git pull` 并读变更记录
 - [x] P2 智能体工作台（2026-10-22 完成并验收）
   - [x] `Agent` / `AgentNode` / `AgentVersion` 实体
@@ -124,9 +124,9 @@
 ### 后端线（你）
 
 - [x] P2 收尾（发布 / 复制 / 版本回滚 / 条件路由 / 预览）—— 已随 2026-10-22 一并完成
-- [ ] **【交付】** 工作台接口（代码已完成，待推送）
-  - [ ] 更新 `docs/api-admin.md` 变更记录
-  - [ ] `git commit` + `git push`
+- [x] **【交付】** 工作台接口（2026-10-22 已推送）
+  - [x] 更新 `docs/api-admin.md` 变更记录
+  - [x] `git commit` + `git push`
   - [ ] 搭档开工前 `git pull` 并读变更记录
 - [ ] P3 调试面板（开始）
   - [ ] `CallLog` 表
