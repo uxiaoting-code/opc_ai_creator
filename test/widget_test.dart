@@ -101,7 +101,10 @@ void main() {
     test('带参数路由能正确拼接', () {
       expect(RouteNames.taskDetailOf(42), '/tasks/42');
       expect(RouteNames.workDetailOf(7), '/gallery/7');
-      expect(RouteNames.textToImageWithSkill(3), '/create/text-to-image?skillId=3');
+      expect(
+        RouteNames.textToImageWithSkill(3),
+        '/create/text-to-image?skillId=3',
+      );
     });
   });
 
@@ -124,8 +127,7 @@ void main() {
   // 首页
   // ===========================================================================
   group('首页', () {
-    testWidgets('登录后展示顶部栏、Skill 线路、创作入口、功能入口与最近作品',
-        (tester) async {
+    testWidgets('登录后展示顶部栏、Skill 线路、创作入口、功能入口与最近作品', (tester) async {
       useTallPhoneViewport(tester);
       await tester.pumpWidget(await buildApp(loggedIn: true));
       await pumpHomeLoaded(tester);
@@ -155,6 +157,13 @@ void main() {
       // --- 需求 5：最近作品 ---
       expect(find.text('最近作品'), findsOneWidget);
       expect(find.text('赛博朋克少女'), findsOneWidget);
+
+      // --- UI 迁移后仍保留 5 个底部入口 ---
+      expect(find.text('首页'), findsOneWidget);
+      expect(find.text('任务'), findsOneWidget);
+      expect(find.text('画廊'), findsOneWidget);
+      expect(find.text('素材'), findsOneWidget);
+      expect(find.text('我的'), findsOneWidget);
     });
 
     testWidgets('点击 Skill 线路卡片会带着 skillId 进入文生图创作页', (tester) async {
@@ -186,6 +195,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('图生视频创作'), findsOneWidget);
+      expect(find.text('首帧参考图'), findsOneWidget);
+      expect(find.text('点击选择首帧图片'), findsOneWidget);
+      expect(find.text('镜头缓慢推进'), findsOneWidget);
+      expect(find.text('开始生成视频'), findsOneWidget);
+    });
+
+    testWidgets('图生视频页在 360×800 小屏不出现布局溢出', (tester) async {
+      useTallPhoneViewport(tester);
+      await tester.pumpWidget(await buildApp(loggedIn: true));
+      await pumpHomeLoaded(tester);
+
+      await tester.tap(find.text('让静态图片动起来'));
+      await tester.pumpAndSettle();
+
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      await tester.pumpAndSettle();
+
+      expect(find.text('首帧参考图'), findsOneWidget);
+      expect(find.text('开始生成视频'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('在 360×800 的小屏手机上不出现布局溢出', (tester) async {

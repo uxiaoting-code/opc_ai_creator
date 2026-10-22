@@ -1,0 +1,82 @@
+{
+  "list": [
+    {
+      "id": 1,
+      "orderNo": "P20261019001",
+      "userId": 100231,
+      "userName": "未知仙女座",
+      "type": "RECHARGE",
+      "typeLabel": "充值",
+      "amount": 198,
+      "creditsDelta": 200,
+      "channel": "微信支付",
+      "status": "SUCCESS",
+      "statusLabel": "成功",
+      "createdAt": "2026-10-19T10:24:00"
+    },
+    {
+      "id": 2,
+      "orderNo": "C20261019088",
+      "userId": 100188,
+      "userName": "出海老王",
+      "type": "CONSUME",
+      "typeLabel": "消耗",
+      "amount": 12.6,
+      "creditsDelta": -12.6,
+      "channel": "算力余额",
+      "status": "SUCCESS",
+      "statusLabel": "成功",
+      "createdAt": "2026-10-19T10:20:00"
+    },
+    {
+      "id": 3,
+      "orderNo": "P20261019002",
+      "userId": 100455,
+      "userName": "摸鱼设计师",
+      "type": "RECHARGE",
+      "typeLabel": "充值",
+      "amount": 68,
+      "creditsDelta": 68,
+      "channel": "支付宝",
+      "status": "SUCCESS",
+      "statusLabel": "成功",
+      "createdAt": "2026-10-19T10:12:00"
+    },
+    {
+      "id": 4,
+      "orderNo": "R20261019003",
+      "userId": 100913,
+      "userName": "测试账号01",
+      "type": "REFUND",
+      "typeLabel": "退款",
+      "amount": 30,
+      "creditsDelta": -30,
+      "channel": "原路退回",
+      "status": "PENDING",
+      "statusLabel": "处理中",
+      "createdAt": "2026-10-19T09:57:00"
+    },
+    {
+      "id": 5,
+      "orderNo": "C20261019087",
+      "userId": 100072,
+      "userName": "短视频工厂",
+      "type": "CONSUME",
+      "typeLabel": "消耗",
+      "amount": 86.4,
+      "creditsDelta": -86.4,
+      "channel": "算力余额",
+      "status": "SUCCESS",
+      "statusLabel": "成功",
+      "createdAt": "2026-10-19T09:40:00"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 12842,
+  "summary": {
+    "count": 12842,
+    "totalRecharge": 48210,
+    "totalConsume": 39606
+  }
+}

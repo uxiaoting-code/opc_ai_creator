@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
-/// 首页两大创作入口卡片：文生图 / 图生视频（对应需求 3）。
+/// 首页两大创作入口卡片：文生图 / 图生视频。
 ///
-/// 用大色块 + 图标的强视觉形式，和上方细长的 Skill 卡片形成层次区分，
-/// 让用户一眼看出「从这里开始创作」。
+/// 原型是 Light Premium 的毛玻璃卡片：
+/// 渐变只放在左上角的图标块里，整张卡保持暖白半透明，
+/// 这样两张入口卡不会像两个高饱和色块一样抢走主流程的注意力。
 class CreationEntryCard extends StatelessWidget {
   const CreationEntryCard({
     super.key,
@@ -14,95 +16,88 @@ class CreationEntryCard extends StatelessWidget {
     required this.icon,
     required this.gradient,
     required this.onTap,
+    this.iconColor = Colors.white,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
-
-  /// 卡片背景渐变。两张卡片用不同色系，避免看起来是同一个按钮。
   final Gradient gradient;
-
+  final Color iconColor;
   final VoidCallback onTap;
 
-  static const double height = 124;
+  static const double height = 128;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return SizedBox(
       height: height,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        clipBehavior: Clip.antiAlias,
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.darkSurface.withValues(alpha: 0.8)
+              : AppColors.glass,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+          border: Border.all(
+            color: isDark
+                ? AppColors.darkBorder
+                : Colors.white.withValues(alpha: 0.65),
           ),
+          boxShadow: AppColors.shadowSoft,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
-            child: Stack(
-              children: [
-                // 右下角装饰圆：纯视觉，不影响点击
-                Positioned(
-                  right: -24,
-                  bottom: -28,
-                  child: Container(
-                    width: 92,
-                    height: 92,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.12),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
                       Container(
-                        width: 34,
-                        height: 34,
-                        alignment: Alignment.center,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSm),
+                          gradient: gradient,
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
+                          boxShadow: AppColors.shadowSoft,
                         ),
-                        child: Icon(icon, color: Colors.white, size: 19),
+                        child: Icon(icon, color: iconColor, size: 20),
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.88),
-                              fontSize: 11,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
+                      const Spacer(),
+                      Icon(
+                        Icons.arrow_outward_rounded,
+                        size: 18,
+                        color: AppColors.taupe.withValues(alpha: 0.8),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title, style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

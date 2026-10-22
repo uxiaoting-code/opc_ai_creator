@@ -27,7 +27,7 @@ class RecentWorkCard extends StatelessWidget {
       height: size,
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,

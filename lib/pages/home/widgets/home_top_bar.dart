@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -40,6 +41,7 @@ class HomeTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -60,9 +62,11 @@ class HomeTopBar extends StatelessWidget {
                   width: 40,
                   height: 40,
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: AppColors.primaryGradient,
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: AppColors.shadowSoft,
                   ),
                   child: Text(
                     nickname.isEmpty ? '?' : nickname.substring(0, 1),
@@ -85,11 +89,19 @@ class HomeTopBar extends StatelessWidget {
                       '你好，$nickname',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.taupe,
+                        fontSize: 12,
+                      ),
                     ),
                     Text(
-                      '今天想创作点什么？',
-                      style: theme.textTheme.bodySmall,
+                      '今天想创作什么？',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -101,16 +113,19 @@ class HomeTopBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.bolt_rounded,
-                        size: 16, color: AppColors.accent),
+                    const Icon(
+                      Icons.bolt_rounded,
+                      size: 16,
+                      color: AppColors.gold,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       // 还没拉到真实值时不显示 0 —— 那会让用户以为算力点没了
                       credits?.toString() ?? '—',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.accent,
+                        color: theme.textTheme.bodyLarge?.color,
                       ),
                     ),
                   ],
@@ -152,25 +167,23 @@ class HomeTopBar extends StatelessWidget {
               height: AppSpacing.touchTargetMin,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                color: isDark
+                    ? AppColors.darkSurface.withValues(alpha: 0.78)
+                    : AppColors.glass,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
                 border: Border.all(
-                  color: theme.dividerTheme.color ?? Colors.transparent,
+                  color: isDark
+                      ? AppColors.darkBorder
+                      : Colors.white.withValues(alpha: 0.8),
                 ),
+                boxShadow: AppColors.shadowSoft,
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.search_rounded,
-                    size: 20,
-                    color: theme.textTheme.bodySmall?.color,
-                  ),
+                  Icon(CupertinoIcons.search, size: 19, color: AppColors.taupe),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Text(
-                      '搜索提示词、创作线路',
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    child: Text('搜索提示词、创作线路', style: theme.textTheme.bodySmall),
                   ),
                 ],
               ),
@@ -199,6 +212,7 @@ class _PillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
@@ -207,11 +221,16 @@ class _PillButton extends StatelessWidget {
         padding: padding,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
+          color: isDark
+              ? AppColors.darkSurface.withValues(alpha: 0.78)
+              : AppColors.glass,
           borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
           border: Border.all(
-            color: theme.dividerTheme.color ?? Colors.transparent,
+            color: isDark
+                ? AppColors.darkBorder
+                : Colors.white.withValues(alpha: 0.8),
           ),
+          boxShadow: AppColors.shadowSoft,
         ),
         child: child,
       ),

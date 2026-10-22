@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
+import 'premium/premium_top_bar.dart';
 
 /// 13 个业务页面的统一「空白脚手架」外壳。
 ///
@@ -62,7 +63,13 @@ class ScaffoldPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title), actions: actions),
+      appBar: premiumTopBar(
+        title: title,
+        onBack: Navigator.of(context).canPop()
+            ? () => Navigator.of(context).pop()
+            : null,
+        actions: actions ?? const [],
+      ),
       body: SafeArea(
         child: MobileScaffoldBody(
           child: Column(
@@ -92,7 +99,11 @@ class ScaffoldPage extends StatelessWidget {
 
 /// 页面正文的通用容器：限制最大宽度 + 统一内边距，避免大屏拉伸。
 class MobileScaffoldBody extends StatelessWidget {
-  const MobileScaffoldBody({super.key, required this.child, this.scrollable = true});
+  const MobileScaffoldBody({
+    super.key,
+    required this.child,
+    this.scrollable = true,
+  });
 
   final Widget child;
   final bool scrollable;
@@ -161,10 +172,7 @@ class _PlaceholderContent extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      summary,
-                      style: theme.textTheme.bodyMedium,
-                    ),
+                    Text(summary, style: theme.textTheme.bodyMedium),
                   ],
                 ),
               ),
@@ -213,10 +221,7 @@ class _PlaceholderContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.xxl),
 
         Center(
-          child: Text(
-            '脚手架占位页 · 将于后续迭代实现',
-            style: theme.textTheme.bodySmall,
-          ),
+          child: Text('脚手架占位页 · 将于后续迭代实现', style: theme.textTheme.bodySmall),
         ),
       ],
     );

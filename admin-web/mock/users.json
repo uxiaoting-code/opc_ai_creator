@@ -1,0 +1,72 @@
+{
+  "list": [
+    {
+      "id": 100231,
+      "username": "demo",
+      "nickname": "未知仙女座",
+      "phone": "186****3000",
+      "credits": 27,
+      "totalSpent": 1286.4,
+      "status": 1,
+      "statusLabel": "正常",
+      "role": "USER",
+      "createdAt": "2026-03-14T10:20:30",
+      "lastActiveAt": "2026-10-19T10:24:00"
+    },
+    {
+      "id": 100188,
+      "username": "going_sea",
+      "nickname": "出海老王",
+      "phone": "139****8821",
+      "credits": 412,
+      "totalSpent": 8940,
+      "status": 1,
+      "statusLabel": "正常",
+      "role": "USER",
+      "createdAt": "2026-02-02T09:10:00",
+      "lastActiveAt": "2026-10-19T10:12:00"
+    },
+    {
+      "id": 100455,
+      "username": "fish_designer",
+      "nickname": "摸鱼设计师",
+      "phone": "150****6642",
+      "credits": 6,
+      "totalSpent": 642,
+      "status": 1,
+      "statusLabel": "正常",
+      "role": "USER",
+      "createdAt": "2026-05-19T14:30:00",
+      "lastActiveAt": "2026-10-19T09:30:00"
+    },
+    {
+      "id": 100072,
+      "username": "video_factory",
+      "nickname": "短视频工厂",
+      "phone": "187****0913",
+      "credits": 2310,
+      "totalSpent": 26480,
+      "status": 1,
+      "statusLabel": "正常",
+      "role": "USER",
+      "createdAt": "2026-01-08T11:00:00",
+      "lastActiveAt": "2026-10-19T10:20:00"
+    },
+    {
+      "id": 100913,
+      "username": "test01",
+      "nickname": "测试账号01",
+      "phone": "100****0001",
+      "credits": 0,
+      "totalSpent": 30,
+      "status": 0,
+      "statusLabel": "冻结",
+      "role": "USER",
+      "createdAt": "2026-08-30T16:20:00",
+      "lastActiveAt": "2026-10-16T18:00:00"
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 12846
+}

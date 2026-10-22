@@ -1,0 +1,6 @@
+{
+  "list": [
+    { "id": 1, "name": "春季新品主图.png", "type": "IMAGE", "groupName": "商品主图", "tags": "春季,新品", "fileSize": 1887437, "url": "/upload/demo-1.png", "createdAt": "2026-10-19T10:12:00" },
+    { "id": 2, "name": "产品展示.mp4", "type": "VIDEO", "groupName": "短视频", "tags": "展示,产品", "fileSize": 8808038, "url": "/upload/demo-2.mp4", "createdAt": "2026-10-18T16:40:00" }
+  ]
+}

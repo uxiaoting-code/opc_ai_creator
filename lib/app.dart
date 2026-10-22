@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/network/api_client.dart';
@@ -64,10 +65,14 @@ class _OpcAppState extends State<OpcApp> {
         // ApiClient 用 .value 提供：它的生命周期由 main 掌控，这里只做注入
         Provider<ApiClient>.value(value: widget.apiClient),
         ChangeNotifierProvider<AuthProvider>.value(value: widget.authProvider),
-        ChangeNotifierProvider<ThemeProvider>.value(value: widget.themeProvider),
+        ChangeNotifierProvider<ThemeProvider>.value(
+          value: widget.themeProvider,
+        ),
         // 业务数据 Provider：首页 / 画廊 / 消息共用，
         // 放在应用根节点保证跨 Tab 切换时数据不丢、不重复请求
-        ChangeNotifierProvider<SkillProvider>.value(value: widget.skillProvider),
+        ChangeNotifierProvider<SkillProvider>.value(
+          value: widget.skillProvider,
+        ),
         ChangeNotifierProvider<WorkProvider>.value(value: widget.workProvider),
         ChangeNotifierProvider<NotificationProvider>.value(
           value: widget.notificationProvider,
@@ -91,10 +96,7 @@ class _OpcAppState extends State<OpcApp> {
             // 不配这个的话，Material 内置控件（日期选择、下拉刷新提示等）
             // 会显示英文，课程设计答辩时很显眼。
             locale: const Locale('zh', 'CN'),
-            supportedLocales: const [
-              Locale('zh', 'CN'),
-              Locale('en', 'US'),
-            ],
+            supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
@@ -104,13 +106,60 @@ class _OpcAppState extends State<OpcApp> {
             // ---------- 路由 ----------
             routerConfig: _appRouter.router,
 
+            // ---------- iOS 手感：弹性滚动 + 去掉 Android 蓝色辉光 ----------
+            scrollBehavior: const _AppScrollBehavior(),
+
             // ---------- 手机竖屏视口约束 ----------
             // Web 宽屏时把整棵页面树居中收窄成手机比例，
             // Android 上宽度本来就小于阈值，这里是零开销直通。
-            builder: (context, child) => MobileViewport(child: child!),
+            builder: (context, child) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final overlay =
+                  (isDark
+                          ? SystemUiOverlayStyle.light
+                          : SystemUiOverlayStyle.dark)
+                      .copyWith(
+                        statusBarColor: Colors.transparent,
+                        systemNavigationBarColor: Colors.transparent,
+                        systemNavigationBarDividerColor: Colors.transparent,
+                      );
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: overlay,
+                child: MobileViewport(child: child!),
+              );
+            },
           );
         },
       ),
     );
+  }
+}
+
+/// iOS 风格滚动：橡皮筋回弹，不显示 Android 的拉伸辉光。
+class _AppScrollBehavior extends MaterialScrollBehavior {
+  const _AppScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+  }
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    // 手机端保持干净，不常驻显示滚动条；需要时系统/浏览器会自己给反馈。
+    return child;
   }
 }

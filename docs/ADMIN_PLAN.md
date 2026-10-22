@@ -15,7 +15,7 @@
 
 | 问题 | 结论 |
 |---|---|
-| 老师给的 `web/` 是什么 | 后台控制台的**静态原型**（HTML+CSS+JS，7 个页面，**全站 0 处网络请求**，数据写死在 HTML 里） |
+| 老师给的 `admin-web/` 是什么 | 后台控制台的**静态原型**（HTML+CSS+JS，7 个页面，**全站 0 处网络请求**，数据写死在 HTML 里） |
 | 之前 Claude Code 做的是什么 | **面向 App 的后端**（22 个 C 端接口）+ **Flutter App**（13 页，11 页完成） |
 | 缺口在哪 | 需求文档的 8 大能力基本都没有，`/api/admin/**` **一个接口都没有** |
 | 开发顺序 | 管理端地基 → 模型/API 配置 → 智能体工作台 → 调试面板 → MCP → 知识库/素材库 → 算力运营 → 对外网关 → App 收尾 |
@@ -25,16 +25,16 @@
 
 ## 1. 三块家底
 
-### 1.1 `web/` —— 老师给的后台控制台原型（纯静态）
+### 1.1 `admin-web/` —— 老师给的后台控制台原型（纯静态）
 
-- 文件：`web/index.html`(415 行) + `web/css/admin.css`(23KB) + `web/js/admin.js`(28KB)
+- 文件：`admin-web/index.html`(415 行) + `admin-web/css/admin.css`(23KB) + `admin-web/js/admin.js`(28KB)
 - 侧栏 7 个页面：数据概览 / 用户管理 / 账单管理 / 大模型配置 / 智能体 Skill 配置 / 算力使用 / 系统设置
 - 交互最深的是「智能体 Skill 配置」，两层结构：
   智能体列表 → **Skill 编排详情**（基础信息 + System Prompt + 开场白 + Skill 列表开关排序
   + 调用计费/轮次/超时/配额 + 静态调用流程预览）
 - **关键事实：`admin.js` 里没有一处 `fetch` / `XMLHttpRequest` / `axios`，`index.html` 里表格数据全是写死的。**
   所以它现在是一个「能点的高保真原型」，不是「能用的后台」。
-- 登录页只要账号密码非空就放行（`web/js/admin.js` 第 29~36 行），**没有鉴权**。
+- 登录页只要账号密码非空就放行（`admin-web/js/admin.js` 第 29~36 行），**没有鉴权**。
 - `web_old/` 是本次替换前 Flutter web 的产物（favicon / manifest / icons），与后台无关。
 
 ### 1.2 `server/` —— 已有的后端（Spring Boot 4.1.1 + Java 21 + JPA + H2/MySQL）
@@ -185,7 +185,7 @@
 
 | 阶段 | 内容 | 产出 / 验收 | 预估 | 谁 |
 |---|---|---|---|---|
-| **P0 地基** | `/api/admin/**` 路由 + ADMIN 角色鉴权 + 管理端登录接口；控制台假登录改真登录 + 抽出 `web/js/api.js` 统一请求封装；MySQL 建库落地；把 dev-token 收窄到不放行 admin | `admin/admin123` 能登录后台；任一页能拿到真数据 | 3~4 天 | **两人结对** |
+| **P0 地基** | `/api/admin/**` 路由 + ADMIN 角色鉴权 + 管理端登录接口；控制台假登录改真登录 + 抽出 `admin-web/js/api.js` 统一请求封装；MySQL 建库落地；把 dev-token 收窄到不放行 admin | `admin/admin123` 能登录后台；任一页能拿到真数据 | 3~4 天 | **两人结对** |
 | **P1 模型 / API 配置** | `AiProviderConfig` 实体 + CRUD + 鉴权配置 + 请求模板 + 响应模板 + 连通性测试；把 `AiProviderRouter` 从"写死 provider 名"改成"读配置路由" | 后台配一个模型 → 页面点"测试"能看到真实返回；「大模型配置」页接真数据 | 4~5 天 | A |
 | **P2 智能体与工作台** | `Agent` / `AgentNode` / `AgentVersion` 实体；节点 = 能力（工具/模型/知识库/审核）；编排保存、发布、复制、版本回滚、条件路由 | 「智能体 Skill 配置」页真数据；能编排一条"输入→检索→生成"的链并保存 | 5~6 天 | B |
 | **P3 调试面板** | 调用日志表 + 单节点调试 + 全链路调试 + 对话式调试 + 版本对比 + 回归用例集 | 新页面「调试」；一键跑通链路，能看到每个节点的中间结果 / 耗时 / 算力 | 4~5 天 | A |
@@ -216,7 +216,7 @@
 | 主题 | "怎么把外部 AI 能力接进来、怎么调通" | "怎么把能力编排成智能体、怎么管资源与钱" |
 | 负责阶段 | P1 模型/API 配置、P3 调试面板、P4 MCP、P8 网关 | P2 工作台编排、P5 知识库、P6 素材库后台 |
 | 后端包 | `admin.provider`、`admin.debug`、`admin.mcp`、`admin.gateway`；改造 `ai/`（`AiProviderRouter` 配置驱动、新增 `HttpApiProvider`） | `admin.agent`、`admin.kb`、`admin.material`；新增实体与仓储 |
-| 控制台文件 | `web/js/pages/models.js`、`debug.js`、`mcp.js` | `web/js/pages/agents.js`、`kb.js`、`materials.js` |
+| 控制台文件 | `admin-web/js/pages/models.js`、`debug.js`、`mcp.js` | `admin-web/js/pages/agents.js`、`kb.js`、`materials.js` |
 | 关键交付物 | 配置化 Provider（含请求/响应模板引擎）+ 调用日志表 + 调试 6 件套 | Agent/节点/版本模型 + 文档分段检索 + 素材标签体系 |
 | 工作量 | P0 3.5 + P1 4.5 + P3 4.5 + P4 3.5 + P7(半) 2.5 + P8 1.5 ≈ **20 人天** | P0 3.5 + P2 5.5 + P5 5.5 + P6 3.5 + P7(半) 2.5 + P8 1.5 ≈ **22 人天** |
 
@@ -225,10 +225,10 @@ B 做 用户管理 + 系统设置（偏 CRUD）。
 
 ### 协作约定（避免互相踩）
 
-1. **P0 阶段两人一起把地基打完并冻结**（路由前缀、鉴权方式、统一返回体、`web/js/api.js`），
+1. **P0 阶段两人一起把地基打完并冻结**（路由前缀、鉴权方式、统一返回体、`admin-web/js/api.js`），
    之后才分头写。
 2. **接口先冻结**：新建 `docs/api-admin.md`，把字段写死，两边照契约写，不等对方实现。
-3. `web/index.html` 是共享文件：A 只加自己页面的 `<section>`，B 只加自己的，改动行区间不重叠；
+3. `admin-web/index.html` 是共享文件：A 只加自己页面的 `<section>`，B 只加自己的，改动行区间不重叠；
    每次合并前先 pull。
 4. 控制台 JS **按页面拆文件**，别都往 `admin.js` 里堆。
 5. 共享文件（`WebConfig.java` 拦截器注册、`DataSeeder.java`、`application.yml`）改动前先在群里说一声。
@@ -238,7 +238,7 @@ B 做 用户管理 + 系统设置（偏 CRUD）。
 ## 6. 第一周该怎么开工（可直接照做）
 
 **Day 1（两人一起）**
-- 建分支 `codex/admin-backend`；跑起来 server（H2 开箱即跑），用 Live Server 打开 `web/index.html` 确认现状
+- 建分支 `codex/admin-backend`；跑起来 server（H2 开箱即跑），用 Live Server 打开 `admin-web/index.html` 确认现状
 - 建 `docs/api-admin.md`，先把最简单的两组接口字段定死：⑦ 系统设置、② 用户管理
 - 数据库迁移方式定下来 —— 建议沿用 Hibernate `ddl-auto: update`，别引入 Flyway
 
@@ -247,8 +247,8 @@ B 做 用户管理 + 系统设置（偏 CRUD）。
 - 收窄 `dev-token-enabled`：只放行 C 端 `/api/**`，**不放行 `/api/admin/**`**
 
 **Day 2~3（B）**
-- 控制台登录页改成真调接口、存 token；抽出 `web/js/api.js`（统一 baseURL + Authorization + 错误 toast）
-- 把 `admin.js` 按页面拆成 `web/js/pages/*.js`；`index.html` 侧栏预留 5 个新页入口（先空页）
+- 控制台登录页改成真调接口、存 token；抽出 `admin-web/js/api.js`（统一 baseURL + Authorization + 错误 toast）
+- 把 `admin.js` 按页面拆成 `admin-web/js/pages/*.js`；`index.html` 侧栏预留 5 个新页入口（先空页）
 
 **Day 4~5（各自动手）**
 - A：`AiProviderConfig` 实体 + 列表/新增接口 + 「大模型配置」页接真数据

@@ -2,16 +2,20 @@ import 'dart:async';
 
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../widgets/media/media_viewers.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/premium_top_bar.dart';
 import '../../widgets/scaffold_page.dart';
 import '../../widgets/state_views.dart';
 
@@ -240,10 +244,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
 
   void _startPolling() {
     if (_pollTimer != null) return; // 已经在轮询了，不要重复起
-    _pollTimer = Timer.periodic(
-      AppConfig.taskPollInterval,
-      (_) => _pollOnce(),
-    );
+    _pollTimer = Timer.periodic(AppConfig.taskPollInterval, (_) => _pollOnce());
   }
 
   void _stopPolling() {
@@ -262,27 +263,34 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     final refreshing = _loading && _task != null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('任务详情'),
+      appBar: premiumTopBar(
+        title: '任务详情',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.taskListPath);
+          }
+        },
         actions: [
-          // 手动刷新：轮询间隔内想立刻看结果时用，也方便演示
-          IconButton(
+          PremiumCircleAction(
+            icon: refreshing ? null : Icons.refresh_rounded,
+            content: refreshing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.sage,
+                    ),
+                  )
+                : null,
             tooltip: '刷新',
             onPressed: (_taskIdValue == null || refreshing)
                 ? null
                 : () {
                     _loadFirstTime();
                   },
-            icon: refreshing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
-                    ),
-                  )
-                : const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
@@ -381,7 +389,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             icon: Icons.hourglass_empty_rounded,
             color: AppColors.statusQueued,
             title: '排队等待调度',
-            message: 'Harness 调度器每 3 秒扫描一次队列，'
+            message:
+                'Harness 调度器每 3 秒扫描一次队列，'
                 '当前有并发上限，稍等片刻就会开始生成。',
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -394,7 +403,8 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             icon: Icons.auto_awesome,
             color: AppColors.statusRunning,
             title: 'AI 正在生成',
-            message: '页面每 ${AppConfig.taskPollInterval.inSeconds} 秒'
+            message:
+                '页面每 ${AppConfig.taskPollInterval.inSeconds} 秒'
                 '自动刷新一次状态，可以直接离开，任务在后台继续跑。',
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -417,27 +427,44 @@ class _StatusCard extends StatelessWidget {
     final theme = Theme.of(context);
     final color = _statusColor(task.status);
 
-    return Container(
+    return GlassPanel(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
+      borderRadius: AppSpacing.radiusLg,
+      borderColor: color.withValues(alpha: 0.35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              StatusChip(
-                label: task.displayStatusLabel,
-                color: color,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                ),
+                child: Icon(_statusIcon(task.status), color: color, size: 24),
               ),
-              const Spacer(),
-              Text(
-                task.typeLabel ?? task.type.label,
-                style: theme.textTheme.bodySmall,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.displayStatusLabel,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      task.typeLabel ?? task.type.label,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
+              StatusChip(label: task.displayStatusLabel, color: color),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -459,24 +486,20 @@ class _StatusCard extends StatelessWidget {
                 Text('${task.progress}%', style: theme.textTheme.bodySmall),
                 const Spacer(),
                 if (task.durationLabel != null)
-                  Text('已耗时 ${task.durationLabel}',
-                      style: theme.textTheme.bodySmall),
+                  Text(
+                    '已耗时 ${task.durationLabel}',
+                    style: theme.textTheme.bodySmall,
+                  ),
               ],
             ),
           ] else
-            Text(
-              '${task.progress}%',
-              style: theme.textTheme.bodySmall,
-            ),
+            Text('${task.progress}%', style: theme.textTheme.bodySmall),
 
           const Divider(height: AppSpacing.xl),
 
           _KvRow(label: '任务编号', value: task.taskNo, monospace: true),
           const SizedBox(height: AppSpacing.sm),
-          _KvRow(
-            label: '创建时间',
-            value: _formatTime(task.createdAt),
-          ),
+          _KvRow(label: '创建时间', value: _formatTime(task.createdAt)),
         ],
       ),
     );
@@ -515,15 +538,15 @@ class _ResultSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.check_circle_rounded,
-                size: 16, color: AppColors.statusSuccess),
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 16,
+              color: AppColors.statusSuccess,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Text('生成结果', style: theme.textTheme.titleSmall),
             const Spacer(),
-            Text(
-              '点击可放大查看',
-              style: theme.textTheme.bodySmall,
-            ),
+            Text('点击可放大查看', style: theme.textTheme.bodySmall),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -531,20 +554,92 @@ class _ResultSection extends StatelessWidget {
           // 用项目自带的图片预览页（InteractiveViewer 实现，支持双指缩放）
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => ImagePreviewPage(
-                imageUrl: url,
-                title: '生成结果',
-              ),
+              builder: (_) => ImagePreviewPage(imageUrl: url, title: '生成结果'),
             ),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
             // 用 BoxFit.contain 而不是 cover：生成图里画着提示词文字，
             // cover 会把边缘裁掉。这里固定高度、按比例缩放，画面完整可见。
             // （TaskResponse 没有返回宽高，所以不能按真实宽高比撑开盒子）
             child: SizedBox(
               height: 320,
-              child: AppNetworkImage(url: url, fit: BoxFit.contain),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: Colors.black,
+                    child: AppNetworkImage(url: url, fit: BoxFit.contain),
+                  ),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.center,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0x99000000)],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: AppSpacing.md,
+                    top: AppSpacing.md,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.sage.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusPill,
+                        ),
+                      ),
+                      child: const Text(
+                        '✓ 生成成功',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: AppSpacing.md,
+                    right: AppSpacing.md,
+                    bottom: AppSpacing.md,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.zoom_out_map_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text(
+                            '点击查看高清大图',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          task.skillName ?? '图片结果',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -643,7 +738,9 @@ class _VideoResultSectionState extends State<_VideoResultSection> {
             child: Text(
               '视频播放失败\n$message',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodySmall?.color,
+              ),
             ),
           ),
         ),
@@ -683,8 +780,11 @@ class _VideoResultSectionState extends State<_VideoResultSection> {
       children: [
         Row(
           children: [
-            const Icon(Icons.check_circle_rounded,
-                size: 16, color: AppColors.statusSuccess),
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 16,
+              color: AppColors.statusSuccess,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Text('生成结果', style: theme.textTheme.titleSmall),
             const Spacer(),
@@ -777,8 +877,11 @@ class _ErrorSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.error_outline_rounded,
-                  size: 18, color: AppColors.statusFailed),
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 18,
+                color: AppColors.statusFailed,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 '生成失败',
@@ -903,8 +1006,11 @@ class _PollErrorBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.sync_problem_rounded,
-                  size: 18, color: AppColors.statusFailed),
+              const Icon(
+                Icons.sync_problem_rounded,
+                size: 18,
+                color: AppColors.statusFailed,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
@@ -921,18 +1027,12 @@ class _PollErrorBanner extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(message, style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            '下方内容可能不是最新的，恢复后会自动刷新。',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('下方内容可能不是最新的，恢复后会自动刷新。', style: theme.textTheme.bodySmall),
           if (onRetry != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: onRetry,
-                child: const Text('立即重试'),
-              ),
+              child: TextButton(onPressed: onRetry, child: const Text('立即重试')),
             ),
           ],
         ],
@@ -954,15 +1054,9 @@ class _PromptsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
+    return GlassPanel(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
-        ),
-      ),
+      borderRadius: AppSpacing.radiusLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -974,11 +1068,14 @@ class _PromptsCard extends StatelessWidget {
           Text('最终提示词', style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            (task.prompt == null || task.prompt!.isEmpty) ? '（空）' : task.prompt!,
+            (task.prompt == null || task.prompt!.isEmpty)
+                ? '（空）'
+                : task.prompt!,
             style: theme.textTheme.bodyMedium,
           ),
 
-          if (task.negativePrompt != null && task.negativePrompt!.isNotEmpty) ...[
+          if (task.negativePrompt != null &&
+              task.negativePrompt!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             Text('反向提示词', style: theme.textTheme.bodySmall),
             const SizedBox(height: AppSpacing.xs),
@@ -999,15 +1096,9 @@ class _MetaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
+    return GlassPanel(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
-        ),
-      ),
+      borderRadius: AppSpacing.radiusLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1089,6 +1180,16 @@ Color _statusColor(TaskStatus status) {
     case TaskStatus.canceled:
       return AppColors.statusCanceled;
   }
+}
+
+IconData _statusIcon(TaskStatus status) {
+  return switch (status) {
+    TaskStatus.queued => Icons.schedule_rounded,
+    TaskStatus.running => Icons.auto_awesome_rounded,
+    TaskStatus.success => Icons.check_circle_rounded,
+    TaskStatus.failed => Icons.error_outline_rounded,
+    TaskStatus.canceled => Icons.cancel_outlined,
+  };
 }
 
 /// 时间格式化：`09-15 21:30:05`。为空显示 `—`。

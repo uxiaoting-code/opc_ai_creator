@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -12,48 +14,71 @@ import '../../data/models/skill_model.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/skill_provider.dart';
-import '../../widgets/scaffold_page.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/premium_choice_chip.dart';
+import '../../widgets/premium/premium_mode_switch.dart';
+import '../../widgets/premium/premium_select_sheet.dart';
+import '../../widgets/premium/premium_top_bar.dart';
+import '../../widgets/premium/pressable_scale.dart';
+
+enum _CreationMode { image, video }
 
 /// 页面 3：文生图创作页
 ///
-/// 入口：首页「文生图」入口 / 首页 Skill 卡片 / Skill 市场。
-/// 从卡片进来时路由会带 `?skillId=xxx`，进页面直接预选好那条线路。
-///
-/// 页面只做两件事：**选线路 + 写提示词**，然后把任务交给后端 Harness。
-/// 生成是异步的，所以这里不显示结果 —— 提交成功立刻带着 taskId 跳任务详情页，
-/// 由详情页轮询「排队 → 生成中 → 成功」的完整状态流转。
-///
-/// 线路列表复用 [SkillProvider]，不单独发请求：
-/// 首页已经加载过一份，两个页面看到的是同一份缓存。
+/// 按原型重排的“创作台”：
+/// - 顶部图片 / 视频模式切换
+/// - 玻璃提示词卡 + 灵感示例
+/// - 风格芯片（会真正拼进提示词）
+/// - 比例 / 清晰度参数弹层
+/// - 线路选择 + 当前线路参数预览
+/// - 底部固定生成栏
 class TextToImagePage extends StatefulWidget {
-  const TextToImagePage({super.key, this.skillId});
+  const TextToImagePage({super.key, this.skillId, this.prompt});
 
-  /// 从路由 query 参数带进来的 Skill 线路 ID，为空表示用户还没选线路。
   final String? skillId;
+  final String? prompt;
 
   @override
   State<TextToImagePage> createState() => _TextToImagePageState();
 }
 
 class _TextToImagePageState extends State<TextToImagePage> {
+  static const int _cost = 10;
+  static const List<String> _styles = [
+    '纯白背景',
+    '场景图',
+    '模特上身',
+    '3D质感',
+    '国潮',
+    '极简',
+  ];
+  static const List<String> _ratios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
+  static const List<String> _qualities = ['标清', '高清', '超清', '4K'];
+  static const List<String> _ideas = [
+    '雨夜霓虹街道，湿润路面倒影，电影感光效',
+    '白色背景商品主图，柔和棚拍光，高级质感',
+    '国风水墨山水，留白构图，淡雅配色',
+    '未来感金属质感产品，深色背景，轮廓光',
+  ];
+
   final TextEditingController _promptController = TextEditingController();
   final TextEditingController _negativeController = TextEditingController();
 
-  /// 当前选中的线路 ID。null 表示「自动选择」（后端用默认参数）。
   int? _selectedSkillId;
-
-  /// 提交中：禁用按钮并显示 loading，防止连点创建出多个任务。
   bool _submitting = false;
+  bool _showAdvanced = false;
+
+  String _selectedStyle = _styles.first;
+  String _selectedRatio = '1:1';
+  String _selectedQuality = '高清';
+  int _ideaIndex = 0;
 
   @override
   void initState() {
     super.initState();
-
-    // 路由参数是字符串，转不成数字就当没带（而不是崩掉）
     _selectedSkillId = int.tryParse(widget.skillId ?? '');
+    _promptController.text = widget.prompt ?? '';
 
-    // 放到首帧之后再触发加载：Provider 的 load() 内部会 notifyListeners()，
-    // 在 initState 里同步触发会在 build 期间标记依赖组件为脏，直接报错。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<SkillProvider>().loadIfNeeded();
@@ -72,50 +97,70 @@ class _TextToImagePageState extends State<TextToImagePage> {
   // ===========================================================================
 
   Future<void> _submit() async {
-    final prompt = _promptController.text.trim();
-    if (prompt.isEmpty) {
-      _showMessage('请先输入提示词');
+    final rawPrompt = _promptController.text.trim();
+    if (rawPrompt.isEmpty) {
+      _showMessage('先描述一下你想生成什么');
       return;
     }
 
-    // 收起键盘，让用户立刻看到 loading
     FocusScope.of(context).unfocus();
     setState(() => _submitting = true);
 
     try {
       final task = await context.read<TaskRepository>().createTextToImage(
-            skillId: _selectedSkillId,
-            prompt: prompt,
-            negativePrompt: _negativeController.text.trim(),
-          );
+        skillId: _selectedSkillId,
+        prompt: _composePrompt(rawPrompt),
+        negativePrompt: _negativeController.text.trim().isEmpty
+            ? null
+            : _negativeController.text.trim(),
+      );
 
       if (!mounted) return;
-
-      // 后端是在「创建任务」时就扣算力点的（HarnessService.createTask），
-      // 所以提交成功的这一刻就把全局用户信息刷一遍：AuthProvider 是全局
-      // ChangeNotifier，首页 watch 着它，右上角积分会自动跟着变，
-      // 不需要手动刷新浏览器。
-      // 故意不 await：这是顺带更新，不能拖慢跳转到任务详情页。
       unawaited(context.read<AuthProvider>().loadProfile());
-
-      // 任务详情页是「任务」Tab 分支下的子路由，跨分支跳转必须用 go：
-      // go 会把任务分支的页面栈设成 [任务列表, 任务详情]，
-      // 用户从详情返回就落在任务列表，底部导航也跟着切到「任务」。
-      // 用 push 会把详情压进首页分支的栈里，导致导航高亮与内容对不上。
       _showMessage('任务已提交，正在排队');
       context.go(RouteNames.taskDetailOf(task.id));
     } on ApiException catch (e) {
-      // 网络不通、算力点不足、线路下线…… 后端和网络层的错误
-      // 都已经被归一成 ApiException，这里直接展示中文提示即可
       if (!mounted) return;
       _showMessage(e.message);
     } catch (e) {
       if (!mounted) return;
       _showMessage('提交失败：$e');
     } finally {
-      // 跳转成功时页面已经被替换，setState 会报"组件已卸载"
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  String _composePrompt(String base) {
+    final parts = <String>[base];
+    final style = _styleModifier;
+    if (style.isNotEmpty) parts.add(style);
+    parts.add('aspect ratio $_selectedRatio');
+    parts.add(_qualityModifier);
+    final text = parts.join(', ');
+    // 后端 prompt 上限 2000，风格/比例是追加项，别把总长度顶爆。
+    return text.length <= 2000 ? text : text.substring(0, 2000);
+  }
+
+  String get _styleModifier {
+    return switch (_selectedStyle) {
+      '纯白背景' => 'pure white background, clean studio lighting',
+      '场景图' => 'lifestyle scene background, natural lighting',
+      '模特上身' => 'worn by a model, fashion photography',
+      '3D质感' => '3D render, glossy material, soft shadows',
+      '国潮' => 'Chinese guochao style, modern oriental aesthetic',
+      '极简' => 'minimalist composition, lots of negative space',
+      _ => '',
+    };
+  }
+
+  String get _qualityModifier {
+    return switch (_selectedQuality) {
+      '标清' => 'standard quality',
+      '高清' => 'high quality, detailed',
+      '超清' => 'ultra detailed, sharp focus',
+      '4K' => '4K resolution, highly detailed',
+      _ => 'high quality, detailed',
+    };
   }
 
   void _showMessage(String message) {
@@ -131,38 +176,78 @@ class _TextToImagePageState extends State<TextToImagePage> {
   @override
   Widget build(BuildContext context) {
     final skillProvider = context.watch<SkillProvider>();
-    // 只用文生图线路 —— 图生视频线路出现在这里会让用户选错
+    final auth = context.watch<AuthProvider>();
     final skills = skillProvider.textToImageSkills;
-    final selectedSkill = _resolveSelected(skills);
+    final selected = _resolveSelected(skills);
+    final credits = auth.user?.credits;
+    final enough = credits == null || credits >= _cost;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('文生图创作')),
+      appBar: premiumTopBar(
+        title: '文生图创作',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.homePath);
+          }
+        },
+      ),
       body: SafeArea(
-        child: MobileScaffoldBody(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildSkillSection(skillProvider, skills, selectedSkill),
-              const SizedBox(height: AppSpacing.xl),
-              _buildPromptSection(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildNegativeSection(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildSubmitButton(),
-              const SizedBox(height: AppSpacing.md),
-              _buildHint(),
-            ],
-          ),
+        top: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.pagePadding,
+                  AppSpacing.md,
+                  AppSpacing.pagePadding,
+                  AppSpacing.xl,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    PremiumModeSwitch<_CreationMode>(
+                      value: _CreationMode.image,
+                      onChanged: (mode) {
+                        if (mode == _CreationMode.video) _switchToVideo();
+                      },
+                      options: const [
+                        PremiumModeOption(
+                          value: _CreationMode.image,
+                          label: '图片',
+                          icon: CupertinoIcons.photo,
+                        ),
+                        PremiumModeOption(
+                          value: _CreationMode.video,
+                          label: '视频',
+                          icon: CupertinoIcons.videocam,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildPromptCard(),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildStyleSection(),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildParamRow(),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildSkillPreview(skills, selected),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildAdvancedSection(),
+                  ],
+                ),
+              ),
+            ),
+            _buildBottomBar(skills, selected, credits, enough),
+          ],
         ),
       ),
     );
   }
 
-  /// 取当前生效的线路。
-  ///
-  /// 必须校验「选中的 ID 真的在候选列表里」：
-  /// 从路由带进来的 skillId 可能已被运营下线，或者用户手改了地址栏，
-  /// 直接把它塞给 DropdownButton 会触发断言崩溃。
   SkillModel? _resolveSelected(List<SkillModel> skills) {
     if (_selectedSkillId == null) return null;
     for (final skill in skills) {
@@ -171,365 +256,650 @@ class _TextToImagePageState extends State<TextToImagePage> {
     return null;
   }
 
-  // ---------------------------------------------------------------------------
-  // 1. 线路下拉选择
-  // ---------------------------------------------------------------------------
-
-  Widget _buildSkillSection(
-    SkillProvider provider,
-    List<SkillModel> skills,
-    SkillModel? selected,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _FieldLabel(
-          icon: Icons.dashboard_customize_rounded,
-          text: '模型线路',
-          hint: '线路决定出图风格与推理参数',
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (skills.isEmpty)
-          _buildSkillPlaceholder(provider)
-        else
-          _buildDropdown(skills),
-        if (selected != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          _SkillPreview(skill: selected),
-        ],
-      ],
-    );
-  }
-
-  /// 线路还没加载出来（或加载失败）时的占位，避免下拉框空着让人以为坏了。
-  Widget _buildSkillPlaceholder(SkillProvider provider) {
-    final theme = Theme.of(context);
-    if (provider.isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primary,
-              ),
-            ),
-            SizedBox(width: AppSpacing.md),
-            Text('正在加载创作线路…'),
-          ],
-        ),
-      );
+  void _switchToVideo() {
+    final query = <String, String>{};
+    final prompt = _promptController.text.trim();
+    if (prompt.isNotEmpty) query['prompt'] = prompt;
+    if (_selectedSkillId != null) {
+      query['skillId'] = '$_selectedSkillId';
     }
+    HapticFeedback.selectionClick();
+    context.pushReplacement(
+      Uri(
+        path: RouteNames.imageToVideoPath,
+        queryParameters: query.isEmpty ? null : query,
+      ).toString(),
+    );
+  }
 
-    return Container(
+  // ---------------------------------------------------------------------------
+  // 提示词卡
+  // ---------------------------------------------------------------------------
+
+  Widget _buildPromptCard() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? AppColors.darkBorder
+        : Colors.white.withValues(alpha: 0.72);
+
+    return GlassPanel(
+      borderRadius: AppSpacing.radiusHero,
+      shadow: AppColors.shadowLift,
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.statusFailed.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.statusFailed.withValues(alpha: 0.3)),
-      ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.error_outline,
-              size: 18, color: AppColors.statusFailed),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              provider.error ?? '暂无可用线路，请先在后台配置 Skill',
-              style: theme.textTheme.bodySmall,
+          Row(
+            children: [
+              const Icon(
+                CupertinoIcons.sparkles,
+                size: 18,
+                color: AppColors.sage,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text('描述画面', style: theme.textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.darkBackground.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(color: borderColor),
+            ),
+            child: TextField(
+              controller: _promptController,
+              enabled: !_submitting,
+              minLines: 4,
+              maxLines: 6,
+              maxLength: 2000,
+              textInputAction: TextInputAction.newline,
+              style: theme.textTheme.bodyLarge,
+              decoration: InputDecoration(
+                hintText: '描述商品画面，如：白色背景，柔光，高级质感…',
+                hintStyle: theme.textTheme.bodySmall,
+                counterText: '',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
             ),
           ),
-          TextButton(
-            onPressed: () => provider.load(force: true),
-            child: const Text('重试'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 线路下拉框。
-  ///
-  /// 用 [DropdownButton] 而不是 DropdownButtonFormField：
-  /// 后者的 `value` 参数在近几个 Flutter 版本里正在往 `initialValue` 迁移，
-  /// 用裸的 DropdownButton 没有这个 API 变动风险，也更好控制样式。
-  Widget _buildDropdown(List<SkillModel> skills) {
-    final theme = Theme.of(context);
-    final borderColor = theme.dividerTheme.color ?? AppColors.lightBorder;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: borderColor),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int?>(
-          isExpanded: true,
-          value: _resolveSelected(skills)?.id,
-          hint: Text('自动选择（使用默认参数）', style: theme.textTheme.bodyMedium),
-          icon: const Icon(Icons.expand_more_rounded),
-          // 单条高度要够手指点，否则手机上容易点错
-          itemHeight: AppSpacing.touchTargetMin,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          onChanged: _submitting
-              ? null
-              : (value) => setState(() => _selectedSkillId = value),
-          items: [
-            for (final skill in skills)
-              DropdownMenuItem<int?>(
-                value: skill.id,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        skill.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge,
-                      ),
-                    ),
-                    if (skill.modelName != null)
-                      Text(
-                        skill.modelName!,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                  ],
-                ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              _quickAction(
+                icon: CupertinoIcons.lightbulb,
+                label: '灵感示例',
+                onTap: _fillIdea,
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 2. 正向提示词
-  // ---------------------------------------------------------------------------
-
-  Widget _buildPromptSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _FieldLabel(
-          icon: Icons.auto_awesome,
-          text: '提示词',
-          hint: '描述你想要的画面，越具体越好',
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _promptController,
-          enabled: !_submitting,
-          maxLines: 6,
-          minLines: 4,
-          // 与后端 CreationRequest 的 @Size(max = 2000) 对齐，
-          // 前端先拦一道，用户体验好过提交后收 400
-          maxLength: 2000,
-          textInputAction: TextInputAction.newline,
-          decoration: _inputDecoration(
-            hintText: '例如：雨夜霓虹街道，赛博朋克风格，湿滑路面倒影，电影感光效',
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 3. 反向提示词
-  // ---------------------------------------------------------------------------
-
-  Widget _buildNegativeSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _FieldLabel(
-          icon: Icons.block_outlined,
-          text: '反向提示词',
-          hint: '不想出现的内容，留空则用线路自带的',
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _negativeController,
-          enabled: !_submitting,
-          maxLines: 3,
-          minLines: 2,
-          // 与后端 @Size(max = 1000) 对齐
-          maxLength: 1000,
-          textInputAction: TextInputAction.newline,
-          decoration: _inputDecoration(
-            hintText: '例如：低分辨率、多余手指、水印、文字',
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // 4. 生成按钮
-  // ---------------------------------------------------------------------------
-
-  Widget _buildSubmitButton() {
-    final theme = Theme.of(context);
-
-    // 提交中整体压暗：按钮本体是透明的（为了透出渐变），
-    // FilledButton 的 disabled 配色管不到这层渐变，所以用 Opacity 统一处理，
-    // 否则 loading 时按钮看起来还是"可以点"的。
-    return Opacity(
-      opacity: _submitting ? 0.65 : 1,
-      child: SizedBox(
-        height: AppSpacing.buttonHeight,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.28),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+              const SizedBox(width: AppSpacing.md),
+              _quickAction(
+                icon: CupertinoIcons.arrow_counterclockwise,
+                label: '清空',
+                onTap: _clearPrompt,
               ),
             ],
           ),
-          child: FilledButton(
-            onPressed: _submitting ? null : _submit,
-            style: FilledButton.styleFrom(
-              // 让渐变透出来：按钮本体不填色
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 4,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.sage),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.sage,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            child: _submitting
-                ? const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: AppSpacing.md),
-                      Text('正在提交任务…'),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.auto_awesome, size: 20),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '开始生成',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _fillIdea() {
+    HapticFeedback.selectionClick();
+    final idea = _ideas[_ideaIndex % _ideas.length];
+    _ideaIndex++;
+    _promptController.text = idea;
+    _promptController.selection = TextSelection.collapsed(offset: idea.length);
+    setState(() {});
+  }
+
+  void _clearPrompt() {
+    HapticFeedback.selectionClick();
+    _promptController.clear();
+    setState(() {});
+  }
+
+  // ---------------------------------------------------------------------------
+  // 风格芯片
+  // ---------------------------------------------------------------------------
+
+  Widget _buildStyleSection() {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text('风格', style: theme.textTheme.titleMedium),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text('会追加到提示词里', style: theme.textTheme.labelSmall),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SizedBox(
+          height: 38,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _styles.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+            itemBuilder: (context, index) {
+              final style = _styles[index];
+              return _styleChip(style, style == _selectedStyle);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _styleChip(String style, bool selected) {
+    return PremiumChoiceChip(
+      label: style,
+      selected: selected,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _selectedStyle = style);
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 参数胶囊
+  // ---------------------------------------------------------------------------
+
+  Widget _buildParamRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _paramPill(
+                icon: Icons.aspect_ratio_rounded,
+                label: '比例',
+                value: _selectedRatio,
+                onTap: () => _pickOption(
+                  title: '选择比例',
+                  options: _ratios,
+                  current: _selectedRatio,
+                  onSelected: (value) => _selectedRatio = value,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _paramPill(
+                icon: Icons.crop_original_rounded,
+                label: '数量',
+                value: '1 张',
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _paramPill(
+                icon: Icons.hd_rounded,
+                label: '清晰度',
+                value: _selectedQuality,
+                onTap: () => _pickOption(
+                  title: '选择清晰度',
+                  options: _qualities,
+                  current: _selectedQuality,
+                  onSelected: (value) => _selectedQuality = value,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          '当前接口每次生成 1 张；比例/清晰度会写进提示词。',
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+      ],
+    );
+  }
+
+  Widget _paramPill({
+    required IconData icon,
+    required String label,
+    required String value,
+    VoidCallback? onTap,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final child = Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkBackground.withValues(alpha: 0.5)
+            : Colors.white.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        border: Border.all(
+          color: isDark
+              ? AppColors.darkBorder
+              : Colors.white.withValues(alpha: 0.9),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.sage),
+          const SizedBox(width: 5),
+          Text(label, style: theme.textTheme.labelSmall),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 4),
+            const Icon(
+              CupertinoIcons.chevron_down,
+              size: 12,
+              color: AppColors.taupe,
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (onTap == null) return child;
+    return PressableScale(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        child: child,
+      ),
+    );
+  }
+
+  Future<void> _pickOption({
+    required String title,
+    required List<String> options,
+    required String current,
+    required ValueChanged<String> onSelected,
+  }) async {
+    final result = await showPremiumSelectSheet<String>(
+      context: context,
+      title: title,
+      subtitle: '选择后会更新本次生成参数',
+      selected: current,
+      options: [
+        for (final option in options)
+          PremiumSelectOption(
+            value: option,
+            title: option,
+            icon: option == current
+                ? Icons.check_circle_rounded
+                : Icons.circle_outlined,
+            highlighted: option == current,
+          ),
+      ],
+    );
+    if (result == null || !mounted) return;
+    HapticFeedback.selectionClick();
+    setState(() => onSelected(result));
+  }
+
+  // ---------------------------------------------------------------------------
+  // 线路预览
+  // ---------------------------------------------------------------------------
+
+  Widget _buildSkillPreview(List<SkillModel> skills, SkillModel? selected) {
+    if (selected != null) return _SkillPreview(skill: selected);
+
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.sage.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+        border: Border.all(color: AppColors.sage.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.slider_horizontal_3,
+            size: 18,
+            color: AppColors.sage,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              skills.isEmpty ? '线路加载中…' : '未选择线路，将使用默认参数',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 高级设置
+  // ---------------------------------------------------------------------------
+
+  Widget _buildAdvancedSection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return GlassPanel(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _showAdvanced = !_showAdvanced);
+            },
+            borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  const Icon(
+                    CupertinoIcons.slider_horizontal_3,
+                    size: 18,
+                    color: AppColors.sage,
                   ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text('高级设置', style: theme.textTheme.titleSmall),
+                  ),
+                  Text('反向提示词', style: theme.textTheme.labelSmall),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _showAdvanced
+                        ? CupertinoIcons.chevron_up
+                        : CupertinoIcons.chevron_down,
+                    size: 14,
+                    color: AppColors.taupe,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_showAdvanced)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: TextField(
+                controller: _negativeController,
+                enabled: !_submitting,
+                minLines: 2,
+                maxLines: 3,
+                maxLength: 1000,
+                decoration: InputDecoration(
+                  hintText: '不想出现的内容，例如：低分辨率、水印、多余手指',
+                  hintStyle: theme.textTheme.bodySmall,
+                  counterText: '',
+                  fillColor: isDark
+                      ? AppColors.darkBackground.withValues(alpha: 0.5)
+                      : Colors.white.withValues(alpha: 0.55),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 底部固定生成栏
+  // ---------------------------------------------------------------------------
+
+  Widget _buildBottomBar(
+    List<SkillModel> skills,
+    SkillModel? selected,
+    int? credits,
+    bool enough,
+  ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final skillName = selected?.name ?? '自动线路';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkSurface.withValues(alpha: 0.94)
+            : AppColors.glassStrong,
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? AppColors.darkBorder
+                : Colors.white.withValues(alpha: 0.8),
+          ),
+        ),
+        boxShadow: AppColors.shadowSoft,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.pagePadding,
+            10,
+            AppSpacing.pagePadding,
+            12,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  PressableScale(
+                    child: InkWell(
+                      onTap: () => _openSkillPicker(skills),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusPill,
+                      ),
+                      child: Container(
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkBackground.withValues(alpha: 0.5)
+                              : Colors.white.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusPill,
+                          ),
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.slider_horizontal_3,
+                              size: 14,
+                              color: AppColors.sage,
+                            ),
+                            const SizedBox(width: 5),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 150),
+                              child: Text(
+                                skillName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.textTheme.bodyLarge?.color,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 12,
+                              color: AppColors.taupe,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text('预计消耗 $_cost 算力', style: theme.textTheme.labelSmall),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                height: AppSpacing.buttonHeight,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: enough
+                        ? AppColors.primaryGradient
+                        : const LinearGradient(
+                            colors: [Color(0xFFBDB5AA), Color(0xFFA79E92)],
+                          ),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                    boxShadow: enough ? AppColors.shadowButton : null,
+                  ),
+                  child: FilledButton(
+                    onPressed: _submitting || !enough ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusPill,
+                        ),
+                      ),
+                    ),
+                    child: _submitting
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: AppSpacing.md),
+                              Text('正在提交任务…'),
+                            ],
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(CupertinoIcons.sparkles, size: 18),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('开始生成'),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                enough
+                    ? '提交后自动跳到任务详情，排队进度实时刷新'
+                    : '算力不足（当前 ${credits ?? '—'}），先去个人中心看看',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: enough ? AppColors.taupe : AppColors.statusFailed,
+                  fontWeight: enough ? FontWeight.w400 : FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHint() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.info_outline_rounded,
-          size: 14,
-          color: Theme.of(context).textTheme.bodySmall?.color,
+  Future<void> _openSkillPicker(List<SkillModel> skills) async {
+    final result = await showPremiumSelectSheet<int>(
+      context: context,
+      title: '选择创作线路',
+      subtitle: '切换模型、采样参数和提示词模板',
+      selected: _selectedSkillId ?? -1,
+      options: [
+        const PremiumSelectOption(
+          value: -1,
+          title: '自动线路',
+          description: '使用后端默认模型与参数',
+          icon: CupertinoIcons.sparkles,
         ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            '提交后任务进入排队，页面会自动跳到任务详情页，实时显示生成进度。',
-            style: Theme.of(context).textTheme.bodySmall,
+        for (final skill in skills)
+          PremiumSelectOption(
+            value: skill.id,
+            title: skill.name,
+            description: [
+              skill.modelName ?? '默认模型',
+              if (skill.steps != null) '${skill.steps} 步',
+              if (skill.width != null && skill.height != null)
+                '${skill.width}×${skill.height}',
+            ].join(' · '),
+            icon: CupertinoIcons.slider_horizontal_3,
+            badge: skill.id == _selectedSkillId ? '当前' : null,
+            trailing: skill.usageLabel,
+            highlighted: skill.id == _selectedSkillId,
           ),
-        ),
       ],
     );
-  }
-
-  InputDecoration _inputDecoration({required String hintText}) {
-    final theme = Theme.of(context);
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: theme.textTheme.bodySmall,
-      filled: true,
-      fillColor: theme.cardTheme.color,
-      alignLabelWithHint: true,
-      contentPadding: const EdgeInsets.all(AppSpacing.lg),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        borderSide: BorderSide(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
-        ),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        borderSide: BorderSide(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
-      ),
-    );
+    if (result == null || !mounted) return;
+    HapticFeedback.selectionClick();
+    setState(() => _selectedSkillId = result < 0 ? null : result);
   }
 }
 
 // =============================================================================
-// 内部小组件
+// 内部组件
 // =============================================================================
 
-/// 表单字段的标题行：图标 + 标题 + 一句说明。
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({
-    required this.icon,
-    required this.text,
-    required this.hint,
-  });
-
-  final IconData icon;
-  final String text;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(width: AppSpacing.sm),
-        Text(text, style: theme.textTheme.titleSmall),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            hint,
-            style: theme.textTheme.bodySmall,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// 选中线路的参数预览。
-///
-/// 让「多线路」这件事在界面上可见：同一句提示词走不同线路，
-/// 前缀、步数、尺寸都不一样，这里把差异摊开给用户看。
 class _SkillPreview extends StatelessWidget {
   const _SkillPreview({required this.skill});
 
@@ -538,7 +908,6 @@ class _SkillPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     final params = <String>[
       if (skill.modelName != null) skill.modelName!,
       if (skill.width != null && skill.height != null)
@@ -550,15 +919,33 @@ class _SkillPreview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        // 用品牌色的淡化底而不是灰底，和整体视觉语言一致
-        color: AppColors.primary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        color: AppColors.sage.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+        border: Border.all(color: AppColors.sage.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (skill.description != null)
+          Row(
+            children: [
+              const Icon(
+                CupertinoIcons.slider_horizontal_3,
+                size: 16,
+                color: AppColors.sage,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  '当前线路 · ${skill.name}',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+            ],
+          ),
+          if (skill.description != null) ...[
+            const SizedBox(height: AppSpacing.sm),
             Text(skill.description!, style: theme.textTheme.bodySmall),
+          ],
           if (params.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             Wrap(
@@ -568,8 +955,8 @@ class _SkillPreview extends StatelessWidget {
                 for (final param in params)
                   Text(
                     param,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.primary,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.sage,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import 'media/media_viewers.dart';
 
@@ -38,16 +39,16 @@ class CoverImage extends StatelessWidget {
   final BorderRadius? borderRadius;
   final BoxFit fit;
 
-  /// 渐变色板。都是「深底 + 高饱和」的组合，叠白色图标好看。
+  /// 原型里的暖色/莫兰迪色板：奶油、蜜桃、鼠尾草、灰褐。
   static const List<List<Color>> _palettes = [
-    [Color(0xFF6C4DF6), Color(0xFF17C3E6)], // 电光紫 → 青蓝（品牌主渐变）
-    [Color(0xFFFF5A9E), Color(0xFF6C4DF6)], // 品红 → 紫
-    [Color(0xFF12B76A), Color(0xFF17C3E6)], // 翠绿 → 青蓝
-    [Color(0xFFFF8A3D), Color(0xFFFF5A9E)], // 橙 → 品红
-    [Color(0xFF2E90FA), Color(0xFF6C4DF6)], // 蓝 → 紫
-    [Color(0xFF8B5CF6), Color(0xFFFF8A3D)], // 紫 → 橙
-    [Color(0xFF0EA5E9), Color(0xFF12B76A)], // 天蓝 → 翠绿
-    [Color(0xFFF04438), Color(0xFFFF8A3D)], // 红 → 橙
+    [Color(0xFFE8D5C4), Color(0xFFD4B896)], // 蜜桃 → 香槟
+    [Color(0xFFC7D5C0), Color(0xFFA8BFA0)], // 鼠尾草浅 → 深
+    [Color(0xFFF0DCC8), Color(0xFFE4C9A8)], // 奶油 → 金
+    [Color(0xFFD8D0C0), Color(0xFFBFB39E)], // 燕麦 → 灰褐
+    [Color(0xFFE5D5D5), Color(0xFFC9AEAE)], // 藕粉 → 豆沙
+    [Color(0xFFD0DCE5), Color(0xFFA8BFC9)], // 雾蓝 → 灰蓝
+    [Color(0xFFF5EDDE), Color(0xFFE4D0A8)], // 暖白 → 淡金
+    [Color(0xFFE0E8DC), Color(0xFFA8BFA9)], // 浅绿 → 鼠尾草
   ];
 
   /// 稳定哈希：同样的字符串在任何平台、任何次运行都得到同样的值。
@@ -100,7 +101,11 @@ class CoverImage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null)
-              Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 30),
+              Icon(
+                icon,
+                color: AppColors.charcoal.withValues(alpha: 0.55),
+                size: 30,
+              ),
             if (label != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Padding(
@@ -111,7 +116,7 @@ class CoverImage extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.95),
+                    color: AppColors.charcoal.withValues(alpha: 0.68),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),

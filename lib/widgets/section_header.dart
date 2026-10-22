@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
@@ -78,7 +79,7 @@ class SectionHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(actionLabel!, style: const TextStyle(fontSize: 13)),
-                  const Icon(Icons.chevron_right_rounded, size: 16),
+                  const Icon(CupertinoIcons.chevron_right, size: 14),
                 ],
               ),
             ),

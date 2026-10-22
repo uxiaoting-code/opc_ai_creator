@@ -1,0 +1,35 @@
+{
+  "list": [
+    {
+      "id": 1,
+      "name": "跨境电商选品助手",
+      "code": "cross-border-picker",
+      "category": "MARKETING",
+      "categoryLabel": "营销",
+      "status": "PUBLISHED",
+      "statusLabel": "已发布",
+      "modelCount": 2,
+      "enabledSkillCount": 3,
+      "todayCalls": 12408,
+      "avgElapsedMs": 3200,
+      "successRate": 98.6
+    },
+    {
+      "id": 2,
+      "name": "智能客服小星",
+      "code": "cs-xiaoxing",
+      "category": "CUSTOMER_SERVICE",
+      "categoryLabel": "客服",
+      "status": "PUBLISHED",
+      "statusLabel": "已发布",
+      "modelCount": 1,
+      "enabledSkillCount": 5,
+      "todayCalls": 24107,
+      "avgElapsedMs": 900,
+      "successRate": 99.9
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 7
+}

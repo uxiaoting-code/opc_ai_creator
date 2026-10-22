@@ -1,0 +1,6 @@
+{
+  "list": [
+    { "id": 1, "name": "web-search-mcp", "transport": "STDIO", "toolCount": 3, "enabledToolCount": 2, "status": "CONNECTED", "lastDiscoverAt": "2026-10-19T10:20:00" },
+    { "id": 2, "name": "data-query-mcp", "transport": "HTTP", "toolCount": 2, "enabledToolCount": 0, "status": "PENDING", "lastDiscoverAt": null }
+  ]
+}

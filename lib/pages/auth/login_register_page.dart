@@ -7,6 +7,7 @@ import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/premium/glass_panel.dart';
 
 /// 页面 1：登录 / 注册页
 ///
@@ -80,7 +81,9 @@ class _LoginRegisterPageState extends State<LoginRegisterPage>
               vertical: AppSpacing.xl,
             ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: AppSpacing.mobileMaxWidth),
+              constraints: const BoxConstraints(
+                maxWidth: AppSpacing.mobileMaxWidth,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -94,8 +97,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage>
                       gradient: AppColors.primaryGradient,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                     ),
-                    child: const Icon(Icons.auto_awesome,
-                        color: Colors.white, size: 36),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 36,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
@@ -116,26 +122,21 @@ class _LoginRegisterPageState extends State<LoginRegisterPage>
                   if (AppConfig.bypassLogin) const _BypassBanner(),
 
                   // ---------- 登录 / 注册 Tab ----------
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      border: Border.all(
-                        color: theme.dividerTheme.color ?? Colors.transparent,
-                      ),
-                    ),
+                  GlassPanel(
+                    padding: const EdgeInsets.all(4),
+                    borderRadius: AppSpacing.radiusMd,
                     child: TabBar(
                       controller: _tab,
                       indicatorSize: TabBarIndicatorSize.tab,
                       dividerColor: Colors.transparent,
                       indicator: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.12),
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusMd - 2),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd - 2,
+                        ),
                       ),
                       labelColor: AppColors.primary,
-                      unselectedLabelColor:
-                          theme.textTheme.bodySmall?.color,
+                      unselectedLabelColor: theme.textTheme.bodySmall?.color,
                       labelStyle: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -202,9 +203,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage>
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
                 // 密码可见性切换：点击热区 48x48，符合手指操作
-                icon: Icon(_obscureLoginPwd
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined),
+                icon: Icon(
+                  _obscureLoginPwd
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
                 onPressed: () =>
                     setState(() => _obscureLoginPwd = !_obscureLoginPwd),
               ),
@@ -274,9 +277,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage>
               hintText: '至少 6 位',
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
-                icon: Icon(_obscureRegPwd
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined),
+                icon: Icon(
+                  _obscureRegPwd
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
                 onPressed: () =>
                     setState(() => _obscureRegPwd = !_obscureRegPwd),
               ),
@@ -335,8 +340,11 @@ class _LoginRegisterPageState extends State<LoginRegisterPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline,
-              size: 16, color: AppColors.statusFailed),
+          const Icon(
+            Icons.error_outline,
+            size: 16,
+            color: AppColors.statusFailed,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -395,7 +403,9 @@ class _LoginRegisterPageState extends State<LoginRegisterPage>
   /// 登录后直接回到那里；否则回首页。
   void _goAfterAuth() {
     final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
-    final target = (redirect != null && redirect.isNotEmpty &&
+    final target =
+        (redirect != null &&
+            redirect.isNotEmpty &&
             redirect != RouteNames.loginPath)
         ? redirect
         : RouteNames.homePath;
@@ -438,8 +448,11 @@ class _BypassBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.construction_rounded,
-              size: 18, color: AppColors.accent),
+          const Icon(
+            Icons.construction_rounded,
+            size: 18,
+            color: AppColors.accent,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

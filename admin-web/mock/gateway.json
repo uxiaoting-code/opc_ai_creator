@@ -1,0 +1,6 @@
+{
+  "list": [
+    { "id": 1, "name": "选品助手", "agentId": 1, "method": "POST", "path": "/open/v1/picker", "authRequired": true, "rateLimit": 60, "online": true, "callCount": 12408 },
+    { "id": 2, "name": "海报生成", "agentId": 2, "method": "POST", "path": "/open/v1/poster", "authRequired": true, "rateLimit": 30, "online": false, "callCount": 0 }
+  ]
+}

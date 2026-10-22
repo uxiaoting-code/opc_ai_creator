@@ -1,0 +1,19 @@
+{
+  "stats": {
+    "todayUsed": 9260000,
+    "yesterdayUsed": 9460000,
+    "monthUsed": 128000000,
+    "platformStock": 460000000,
+    "stockDays": 36
+  },
+  "byModel": [
+    { "modelName": "TT Image 2 系列", "calls": 48210, "inputTokens": 3120000000, "outputTokens": 980000000, "creditsUsed": 3520000, "percent": 38 },
+    { "modelName": "GEM 3.7 flash", "calls": 32904, "inputTokens": 1860000000, "outputTokens": 2410000000, "creditsUsed": 2410000, "percent": 26 },
+    { "modelName": "即梦 3.5 Pro", "calls": 9132, "inputTokens": null, "outputTokens": null, "creditsUsed": 1670000, "percent": 18 }
+  ],
+  "topUsers": [
+    { "rank": 1, "userId": 100072, "userName": "短视频工厂", "creditsUsed": 1864000 },
+    { "rank": 2, "userId": 100188, "userName": "出海老王", "creditsUsed": 1297000 },
+    { "rank": 3, "userId": 100777, "userName": "独立开发者K", "creditsUsed": 832000 }
+  ]
+}

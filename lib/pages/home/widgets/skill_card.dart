@@ -28,113 +28,128 @@ class SkillCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return SizedBox(
       width: width,
-      child: Material(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border: Border.all(
-                color: theme.dividerTheme.color ?? Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+          boxShadow: AppColors.shadowSoft,
+        ),
+        child: Material(
+          color: isDark
+              ? AppColors.darkSurface.withValues(alpha: 0.8)
+              : AppColors.glass,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+                border: Border.all(
+                  color: isDark
+                      ? AppColors.darkBorder
+                      : Colors.white.withValues(alpha: 0.65),
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ---------- 封面 ----------
-                SizedBox(
-                  height: _coverHeight,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CoverImage(
-                        seed: skill.code,
-                        url: skill.coverUrl,
-                        icon: skill.type == SkillType.textToImage
-                            ? Icons.auto_awesome
-                            : Icons.movie_creation_outlined,
-                      ),
-                      // 类型角标：文生图 / 图生视频
-                      Positioned(
-                        left: 6,
-                        top: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.42),
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.radiusPill),
-                          ),
-                          child: Text(
-                            skill.type.label,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ---------- 封面 ----------
+                  SizedBox(
+                    height: _coverHeight,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CoverImage(
+                          seed: skill.code,
+                          url: skill.coverUrl,
+                          icon: skill.type == SkillType.textToImage
+                              ? Icons.auto_awesome
+                              : Icons.movie_creation_outlined,
+                        ),
+                        // 类型角标：文生图 / 图生视频
+                        Positioned(
+                          left: 6,
+                          top: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.glassStrong,
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusPill,
+                              ),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            child: Text(
+                              skill.type.label,
+                              style: const TextStyle(
+                                color: AppColors.charcoal,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                // ---------- 文字区 ----------
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.sm + 2,
-                    AppSpacing.sm,
-                    AppSpacing.sm + 2,
-                    AppSpacing.md,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        skill.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              skill.scene ?? '通用场景',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                  // ---------- 文字区 ----------
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.sm + 2,
+                      AppSpacing.sm,
+                      AppSpacing.sm + 2,
+                      AppSpacing.md,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          skill.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                skill.scene ?? '通用场景',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall,
+                              ),
+                            ),
+                            // 热度，体现线路的受欢迎程度
+                            Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 11,
+                              color: AppColors.gold.withValues(alpha: 0.9),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              skill.usageLabel,
                               style: theme.textTheme.labelSmall,
                             ),
-                          ),
-                          // 热度，体现线路的受欢迎程度
-                          Icon(
-                            Icons.local_fire_department_rounded,
-                            size: 11,
-                            color: AppColors.accent.withValues(alpha: 0.8),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            skill.usageLabel,
-                            style: theme.textTheme.labelSmall,
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

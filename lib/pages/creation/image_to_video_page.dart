@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -17,8 +18,20 @@ import '../../data/repositories/material_repository.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/skill_provider.dart';
+import '../../widgets/creation/generate_bar.dart';
+import '../../widgets/creation/prompt_input_card.dart';
 import '../../widgets/media/media_viewers.dart';
-import '../../widgets/scaffold_page.dart';
+import '../../widgets/premium/dashed_upload_card.dart';
+import '../../widgets/premium/glass_panel.dart';
+import '../../widgets/premium/premium_choice_chip.dart';
+import '../../widgets/premium/premium_mode_switch.dart';
+import '../../widgets/premium/premium_select_sheet.dart';
+import '../../widgets/premium/premium_top_bar.dart';
+import '../../widgets/premium/pressable_scale.dart';
+
+enum _VideoMode { image, video }
+
+enum _ImageSourceChoice { gallery, camera, materials }
 
 /// 页面 4：图生视频创作页
 ///
@@ -36,10 +49,13 @@ import '../../widgets/scaffold_page.dart';
 /// 生成依然是异步的，所以这里不显示结果：提交成功立刻带 taskId 跳任务详情页，
 /// 由详情页轮询「排队 → 生成中 → 成功」，成功后用视频播放器展示。
 class ImageToVideoPage extends StatefulWidget {
-  const ImageToVideoPage({super.key, this.skillId});
+  const ImageToVideoPage({super.key, this.skillId, this.prompt});
 
   /// 从路由 query 参数带进来的 Skill 线路 ID，为空表示用户还没选线路。
   final String? skillId;
+
+  /// 从首页快捷创作带进来的提示词，进页面直接填好。
+  final String? prompt;
 
   @override
   State<ImageToVideoPage> createState() => _ImageToVideoPageState();
@@ -73,6 +89,7 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
 
     // 路由参数是字符串，转不成数字就当没带（而不是崩掉）
     _selectedSkillId = int.tryParse(widget.skillId ?? '');
+    _promptController.text = widget.prompt ?? '';
 
     // 放到首帧之后再触发加载：Provider 的 load() 内部会 notifyListeners()，
     // 在 initState 里同步触发会在 build 期间标记依赖组件为脏，直接报错。
@@ -130,21 +147,62 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
     });
   }
 
-    // 从素材库选择首帧图
-    Future<void> _openSelectMaterial() async {
-      if (_submitting) return;
-      final selectedUrl = await context.push('/select-material');
-      if(selectedUrl != null && selectedUrl is String) {
-        // 拿到素材返回的图片url，更新到首帧
-        setState(() {
-          _refImageUrl = selectedUrl;
-          // 因为是后端已经存在的素材，不需要本地文件，本地预览需要单独处理
-          _refImage = null;
-          _refImageBytes = null;
-        });
-      }
+  Future<void> _openImageSourceSheet() async {
+    if (_submitting) return;
+    final source = await showPremiumSelectSheet<_ImageSourceChoice>(
+      context: context,
+      title: '选择首帧来源',
+      subtitle: '支持 jpg / png / webp，单张不超过 10MB',
+      options: const [
+        PremiumSelectOption(
+          value: _ImageSourceChoice.gallery,
+          title: '从相册选择',
+          description: '选择手机中的图片作为视频起点',
+          icon: Icons.photo_library_outlined,
+        ),
+        PremiumSelectOption(
+          value: _ImageSourceChoice.camera,
+          title: '拍照',
+          description: '现场拍摄一张首帧图片',
+          icon: Icons.photo_camera_outlined,
+        ),
+        PremiumSelectOption(
+          value: _ImageSourceChoice.materials,
+          title: '从素材库选择',
+          description: '复用已经上传到平台的素材',
+          icon: CupertinoIcons.photo_on_rectangle,
+          highlighted: true,
+        ),
+      ],
+    );
+    if (!mounted || source == null) return;
+    switch (source) {
+      case _ImageSourceChoice.gallery:
+        await _pickImage(ImageSource.gallery);
+        break;
+      case _ImageSourceChoice.camera:
+        await _pickImage(ImageSource.camera);
+        break;
+      case _ImageSourceChoice.materials:
+        await _openSelectMaterial();
+        break;
     }
+  }
 
+  // 从素材库选择首帧图
+  Future<void> _openSelectMaterial() async {
+    if (_submitting) return;
+    final selectedUrl = await context.push('/select-material');
+    if (selectedUrl != null && selectedUrl is String) {
+      // 拿到素材返回的图片url，更新到首帧
+      setState(() {
+        _refImageUrl = selectedUrl;
+        // 因为是后端已经存在的素材，不需要本地文件，本地预览需要单独处理
+        _refImage = null;
+        _refImageBytes = null;
+      });
+    }
+  }
 
   void _previewImage() {
     final bytes = _refImageBytes;
@@ -195,11 +253,11 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
 
       // ---- 第二步：创建任务 ----
       final task = await context.read<TaskRepository>().createImageToVideo(
-            skillId: _selectedSkillId,
-            prompt: prompt,
-            negativePrompt: _negativeController.text.trim(),
-            refImageUrl: refUrl,
-          );
+        skillId: _selectedSkillId,
+        prompt: prompt,
+        negativePrompt: _negativeController.text.trim(),
+        refImageUrl: refUrl,
+      );
 
       if (!mounted) return;
 
@@ -288,27 +346,79 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
     final selectedSkill = _resolveSelected(skills);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('图生视频创作')),
+      appBar: premiumTopBar(
+        title: '图生视频创作',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.homePath);
+          }
+        },
+      ),
       body: SafeArea(
-        child: MobileScaffoldBody(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildImageSection(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildSkillSection(skillProvider, skills, selectedSkill),
-              const SizedBox(height: AppSpacing.xl),
-              _buildPromptSection(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildNegativeSection(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildSubmitButton(),
-              const SizedBox(height: AppSpacing.md),
-              _buildHint(),
-            ],
-          ),
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(AppSpacing.pagePadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    PremiumModeSwitch<_VideoMode>(
+                      value: _VideoMode.video,
+                      onChanged: (mode) {
+                        if (mode == _VideoMode.image) _switchToImage();
+                      },
+                      options: const [
+                        PremiumModeOption(
+                          value: _VideoMode.image,
+                          label: '图片',
+                          icon: CupertinoIcons.photo,
+                        ),
+                        PremiumModeOption(
+                          value: _VideoMode.video,
+                          label: '视频',
+                          icon: CupertinoIcons.videocam,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildImageSection(),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildSkillSection(skillProvider, skills, selectedSkill),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildPromptSection(),
+                    const SizedBox(height: AppSpacing.lg),
+                    _buildNegativeSection(),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
+              ),
+            ),
+            _buildSubmitButton(),
+          ],
         ),
       ),
+    );
+  }
+
+  void _switchToImage() {
+    final query = <String, String>{};
+    final prompt = _promptController.text.trim();
+    if (prompt.isNotEmpty) query['prompt'] = prompt;
+    if (_selectedSkillId != null) {
+      query['skillId'] = '$_selectedSkillId';
+    }
+    HapticFeedback.selectionClick();
+    context.pushReplacement(
+      Uri(
+        path: RouteNames.textToImagePath,
+        queryParameters: query.isEmpty ? null : query,
+      ).toString(),
     );
   }
 
@@ -334,27 +444,29 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
     final bytes = _refImageBytes;
     final remoteUrl = _refImageUrl;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _FieldLabel(
-          icon: Icons.image_outlined,
-          text: '首帧参考图',
-          hint: '必填，视频会以这张图为起点运动',
-        ),
-        const SizedBox(height: AppSpacing.sm),
+    return GlassPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _FieldLabel(
+            icon: Icons.image_outlined,
+            text: '首帧参考图',
+            hint: '必填，视频会以这张图为起点运动',
+          ),
+          const SizedBox(height: AppSpacing.md),
 
-        // 三种状态，按「本地字节 > 远端地址 > 还没选」的优先级判断。
-        //
-        // 正常情况下两种来源是互斥的（选本地图会清空 url，选素材会清空 bytes），
-        // 但改成字节优先是对的：手上真有字节流时，它一定是最准确的那张图。
-        if (bytes != null)
-          _buildImagePreview(theme, bytes)
-        else if (remoteUrl != null && remoteUrl.isNotEmpty)
-          _buildRemoteImagePreview(theme, remoteUrl)
-        else
-          _buildEmptyPicker(theme),
-      ],
+          // 三种状态，按「本地字节 > 远端地址 > 还没选」的优先级判断。
+          //
+          // 正常情况下两种来源是互斥的（选本地图会清空 url，选素材会清空 bytes），
+          // 但改成字节优先是对的：手上真有字节流时，它一定是最准确的那张图。
+          if (bytes != null)
+            _buildImagePreview(bytes)
+          else if (remoteUrl != null && remoteUrl.isNotEmpty)
+            _buildRemoteImagePreview(remoteUrl)
+          else
+            _buildEmptyPicker(theme),
+        ],
+      ),
     );
   }
 
@@ -367,124 +479,80 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
   /// 但 [_refImageUrl] 本身仍然保存那个相对路径：提交时要原样传给后端，
   /// 不能把拼好的绝对地址存进去，否则数据库里会写进
   /// `http://localhost:8080/...` 这种本机地址，换台机器就失效。
-  Widget _buildRemoteImagePreview(ThemeData theme, String url) {
+  Widget _buildRemoteImagePreview(String url) {
     final displayUrl = AppConfig.resolveAssetUrl(url);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GestureDetector(
-          // 点图放大看细节，确认选对了再提交
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ImagePreviewPage(
-                imageUrl: displayUrl,
-                title: '首帧参考图',
-              ),
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            child: SizedBox(
-              height: 220,
-              width: double.infinity,
-              // AppNetworkImage 内部就是 Image.network，
-              // 另外补了加载中占位与加载失败兜底，避免破图
-              child: AppNetworkImage(
-                url: displayUrl,
-                fit: BoxFit.contain,
-                // 失败时把**真实请求地址**显示出来，而不是只给一个破图图标。
-                // 之前这里失败是"哑"的：看不出是地址拼错了、后端没这个文件、
-                // 还是后端没起 —— 把地址亮出来可以直接粘到浏览器验证。
-                errorWidget: _RemoteImageError(url: displayUrl),
-              ),
-            ),
-          ),
+    return _framePreview(
+      media: AppNetworkImage(
+        url: displayUrl,
+        fit: BoxFit.cover,
+        errorWidget: _RemoteImageError(url: displayUrl),
+      ),
+      label: '素材库图片 · 已选首帧',
+      onPreview: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              ImagePreviewPage(imageUrl: displayUrl, title: '首帧参考图'),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          '已选素材图片（来自素材库）',
-          style: theme.textTheme.bodySmall,
-        ),
-        Wrap(
-          alignment: WrapAlignment.end,
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.xs,
-          children: [
-            TextButton.icon(
-              onPressed: _submitting ? null : _openSelectMaterial,
-              icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-              label: const Text('重新选择'),
-            ),
-            TextButton.icon(
-              onPressed: _submitting ? null : _clearImage,
-              icon: const Icon(Icons.delete_outline_rounded, size: 16),
-              label: const Text('移除'),
-            ),
-          ],
-        ),
-      ],
+      ),
+      onChange: _submitting ? null : _openImageSourceSheet,
     );
   }
 
-
   /// 还没选图：给相册 / 拍照两个入口。
   Widget _buildEmptyPicker(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(
-          color: theme.dividerTheme.color ?? AppColors.lightBorder,
-        ),
-      ),
+    return DashedUploadCard(
+      height: 230,
+      onTap: _openImageSourceSheet,
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.add_photo_alternate_outlined,
-            size: 34,
-            color: AppColors.primary.withValues(alpha: 0.8),
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.sage.withValues(alpha: 0.18),
+                  AppColors.gold.withValues(alpha: 0.16),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.add_photo_alternate_outlined,
+              size: 28,
+              color: AppColors.sage,
+            ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text('上传一张图片作为首帧', style: theme.textTheme.bodyMedium),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.md),
           Text(
-            '支持 jpg / png / webp，10MB 以内',
-            style: theme.textTheme.bodySmall,
+            '点击选择首帧图片',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.textTheme.bodyLarge?.color,
+            ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          // 用 Wrap 而不是 Row：
-          // Row 在主轴方向会给子组件**无限宽**的约束，而 OutlinedButton.icon
-          // 内部的尺寸计算（ConstrainedBox + Flexible 标签）拿到无限宽约束时
-          // 会直接抛 "BoxConstraints forces an infinite width"。
-          // Wrap 只给子组件松约束，永远不会强制无限宽；顺带还有个好处 ——
-          // 窄屏上两个按钮会自动折到第二行，不会横向溢出。
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.sm,
-            children: [
-              OutlinedButton.icon(
-                onPressed: _submitting
-                    ? null
-                    : () => _pickImage(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library_outlined, size: 18),
-                label: const Text('从相册选择'),
+          const SizedBox(height: AppSpacing.xs),
+          Text('相册 · 拍照 · 素材库', style: theme.textTheme.bodySmall),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.sageTint,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+            ),
+            child: Text(
+              '视频会以这张图为起点开始运动',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.sage,
+                fontWeight: FontWeight.w600,
               ),
-              OutlinedButton.icon(
-                onPressed:
-                    _submitting ? null : () => _pickImage(ImageSource.camera),
-                icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                label: const Text('拍照'),
-              ),
-              // ==========在这里插入新按钮==========
-                             OutlinedButton.icon(
-                               onPressed: _submitting ? null : _openSelectMaterial,
-                               icon: const Icon(Icons.collections_outlined, size: 18),
-                               label: const Text('从素材库选择'),
-                             ),
-            ],
+            ),
           ),
         ],
       ),
@@ -492,89 +560,106 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
   }
 
   /// 已选图：预览 + 重选 / 移除，并标出上传状态。
-  Widget _buildImagePreview(ThemeData theme, Uint8List bytes) {
+  Widget _buildImagePreview(Uint8List bytes) {
     final uploaded = _refImageUrl != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GestureDetector(
-          // 点图放大看细节，确认选对了再提交
-          onTap: _previewImage,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            child: Stack(
-              children: [
-                // 用 BoxFit.contain + 固定高度：不裁掉画面任何部分，
-                // 用户看到的就是将要送去生成的那张图的完整内容
-                SizedBox(
-                  height: 220,
-                  width: double.infinity,
-                  child: Image.memory(bytes, fit: BoxFit.contain),
+    return _framePreview(
+      media: Image.memory(bytes, fit: BoxFit.cover),
+      label:
+          '已选图片 · ${MediaUtils.formatFileSize(bytes.length)}${uploaded ? ' · 已上传' : ''}',
+      uploaded: uploaded,
+      onPreview: _previewImage,
+      onChange: _submitting ? null : _openImageSourceSheet,
+    );
+  }
+
+  Widget _framePreview({
+    required Widget media,
+    required String label,
+    required VoidCallback onPreview,
+    VoidCallback? onChange,
+    bool uploaded = false,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: SizedBox(
+        height: 260,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            media,
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.center,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xA6000000)],
                 ),
-                // 上传完成的角标：让用户明确知道「这张图后端已经收到了」
-                if (uploaded)
-                  Positioned(
-                    left: AppSpacing.sm,
-                    top: AppSpacing.sm,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.statusSuccess.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.cloud_done_rounded,
-                              size: 13, color: Colors.white),
-                          SizedBox(width: 3),
-                          Text(
-                            '已上传',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+              ),
+            ),
+            Positioned(
+              left: AppSpacing.md,
+              top: AppSpacing.md,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: uploaded
+                      ? AppColors.statusSuccess.withValues(alpha: 0.92)
+                      : Colors.black.withValues(alpha: 0.38),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                ),
+                child: Text(
+                  uploaded ? '✓ 已上传' : '首帧参考图',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: AppSpacing.md,
+              right: AppSpacing.md,
+              bottom: AppSpacing.md,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          '已选图片 · ${MediaUtils.formatFileSize(bytes.length)}',
-          style: theme.textTheme.bodySmall,
-        ),
-        // 与上方选图入口同理：按钮不能直接放进 Row（会拿到无限宽约束而报错），
-        // 统一改用 Wrap，窄屏时自动折行。
-        Wrap(
-          alignment: WrapAlignment.end,
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.xs,
-          children: [
-            TextButton.icon(
-              onPressed: _submitting
-                  ? null
-                  : () => _pickImage(ImageSource.gallery),
-              icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-              label: const Text('重新选择'),
-            ),
-            TextButton.icon(
-              onPressed: _submitting ? null : _clearImage,
-              icon: const Icon(Icons.delete_outline_rounded, size: 16),
-              label: const Text('移除'),
+                  PremiumCircleAction(
+                    icon: Icons.zoom_out_map_rounded,
+                    tooltip: '查看大图',
+                    onPressed: onPreview,
+                  ),
+                  PremiumCircleAction(
+                    icon: Icons.swap_horiz_rounded,
+                    tooltip: '更换首帧',
+                    onPressed: onChange,
+                  ),
+                  PremiumCircleAction(
+                    icon: Icons.delete_outline_rounded,
+                    tooltip: '移除首帧',
+                    onPressed: _submitting ? null : _clearImage,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -587,24 +672,26 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
     List<SkillModel> skills,
     SkillModel? selected,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _FieldLabel(
-          icon: Icons.dashboard_customize_rounded,
-          text: '运镜线路',
-          hint: '线路决定镜头运动方式与推理参数',
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (skills.isEmpty)
-          _buildSkillPlaceholder(provider)
-        else
-          _buildDropdown(skills),
-        if (selected != null) ...[
+    return GlassPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _FieldLabel(
+            icon: Icons.dashboard_customize_rounded,
+            text: '运镜线路',
+            hint: '线路决定镜头运动方式与推理参数',
+          ),
           const SizedBox(height: AppSpacing.md),
-          _SkillPreview(skill: selected),
+          if (skills.isEmpty)
+            _buildSkillPlaceholder(provider)
+          else
+            _buildDropdown(skills),
+          if (selected != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _SkillPreview(skill: selected),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -636,12 +723,17 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
       decoration: BoxDecoration(
         color: AppColors.statusFailed.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.statusFailed.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.statusFailed.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline,
-              size: 18, color: AppColors.statusFailed),
+          const Icon(
+            Icons.error_outline,
+            size: 18,
+            color: AppColors.statusFailed,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
@@ -658,54 +750,106 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
     );
   }
 
-  /// 线路下拉框。与文生图页同一套写法（裸 DropdownButton，不用 FormField）。
+  /// 线路选择器。使用统一富信息底部弹层。
   Widget _buildDropdown(List<SkillModel> skills) {
     final theme = Theme.of(context);
-    final borderColor = theme.dividerTheme.color ?? AppColors.lightBorder;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: borderColor),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int?>(
-          isExpanded: true,
-          value: _resolveSelected(skills)?.id,
-          hint: Text('自动选择（使用默认参数）', style: theme.textTheme.bodyMedium),
-          icon: const Icon(Icons.expand_more_rounded),
-          itemHeight: AppSpacing.touchTargetMin,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          onChanged: _submitting
-              ? null
-              : (value) => setState(() => _selectedSkillId = value),
-          items: [
-            for (final skill in skills)
-              DropdownMenuItem<int?>(
-                value: skill.id,
-                child: Row(
+    final selected = _resolveSelected(skills);
+    return PressableScale(
+      child: InkWell(
+        onTap: _submitting ? null : () => _openSkillPicker(skills),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            border: Border.all(
+              color: theme.dividerTheme.color ?? AppColors.lightBorder,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.sageTint,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: const Icon(
+                  CupertinoIcons.videocam_fill,
+                  size: 17,
+                  color: AppColors.sage,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        skill.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge,
-                      ),
+                    Text(
+                      selected?.name ?? '自动选择线路',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall,
                     ),
-                    if (skill.modelName != null)
-                      Text(
-                        skill.modelName!,
-                        style: theme.textTheme.bodySmall,
-                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      selected?.modelName ?? '使用后端默认运镜参数',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
-          ],
+              const Icon(
+                CupertinoIcons.chevron_down,
+                size: 15,
+                color: AppColors.taupe,
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _openSkillPicker(List<SkillModel> skills) async {
+    final result = await showPremiumSelectSheet<int>(
+      context: context,
+      title: '选择运镜线路',
+      subtitle: '线路决定镜头运动和模型参数',
+      selected: _selectedSkillId ?? -1,
+      options: [
+        const PremiumSelectOption(
+          value: -1,
+          title: '自动线路',
+          description: '使用后端默认运镜模板',
+          icon: CupertinoIcons.sparkles,
+        ),
+        for (final skill in skills)
+          PremiumSelectOption(
+            value: skill.id,
+            title: skill.name,
+            description: [
+              skill.modelName ?? '默认模型',
+              if (skill.width != null && skill.height != null)
+                '${skill.width}×${skill.height}',
+            ].join(' · '),
+            icon: CupertinoIcons.videocam,
+            badge: skill.id == _selectedSkillId ? '当前' : null,
+            trailing: skill.usageLabel,
+            highlighted: skill.id == _selectedSkillId,
+          ),
+      ],
+    );
+    if (result == null || !mounted) return;
+    HapticFeedback.selectionClick();
+    setState(() => _selectedSkillId = result < 0 ? null : result);
   }
 
   // ---------------------------------------------------------------------------
@@ -716,27 +860,57 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _FieldLabel(
-          icon: Icons.auto_awesome,
-          text: '运动描述',
-          hint: '描述镜头怎么动、画面里发生什么',
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
+        PromptInputCard(
           controller: _promptController,
           enabled: !_submitting,
-          maxLines: 5,
-          minLines: 3,
-          // 与后端 CreationRequest 的 @Size(max = 2000) 对齐，
-          // 前端先拦一道，用户体验好过提交后收 400
+          title: '运动描述',
+          hintText: '例如：镜头缓慢推进，人物头发随风飘动，背景霓虹灯闪烁',
           maxLength: 2000,
-          textInputAction: TextInputAction.newline,
-          decoration: _inputDecoration(
-            hintText: '例如：镜头缓慢推进，人物头发随风飘动，背景霓虹灯闪烁',
+          minLines: 4,
+          maxLines: 5,
+          trailing: Text(
+            '必填',
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: AppColors.sage, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < _motionPresets.length; i++) ...[
+                PremiumChoiceChip(
+                  label: _motionPresets[i],
+                  selected: false,
+                  icon: CupertinoIcons.sparkles,
+                  compact: true,
+                  onTap: () => _applyMotionPreset(_motionPresets[i]),
+                ),
+                if (i != _motionPresets.length - 1)
+                  const SizedBox(width: AppSpacing.sm),
+              ],
+            ],
           ),
         ),
       ],
     );
+  }
+
+  static const List<String> _motionPresets = [
+    '镜头缓慢推进',
+    '商品环绕展示',
+    '固定镜头',
+    '光影缓慢变化',
+  ];
+
+  void _applyMotionPreset(String preset) {
+    final current = _promptController.text.trim();
+    if (current.contains(preset)) return;
+    final next = current.isEmpty ? preset : '$current，$preset';
+    _promptController.text = next;
+    _promptController.selection = TextSelection.collapsed(offset: next.length);
+    setState(() {});
   }
 
   // ---------------------------------------------------------------------------
@@ -744,28 +918,28 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
   // ---------------------------------------------------------------------------
 
   Widget _buildNegativeSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _FieldLabel(
-          icon: Icons.block_outlined,
-          text: '反向提示词',
-          hint: '不想出现的内容，留空则用线路自带的',
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: _negativeController,
-          enabled: !_submitting,
-          maxLines: 3,
-          minLines: 2,
-          // 与后端 @Size(max = 1000) 对齐
-          maxLength: 1000,
-          textInputAction: TextInputAction.newline,
-          decoration: _inputDecoration(
-            hintText: '例如：画面抖动、人物变形、闪烁、低分辨率',
+    return GlassPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _FieldLabel(
+            icon: Icons.block_outlined,
+            text: '反向提示词',
+            hint: '留空则使用线路自带参数',
           ),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _negativeController,
+            enabled: !_submitting,
+            maxLines: 3,
+            minLines: 2,
+            // 与后端 @Size(max = 1000) 对齐
+            maxLength: 1000,
+            textInputAction: TextInputAction.newline,
+            decoration: _inputDecoration(hintText: '例如：画面抖动、人物变形、闪烁、低分辨率'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -774,91 +948,15 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
   // ---------------------------------------------------------------------------
 
   Widget _buildSubmitButton() {
-    final theme = Theme.of(context);
-
-    // 提交中整体压暗：按钮本体是透明的（为了透出渐变），
-    // FilledButton 的 disabled 配色管不到这层渐变，所以用 Opacity 统一处理。
-    return Opacity(
-      opacity: _submitting ? 0.65 : 1,
-      child: SizedBox(
-        height: AppSpacing.buttonHeight,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.28),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: FilledButton(
-            onPressed: _submitting ? null : _submit,
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-            ),
-            child: _submitting
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      // 两段式提交，文案要跟着走，否则用户会以为卡住了
-                      Text(_submitStage.isEmpty ? '正在提交…' : _submitStage),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.movie_creation_outlined, size: 20),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '开始生成',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHint() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.info_outline_rounded,
-          size: 14,
-          color: Theme.of(context).textTheme.bodySmall?.color,
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            '提交后任务进入排队，页面会自动跳到任务详情页。'
-            '视频生成比图片慢，完成后可直接在详情页播放。',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ),
-      ],
+    final credits = context.watch<AuthProvider>().user?.credits;
+    return GenerateBar(
+      creditCost: 15,
+      credits: credits,
+      submitting: _submitting,
+      submittingLabel: _submitStage.isEmpty ? '正在提交…' : _submitStage,
+      label: '开始生成视频',
+      hint: '提交后自动进入任务详情，由 Harness 异步生成',
+      onGenerate: _submit,
     );
   }
 
@@ -868,23 +966,24 @@ class _ImageToVideoPageState extends State<ImageToVideoPage> {
       hintText: hintText,
       hintStyle: theme.textTheme.bodySmall,
       filled: true,
-      fillColor: theme.cardTheme.color,
+      fillColor: (theme.cardTheme.color ?? theme.colorScheme.surface)
+          .withValues(alpha: 0.82),
       alignLabelWithHint: true,
       contentPadding: const EdgeInsets.all(AppSpacing.lg),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: BorderSide(
           color: theme.dividerTheme.color ?? AppColors.lightBorder,
         ),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: BorderSide(
           color: theme.dividerTheme.color ?? AppColors.lightBorder,
         ),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
       ),
     );

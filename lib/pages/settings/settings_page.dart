@@ -1,4 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/app_config.dart';
@@ -7,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/platform_utils.dart';
 import '../../providers/theme_provider.dart';
+import '../../widgets/premium/glass_panel.dart';
 import '../../widgets/scaffold_page.dart';
 
 /// 页面 12：设置页
@@ -20,6 +24,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final theme = Theme.of(context);
 
     return ScaffoldPage(
       pageNumber: 12,
@@ -41,31 +46,39 @@ class SettingsPage extends StatelessWidget {
           // ---------- 已实现：主题切换 ----------
           _SectionCard(
             title: '外观',
-            icon: Icons.palette_outlined,
+            icon: CupertinoIcons.paintbrush,
             children: [
-              _SettingTile(
-                title: '主题模式',
-                subtitle: themeProvider.themeModeLabel,
-                trailing: SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ThemeMode.light,
-                      icon: Icon(Icons.light_mode_outlined, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.system,
-                      icon: Icon(Icons.brightness_auto_outlined, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.dark,
-                      icon: Icon(Icons.dark_mode_outlined, size: 18),
-                    ),
-                  ],
-                  selected: {themeProvider.themeMode},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (selection) =>
-                      themeProvider.setThemeMode(selection.first),
-                ),
+              Text('主题模式', style: theme.textTheme.bodyMedium),
+              const SizedBox(height: AppSpacing.sm),
+              CupertinoSlidingSegmentedControl<ThemeMode>(
+                groupValue: themeProvider.themeMode,
+                backgroundColor: AppColors.sageTint.withValues(alpha: 0.55),
+                thumbColor: theme.colorScheme.surface,
+                padding: const EdgeInsets.all(3),
+                children: const {
+                  ThemeMode.light: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Icon(CupertinoIcons.sun_max, size: 18),
+                  ),
+                  ThemeMode.system: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Icon(CupertinoIcons.circle_lefthalf_fill, size: 18),
+                  ),
+                  ThemeMode.dark: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Icon(CupertinoIcons.moon, size: 18),
+                  ),
+                },
+                onValueChanged: (mode) {
+                  if (mode == null) return;
+                  HapticFeedback.selectionClick();
+                  themeProvider.setThemeMode(mode);
+                },
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                themeProvider.themeModeLabel,
+                style: theme.textTheme.bodySmall,
               ),
             ],
           ),
@@ -75,7 +88,7 @@ class SettingsPage extends StatelessWidget {
           // ---------- 已实现：环境信息 ----------
           _SectionCard(
             title: '环境信息（调试用）',
-            icon: Icons.dns_outlined,
+            icon: CupertinoIcons.info_circle,
             children: [
               _InfoTile(label: '当前环境', value: AppConfig.envLabel),
               _InfoTile(label: '运行平台', value: PlatformUtils.platformName),
@@ -92,8 +105,9 @@ class SettingsPage extends StatelessWidget {
               _InfoTile(
                 label: '登录模式',
                 value: AppConfig.bypassLogin ? '脚手架放行（未连后端）' : '真实接口',
-                valueColor:
-                    AppConfig.bypassLogin ? AppColors.accent : AppColors.statusSuccess,
+                valueColor: AppConfig.bypassLogin
+                    ? AppColors.accent
+                    : AppColors.statusSuccess,
               ),
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.md),
@@ -101,7 +115,7 @@ class SettingsPage extends StatelessWidget {
                   PlatformUtils.isWeb
                       ? 'Web 调试：后端跑在本机，直接用 localhost。'
                       : 'Android 真机：手机访问不到 localhost，必须用电脑的局域网 IP，'
-                          '并确保手机与电脑在同一 WiFi、后端监听 0.0.0.0。',
+                            '并确保手机与电脑在同一 WiFi、后端监听 0.0.0.0。',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -124,6 +138,14 @@ class SettingsPage extends StatelessWidget {
           ),
 
           const SizedBox(height: AppSpacing.xxl),
+
+          OutlinedButton.icon(
+            onPressed: () => context.push(RouteNames.componentGalleryPath),
+            icon: const Icon(Icons.widgets_outlined, size: 18),
+            label: const Text('打开组件预览（开发用）'),
+          ),
+
+          const SizedBox(height: AppSpacing.xl),
 
           Center(
             child: Text(
@@ -151,13 +173,7 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: theme.dividerTheme.color ?? Colors.transparent),
-      ),
+    return GlassPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -172,38 +188,6 @@ class _SectionCard extends StatelessWidget {
           ...children,
         ],
       ),
-    );
-  }
-}
-
-class _SettingTile extends StatelessWidget {
-  const _SettingTile({
-    required this.title,
-    this.subtitle,
-    this.trailing,
-  });
-
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: theme.textTheme.bodyMedium),
-              if (subtitle != null)
-                Text(subtitle!, style: theme.textTheme.bodySmall),
-            ],
-          ),
-        ),
-        ?trailing,
-      ],
     );
   }
 }
