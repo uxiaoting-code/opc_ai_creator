@@ -1,0 +1,68 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "电商视觉",
+      "parentId": null,
+      "sortOrder": 1,
+      "children": [
+        { "id": 4, "name": "商品主图", "parentId": 1, "sortOrder": 1, "children": [] },
+        { "id": 5, "name": "活动海报", "parentId": 1, "sortOrder": 2, "children": [] }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "短视频",
+      "parentId": null,
+      "sortOrder": 2,
+      "children": [
+        { "id": 6, "name": "产品展示", "parentId": 2, "sortOrder": 1, "children": [] },
+        { "id": 7, "name": "场景素材", "parentId": 2, "sortOrder": 2, "children": [] }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "品牌资产",
+      "parentId": null,
+      "sortOrder": 3,
+      "children": [
+        { "id": 8, "name": "Logo", "parentId": 3, "sortOrder": 1, "children": [] },
+        { "id": 9, "name": "字体", "parentId": 3, "sortOrder": 2, "children": [] }
+      ]
+    }
+  ],
+  "tags": [
+    {
+      "id": 1,
+      "name": "风格",
+      "parentId": null,
+      "sortOrder": 1,
+      "children": [
+        { "id": 4, "name": "极简", "parentId": 1, "sortOrder": 1, "children": [] },
+        { "id": 5, "name": "国风", "parentId": 1, "sortOrder": 2, "children": [] },
+        { "id": 6, "name": "赛博朋克", "parentId": 1, "sortOrder": 3, "children": [] }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "场景",
+      "parentId": null,
+      "sortOrder": 2,
+      "children": [
+        { "id": 7, "name": "室内", "parentId": 2, "sortOrder": 1, "children": [] },
+        { "id": 8, "name": "户外", "parentId": 2, "sortOrder": 2, "children": [] },
+        { "id": 9, "name": "节庆", "parentId": 2, "sortOrder": 3, "children": [] }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "运营状态",
+      "parentId": null,
+      "sortOrder": 3,
+      "children": [
+        { "id": 10, "name": "新品", "parentId": 3, "sortOrder": 1, "children": [] },
+        { "id": 11, "name": "爆款", "parentId": 3, "sortOrder": 2, "children": [] }
+      ]
+    }
+  ]
+}

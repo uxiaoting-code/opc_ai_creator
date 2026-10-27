@@ -7,6 +7,7 @@ import 'core/network/api_client.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/material_repository.dart';
+import 'data/repositories/prompt_repository.dart';
 import 'data/repositories/task_repository.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
@@ -32,6 +33,7 @@ class OpcApp extends StatefulWidget {
     required this.notificationProvider,
     required this.taskRepository,
     required this.materialRepository,
+    required this.promptRepository,
   });
 
   final ApiClient apiClient;
@@ -49,6 +51,9 @@ class OpcApp extends StatefulWidget {
   /// 素材仓库。同样没有 Provider —— 只有「图生视频创作页」在提交那一刻用一次，
   /// 没有跨页共享的状态。
   final MaterialRepository materialRepository;
+
+  /// Prompt 知识库数据仓库。
+  final PromptRepository promptRepository;
 
   @override
   State<OpcApp> createState() => _OpcAppState();
@@ -80,6 +85,7 @@ class _OpcAppState extends State<OpcApp> {
         // 仓库层：无状态服务，用普通 Provider 注入即可
         Provider<TaskRepository>.value(value: widget.taskRepository),
         Provider<MaterialRepository>.value(value: widget.materialRepository),
+        Provider<PromptRepository>.value(value: widget.promptRepository),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

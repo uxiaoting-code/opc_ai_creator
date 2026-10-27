@@ -600,7 +600,88 @@ GET /api/notifications/unread
 
 ---
 
-## 九、健康检查 `/api/health`
+## 九、Prompt 知识库 `/api/prompts`
+
+所有 Prompt 接口都需要登录。
+
+### 9.1 Prompt 列表
+
+```
+GET /api/prompts?category=电商&keyword=主图&page=1&pageSize=12
+```
+
+| 参数 | 必填 | 说明 |
+|---|---|---|
+| `category` | 否 | 分类精确匹配；为空表示全部 |
+| `keyword` | 否 | 同时匹配标题、正文和标签 |
+| `page` | 否 | 从 1 开始，默认 1 |
+| `pageSize` | 否 | 默认 12，最大 50 |
+
+**返回 `data`**：统一分页结构，元素字段如下：
+
+```json
+{
+  "list": [
+    {
+      "id": 1,
+      "userId": null,
+      "title": "极简商品主图",
+      "content": "product photography, single object, pastel background",
+      "negativeContent": "cluttered, text, watermark",
+      "category": "电商",
+      "tags": "电商,产品,极简",
+      "coverUrl": null,
+      "favoriteCount": 94,
+      "useCount": 312,
+      "isPublic": true,
+      "favorited": false,
+      "createdAt": "2026-10-19T10:12:00"
+    }
+  ],
+  "page": 1,
+  "pageSize": 12,
+  "total": 1
+}
+```
+
+### 9.2 保存自定义 Prompt
+
+```
+POST /api/prompts
+```
+
+```json
+{
+  "title": "我的商品主图",
+  "content": "白色背景，柔和棚拍光，商品居中",
+  "negativeContent": "文字，水印，低清晰度",
+  "category": "电商",
+  "tags": "商品,主图,极简",
+  "coverUrl": null
+}
+```
+
+标题和正文必填；标题最多 100 字，正文最多 4000 字，反向提示词最多 2000 字。
+
+### 9.3 收藏 / 取消收藏
+
+```
+POST /api/prompts/{id}/favorite
+```
+
+同一接口切换收藏状态。**返回 `data`**
+
+```json
+{
+  "promptId": 1,
+  "favorited": true,
+  "favoriteCount": 95
+}
+```
+
+---
+
+## 十、健康检查 `/api/health`
 
 ```
 GET /api/health      无需鉴权
@@ -626,7 +707,7 @@ GET /api/health      无需鉴权
 
 ---
 
-## 十、枚举字典
+## 十一、枚举字典
 
 | 枚举 | 取值 | 中文 |
 |---|---|---|
@@ -645,7 +726,7 @@ GET /api/health      无需鉴权
 
 ---
 
-## 十一、错误码表
+## 十二、错误码表
 
 | code | message | 说明 |
 |---|---|---|
@@ -670,10 +751,14 @@ GET /api/health      无需鉴权
 | 4003 | 文件体积超出限制 | |
 | 4004 | 文件保存失败 | |
 | 5001 | 作品不存在 | |
+| 6501 | Prompt 不存在 | |
+| 6502 | Prompt 标题不合法 | |
+| 6503 | Prompt 内容不合法 | |
+| 6504 | Prompt 参数不合法 | |
 
 ---
 
-## 十二、快速自测（curl）
+## 十三、快速自测（curl）
 
 ```bash
 # 1. 健康检查（不需要 token）
@@ -703,11 +788,23 @@ curl -H "Authorization: Bearer $T" "http://localhost:8080/api/tasks?page=1&pageS
 
 # 8. 作品列表
 curl -H "Authorization: Bearer $T" "http://localhost:8080/api/works"
+
+# 9. Prompt 列表
+curl -H "Authorization: Bearer $T" "http://localhost:8080/api/prompts?page=1&pageSize=12"
+
+# 10. 保存自定义 Prompt
+curl -X POST http://localhost:8080/api/prompts \
+  -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+  -d '{"title":"我的商品主图","content":"白色背景，柔和棚拍光，商品居中","category":"电商","tags":"商品,主图"}'
+
+# 11. 切换收藏状态
+curl -X POST http://localhost:8080/api/prompts/1/favorite \
+  -H "Authorization: Bearer $T"
 ```
 
 ---
 
-## 十三、关于 Mock
+## 十四、关于 Mock
 
 后端**不调用任何真实 AI 服务**，`MockAiProvider` 是纯本地实现：
 
@@ -721,3 +818,9 @@ curl -H "Authorization: Bearer $T" "http://localhost:8080/api/works"
 
 生成耗时被刻意拉长到 2~6 秒，好让「排队 → 生成中 → 成功」的状态流转肉眼可见。
 这两项分别由 `opc.mock.min-delay-ms` / `max-delay-ms` 和 `opc.harness.poll-interval-ms` 控制。
+
+---
+
+## 十五、变更记录
+
+- 2026-10-26：新增 Prompt 列表、自定义保存、收藏切换接口（6500-6599 错误码段）。

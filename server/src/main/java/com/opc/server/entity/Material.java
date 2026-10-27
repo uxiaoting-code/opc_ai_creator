@@ -2,6 +2,10 @@ package com.opc.server.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,11 +13,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
  * 素材，对应 {@code t_material}。
  *
- * <p>用户上传的参考素材（垫图、首帧图）。本轮后端先建好表与实体，
- * 上传接口等「素材库」页面开发时再接。
+ * <p>C 端上传接口继续使用 {@code name/url}；管理端在此基础上补充标题、
+ * 分类、标签关联和版本号。字段只增不改，避免破坏 App 现有接口。
  */
 @Entity
 @Table(name = "t_material")
@@ -29,6 +36,10 @@ public class Material extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
+
+    /** 管理端展示名称；旧数据为空时回退到 name。 */
+    @Column(name = "title", length = 100)
+    private String title;
 
     @Column(name = "url", nullable = false, length = 255)
     private String url;
@@ -56,9 +67,27 @@ public class Material extends BaseEntity {
     @Column(name = "group_name", length = 50)
     private String groupName;
 
-    /** 标签，逗号分隔 */
+    /** 分类树节点 ID。 */
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    /** 旧版逗号分隔标签，保留用于兼容历史数据和关键词检索。 */
     @Column(name = "tags", length = 255)
-    private String tags;
+    private String legacyTags;
+
+    /** 管理端多级标签关联。 */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "t_material_tag_rel",
+            joinColumns = @JoinColumn(name = "material_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    @Builder.Default
+    private Set<MaterialTag> tags = new LinkedHashSet<>();
+
+    @Column(name = "version")
+    @Builder.Default
+    private Integer version = 1;
 
     /** 逻辑删除（DB 列是 TINYINT，Java 侧用布尔语义以支持 DeletedFalse 派生查询） */
     @Column(name = "deleted", nullable = false)

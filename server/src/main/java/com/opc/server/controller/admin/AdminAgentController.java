@@ -68,6 +68,13 @@ public class AdminAgentController {
         return Result.success(agentService.save(id, request));
     }
 
+    /** 工作台保存编排的语义化路由，与 PUT /{id} 等价。 */
+    @PutMapping("/{id}/nodes")
+    public Result<AgentDetailResponse> saveNodes(@PathVariable Long id,
+                                                 @Valid @RequestBody AgentSaveRequest request) {
+        return Result.success(agentService.save(id, request));
+    }
+
     @PostMapping("/{id}/nodes")
     public Result<AgentNodeResponse> addNode(@PathVariable Long id,
                                              @RequestBody AgentSaveRequest.Node request) {

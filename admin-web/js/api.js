@@ -12,13 +12,8 @@
     avatar: null,
   };
 
-  const mockParam = new URLSearchParams(global.location.search).get('mock');
-  const USE_MOCK =
-    typeof global.ADMIN_USE_MOCK === 'boolean'
-      ? global.ADMIN_USE_MOCK
-      : mockParam === null
-        ? true
-        : mockParam !== '0';
+  // 管理后台已经进入真实接口联调阶段，不再默认回退到静态 Mock。
+  const USE_MOCK = false;
 
   const mockCache = new Map();
 

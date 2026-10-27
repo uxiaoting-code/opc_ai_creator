@@ -1,6 +1,91 @@
 {
   "list": [
-    { "id": 1, "name": "春季新品主图.png", "type": "IMAGE", "groupName": "商品主图", "tags": "春季,新品", "fileSize": 1887437, "url": "/upload/demo-1.png", "createdAt": "2026-10-19T10:12:00" },
-    { "id": 2, "name": "产品展示.mp4", "type": "VIDEO", "groupName": "短视频", "tags": "展示,产品", "fileSize": 8808038, "url": "/upload/demo-2.mp4", "createdAt": "2026-10-18T16:40:00" }
+    {
+      "id": 1,
+      "name": "春季新品主图.png",
+      "title": "春季新品主图",
+      "categoryId": 4,
+      "categoryName": "商品主图",
+      "categoryPath": "电商视觉 / 商品主图",
+      "tags": [
+        { "id": 4, "name": "极简", "parentId": 1 },
+        { "id": 10, "name": "新品", "parentId": 3 }
+      ],
+      "fileUrl": "/upload/demo-1.png",
+      "thumbUrl": null,
+      "mimeType": "image/png",
+      "mediaType": "IMAGE",
+      "fileSize": 1887437,
+      "width": 1920,
+      "height": 1080,
+      "version": 2,
+      "createdAt": "2026-10-19T10:12:00",
+      "updatedAt": "2026-10-24T14:20:00"
+    },
+    {
+      "id": 2,
+      "name": "产品展示.mp4",
+      "title": "产品展示短视频",
+      "categoryId": 6,
+      "categoryName": "产品展示",
+      "categoryPath": "短视频 / 产品展示",
+      "tags": [
+        { "id": 7, "name": "室内", "parentId": 2 },
+        { "id": 11, "name": "爆款", "parentId": 3 }
+      ],
+      "fileUrl": "/upload/demo-2.mp4",
+      "thumbUrl": null,
+      "mimeType": "video/mp4",
+      "mediaType": "VIDEO",
+      "fileSize": 8808038,
+      "width": 1920,
+      "height": 1080,
+      "version": 1,
+      "createdAt": "2026-10-18T16:40:00",
+      "updatedAt": "2026-10-18T16:40:00"
+    },
+    {
+      "id": 3,
+      "name": "节庆氛围底图.jpg",
+      "title": "节庆氛围底图",
+      "categoryId": 5,
+      "categoryName": "活动海报",
+      "categoryPath": "电商视觉 / 活动海报",
+      "tags": [
+        { "id": 5, "name": "国风", "parentId": 1 },
+        { "id": 9, "name": "节庆", "parentId": 2 }
+      ],
+      "fileUrl": "/upload/demo-3.jpg",
+      "thumbUrl": null,
+      "mimeType": "image/jpeg",
+      "mediaType": "IMAGE",
+      "fileSize": 2437120,
+      "width": 2560,
+      "height": 1440,
+      "version": 3,
+      "createdAt": "2026-10-17T09:30:00",
+      "updatedAt": "2026-10-23T11:05:00"
+    },
+    {
+      "id": 4,
+      "name": "品牌提示音.mp3",
+      "title": "品牌提示音",
+      "categoryId": 3,
+      "categoryName": "品牌资产",
+      "categoryPath": "品牌资产",
+      "tags": [
+        { "id": 4, "name": "极简", "parentId": 1 }
+      ],
+      "fileUrl": "/upload/demo-4.mp3",
+      "thumbUrl": null,
+      "mimeType": "audio/mpeg",
+      "mediaType": "AUDIO",
+      "fileSize": 482310,
+      "width": null,
+      "height": null,
+      "version": 1,
+      "createdAt": "2026-10-16T15:22:00",
+      "updatedAt": "2026-10-16T15:22:00"
+    }
   ]
 }

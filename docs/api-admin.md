@@ -59,8 +59,8 @@
 | **6200-6299** | 后端线 | MCP 接入 |
 | **6300-6399** | 后端线 | 智能体与工作台 |
 | **6400-6499** | 后端线 | 知识库 |
-| **6500-6599** | **前端线** | 素材库后台后端 |
-| **6600-6699** | **前端线** | 用户管理 / 系统设置后端 |
+| **6500-6599** | **前端线** | Prompt(6500-6509) / 用户管理(6510-6519) / 系统设置(6520-6529) / 素材库后台 |
+| **6600-6699** | **前端线** | 预留 |
 | **6700-6779** | 后端线 | 数据概览 / 算力 / 账单 |
 | **6780-6799** | 后端线 | API 网关 |
 | 9000-9099 | 公共 | 管理端通用码 |
@@ -158,16 +158,16 @@
 
 ## ② 用户管理 `pg-users`
 
-原型元素：搜索（昵称/手机号/UID）+ 状态筛选 + 新增用户 + 导出；表格 8 列；底部「共 12,846 条」。
+原型元素：搜索（用户名/邮箱）+ 状态筛选 + 加算力 + 冻结/解冻 + 重置密码。
 
 **原型列 → 字段**
 
 | 原型列 | 字段 | 落地说明 |
 |---|---|---|
 | UID | `id` | 直接用 `t_user.id`，不新增 UID 列 |
-| 用户（头像+昵称+手机） | `avatar` `nickname` `phone` | 昵称空时回退 `username` |
+| 用户（头像+昵称+账号） | `avatar` `nickname` `username` `phone` | 昵称空时回退 `username` |
+| 邮箱 | `email` | 支持关键词检索 |
 | 算力余额 | `credits` | `t_user.credits` |
-| 累计消费 | `totalSpent` | **不落列**，实时 `SUM(t_credit_transaction.amount) where type='CONSUME'` |
 | 状态 | `status` + `statusLabel` | 沿用 `1`/`0` → 正常/冻结 |
 | 注册日期 | `createdAt` | `BaseEntity.createdAt` |
 | 最近活跃 | `lastActiveAt` | ⚠️ **需新增列 `t_user.last_active_at`**，由 `AuthInterceptor` 鉴权成功时节流更新（距上次 >5 分钟才写，避免每个请求都 UPDATE） |
@@ -177,25 +177,22 @@
 
 | 方法 | 路径 | 入参 | 说明 |
 |---|---|---|---|
-| GET | `/api/admin/users?page&pageSize&keyword&status` | `keyword` 匹配 昵称/手机号/id；`status` 传 1/0 | `PageResult<UserAdminResponse>` |
-| POST | `/api/admin/users` | `{username, password, nickname, phone, credits, role}` | 新增用户 |
-| POST | `/api/admin/users/{id}/credits` | `{amount, remark}` | 加算力（原型弹窗：算力值 + 备注原因），同时写一条 `ADMIN_ADJUST` 流水 |
-| POST | `/api/admin/users/{id}/freeze` | — | → `status = 0` |
-| POST | `/api/admin/users/{id}/unfreeze` | — | → `status = 1` |
-| POST | `/api/admin/users/{id}/reset-password` | `{newPassword?}` | 不传则重置为 `123456` |
-| GET | `/api/admin/users/{id}` | — | 详情（含该用户最近 10 条流水） |
-| GET | `/api/admin/users/export` | 同列表筛选参数 | 返回 CSV 流；来不及就降级为前端导 CSV |
+| GET | `/api/admin/users?page&pageSize&keyword&status` | `keyword` 匹配用户名/邮箱；`status` 传 1/0 | `PageResult<AdminUserResponse>` |
+| POST | `/api/admin/users/{id}/credits` | `{delta}` | 调整算力；调整后余额不能小于 0 |
+| PUT | `/api/admin/users/{id}/status` | `{status}` | 1 正常 / 0 冻结；冻结时吊销该用户全部旧令牌 |
+| POST | `/api/admin/users/{id}/reset-password` | `{newPassword?}` | 不传则生成随机密码，并在响应中返回一次；旧令牌立即失效 |
 
-`UserAdminResponse`：
+`AdminUserResponse`：
 ```json
 {
-  "id": 100231, "username": "demo", "nickname": "未知仙女座", "phone": "186****3000",
-  "avatar": null, "credits": 27, "totalSpent": 1286.40,
+  "id": 1, "username": "demo", "nickname": "未知仙女座", "email": "demo@example.com",
+  "phone": "186****3000", "credits": 10000,
   "status": 1, "statusLabel": "正常", "role": "USER",
   "createdAt": "2026-03-14T10:20:30", "lastActiveAt": "2026-09-14T12:41:00"
 }
 ```
-> ⚠️ 手机号脱敏（`186****3000`）**由后端做**，别让前端各自实现一套掩码。
+
+用户管理使用 6510-6519 错误码子段：用户不存在、算力调整非法、状态非法、密码非法、参数非法和无权限。
 
 ---
 
@@ -339,6 +336,7 @@
 |---|---|---|
 | GET | `/api/admin/agents/{id}` | 详情：`{ 基础信息, nodes: [...], billing: {...} }` |
 | PUT | `/api/admin/agents/{id}` | 保存编排（原型「保存编排」按钮）。**整体覆盖式保存**：前端提交完整 `nodes` 数组，服务端按 `nodeKey` 对齐增删改，并**自动存一个版本** |
+| PUT | `/api/admin/agents/{id}/nodes` | 工作台保存编排的语义化路由，请求体与行为同 `PUT /api/admin/agents/{id}` |
 | POST | `/api/admin/agents/{id}/nodes` | 添加一个节点（原型「添加 Skill」弹窗） |
 | PUT | `/api/admin/agents/{id}/nodes/{nodeId}` | 单节点配置（含启停、排序、条件路由关键词） |
 | DELETE | `/api/admin/agents/{id}/nodes/{nodeId}` | 删除节点 |
@@ -392,7 +390,7 @@
 | 方法 | 路径 | 入参 / 返回 |
 |---|---|---|
 | GET | `/api/admin/settings` | 见下 |
-| PUT | `/api/admin/settings` | 同结构，整体保存（「保存参数」按钮） |
+| PUT | `/api/admin/settings` | 同结构；字段均可选，支持单项或批量更新 |
 | PUT | `/api/admin/settings/switches` | `{signupEnabled, rechargeEnabled, maintenanceMode}` |
 | POST | `/api/admin/announcements` | `{content}` |
 
@@ -401,13 +399,22 @@
 {
   "platformName": "星枢 AI 聚合平台",
   "signupBonusCredits": 10000,
+  "generationCostCredits": 10,
   "rechargeBonusPercent": 5.0,
   "creditPrice": 1.00,
   "announcement": "TT Image 2.5 官转通道已上线…",
-  "signupEnabled": true, "rechargeEnabled": true, "maintenanceMode": false
+  "announcementEnabled": true,
+  "signupEnabled": true,
+  "rechargeEnabled": true,
+  "maintenanceMode": false,
+  "aiDebugLogEnabled": false
 }
 ```
+
+系统设置使用 `6520-6529` 错误码子段：更新参数非法返回 `6520`，空更新返回 `6521`，非管理员修改返回 `6522`。
 > ⚠️ **`signupBonusCredits` 必须接管现有数据初始化**：现在「新用户送 10000 点」硬编码在 3 个地方（`User` 实体默认值、`AuthService` 注册、`DataSeeder`）。改成读本设置项，**三处一起改**（这是 `docs/HANDOFF.md` 里点名的坑）。
+
+当前落地：注册接口已读取 `signupEnabled` / `signupBonusCredits`；创建生成任务已读取 `maintenanceMode` / `generationCostCredits`；执行任务时由 `aiDebugLogEnabled` 控制额外诊断日志。
 
 ---
 
@@ -514,17 +521,52 @@
 
 C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强**，别重复实现。
 
-| 需求 3.4.2 | 接口 |
-|---|---|
-| 素材上传（批量） | `POST /api/admin/materials/batch-upload`（multipart `files[]`） |
-| 分类管理（按项目/类型/标签/时间） | `GET/POST/PUT/DELETE /api/admin/material-groups` |
-| 标签体系（多级） | `GET/POST/PUT/DELETE /api/admin/material-tags`（`parentId` 实现多级） |
-| 检索能力 | `GET /api/admin/materials?page&pageSize&keyword&groupId&tag&type&startDate&endDate` |
-| 版本管理 | `GET /api/admin/materials/{id}/versions` |
-| 预览与下载 | 预览直接用现有 `/upload/**`；批量下载 `POST /api/admin/materials/batch-download` ← `{ids}` |
-| 绑定智能体 | 复用 ⑩ 的绑定接口（`PUT /api/admin/kbs/{id}/bind-agents` 同理加素材侧） |
+**接口**
 
-> 现有 `t_material` 已有 `group_name`（分类）和 `tags`（逗号分隔）两个字段，**第一版可以先复用它们**，只有需要"标签树"时才落 `t_material_tag` 表。
+| 方法 | 路径 | 入参 | 返回 |
+|---|---|---|---|
+| GET | `/api/admin/materials?page&pageSize&keyword&categoryId&tagIds&type&startDate&endDate` | `tagIds` 可重复；父分类/父标签筛选自动包含后代 | `PageResult<MaterialAdminResponse>` |
+| GET | `/api/admin/materials/{id}` | — | `MaterialAdminResponse` |
+| POST | `/api/admin/materials` | `{title,categoryId,tagIds,fileUrl,thumbUrl,mimeType,fileSize,width,height}` | `MaterialAdminResponse` |
+| PUT | `/api/admin/materials/{id}` | 上述字段（均可部分更新）+ `{newVersion,changeNote}` | `MaterialAdminResponse` |
+| DELETE | `/api/admin/materials/{id}` | — | 逻辑下架，`data: null` |
+| GET | `/api/admin/material-categories` | — | `{categories:[树],tags:[树]}` |
+| GET | `/api/admin/materials/{id}/versions` | — | `MaterialVersionResponse[]` |
+| POST | `/api/admin/materials/{id}/versions/{versionNo}/restore` | `{changeNote?}` | 恢复后生成新版本并返回 `MaterialAdminResponse` |
+
+`MaterialAdminResponse`：
+```json
+{
+  "id": 1, "title": "春季新品主图", "categoryId": 3,
+  "categoryName": "商品主图", "categoryPath": "电商视觉 / 商品主图",
+  "tags": [{ "id": 8, "name": "新品", "parentId": 7 }],
+  "fileUrl": "/upload/material_xxx.png", "thumbUrl": null,
+  "mimeType": "image/png", "mediaType": "IMAGE",
+  "fileSize": 1887437, "width": 1920, "height": 1080,
+  "version": 2, "createdAt": "2026-10-19T10:12:00",
+  "updatedAt": "2026-10-27T11:30:00"
+}
+```
+
+分类和标签使用同一套树节点形状 `{id,name,parentId,sortOrder,children}`。
+`categoryId` 只能指向 `categories` 节点，`tagIds` 只能指向 `tags` 节点。
+素材名称 1-100 字；文件地址支持 `/upload/...`、`http://`、`https://`。
+
+**错误码（素材专用子段 6530-6539）**
+
+| code | 枚举名 | message |
+|---|---|---|
+| 6530 | MATERIAL_NOT_FOUND | 素材不存在或已下架 |
+| 6531 | MATERIAL_PARAMETER_INVALID | 素材参数不合法 |
+| 6532 | MATERIAL_TITLE_INVALID | 素材名称不合法 |
+| 6533 | MATERIAL_FILE_INVALID | 素材文件地址不合法 |
+| 6534 | MATERIAL_CATEGORY_NOT_FOUND | 素材分类不存在 |
+| 6535 | MATERIAL_TAG_NOT_FOUND | 素材标签不存在 |
+| 6536 | MATERIAL_VERSION_NOT_FOUND | 素材版本不存在 |
+| 6537 | MATERIAL_FORBIDDEN | 没有素材库管理权限 |
+
+> 新增实体会与现有 `t_material` 共存：C 端上传接口继续写 `name/url`，管理端补充
+> `title/category_id/version` 与标签关联表；C 端 `/api/materials/**` 契约不变。
 
 ---
 
@@ -599,6 +641,9 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 |---|---|---|---|
 | 2026-10-14 | v1 | 首次冻结：通用约定 + 错误码分段 + 枚举字典 + 12 个页面的完整接口契约 | — |
 | 2026-10-22 | v1.1 | P1 实现：模型配置 CRUD / 鉴权 / 请求响应模板 / 连通性测试 / HttpApiProvider；补充 DELETE 接口；注明 todayCalls/successRate 在 P3 前返回 0/null | 后端线 |
+| 2026-10-27 | v1.3 | 系统设置落地：增加单次生成消耗、公告启用、AI 调试日志开关；PUT 支持部分更新；使用 6520-6529 错误码 | 前端线 |
 | 2026-10-22 | v1.2 | P2 实现：Agent / AgentNode / AgentVersion、编排保存、发布/复制/版本回滚、统一工具库、编排预览；补充 DELETE /api/admin/agents/{id} | 后端线 |
+| 2026-10-27 | v1.4 | 素材库落地：分类/多级标签树、分页检索、新增/编辑/下架、版本快照与恢复；使用 6530-6539 错误码 | 前端线 |
+| 2026-10-27 | v1.5 | 智能体工作台前端落地：增加 `PUT /api/admin/agents/{id}/nodes` 语义化保存别名，保留原 `PUT /api/admin/agents/{id}` 兼容 | 前端线 |
 
 > 规则：接口一旦开工，**改字段名 = 改契约**，必须两人同时改代码 + 在这里记一行。

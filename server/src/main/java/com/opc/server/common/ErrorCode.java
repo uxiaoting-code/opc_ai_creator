@@ -57,6 +57,35 @@ public enum ErrorCode {
     AGENT_VERSION_NOT_FOUND(6306, "智能体版本不存在"),
     AGENT_NO_NODES(6307, "智能体至少需要一个启用节点才能发布"),
 
+    // --- Prompt 知识库（6500-6599）---
+    PROMPT_NOT_FOUND(6501, "Prompt 不存在或已下线"),
+    PROMPT_TITLE_INVALID(6502, "Prompt 标题不合法"),
+    PROMPT_CONTENT_INVALID(6503, "Prompt 内容不合法"),
+    PROMPT_PARAMETER_INVALID(6504, "Prompt 参数不合法"),
+
+    // --- 管理端用户（6510-6519）---
+    ADMIN_USER_NOT_FOUND(6510, "用户不存在或已被删除"),
+    ADMIN_USER_CREDITS_INVALID(6511, "算力调整值不合法"),
+    ADMIN_USER_STATUS_INVALID(6512, "用户状态不合法"),
+    ADMIN_USER_PASSWORD_INVALID(6513, "重置密码不合法"),
+    ADMIN_USER_PARAMETER_INVALID(6514, "用户管理参数不合法"),
+    ADMIN_USER_FORBIDDEN(6515, "没有用户管理权限"),
+
+    // --- 管理端系统设置（6520-6529）---
+    ADMIN_SETTING_PARAMETER_INVALID(6520, "系统设置参数不合法"),
+    ADMIN_SETTING_EMPTY_UPDATE(6521, "至少需要提交一个系统设置项"),
+    ADMIN_SETTING_FORBIDDEN(6522, "没有系统设置修改权限"),
+
+    // --- 管理端素材库（6530-6539）---
+    MATERIAL_NOT_FOUND(6530, "素材不存在或已下架"),
+    MATERIAL_PARAMETER_INVALID(6531, "素材参数不合法"),
+    MATERIAL_TITLE_INVALID(6532, "素材名称不合法"),
+    MATERIAL_FILE_INVALID(6533, "素材文件地址不合法"),
+    MATERIAL_CATEGORY_NOT_FOUND(6534, "素材分类不存在"),
+    MATERIAL_TAG_NOT_FOUND(6535, "素材标签不存在"),
+    MATERIAL_VERSION_NOT_FOUND(6536, "素材版本不存在"),
+    MATERIAL_FORBIDDEN(6537, "没有素材库管理权限"),
+
     // --- 管理端通用（9000-9099，公共段）---
     ADMIN_LOGIN_REQUIRED(9001, "请先以管理员身份登录"),
     ADMIN_FORBIDDEN(9002, "该账号不是管理员，无权访问后台"),
