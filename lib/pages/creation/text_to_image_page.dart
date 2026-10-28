@@ -14,6 +14,7 @@ import '../../data/models/skill_model.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/skill_provider.dart';
+import '../../widgets/creation/prompt_input_card.dart';
 import '../../widgets/premium/glass_panel.dart';
 import '../../widgets/premium/premium_choice_chip.dart';
 import '../../widgets/premium/premium_mode_switch.dart';
@@ -33,10 +34,16 @@ enum _CreationMode { image, video }
 /// - 线路选择 + 当前线路参数预览
 /// - 底部固定生成栏
 class TextToImagePage extends StatefulWidget {
-  const TextToImagePage({super.key, this.skillId, this.prompt});
+  const TextToImagePage({
+    super.key,
+    this.skillId,
+    this.prompt,
+    this.negativePrompt,
+  });
 
   final String? skillId;
   final String? prompt;
+  final String? negativePrompt;
 
   @override
   State<TextToImagePage> createState() => _TextToImagePageState();
@@ -78,6 +85,8 @@ class _TextToImagePageState extends State<TextToImagePage> {
     super.initState();
     _selectedSkillId = int.tryParse(widget.skillId ?? '');
     _promptController.text = widget.prompt ?? '';
+    _negativeController.text = widget.negativePrompt ?? '';
+    _showAdvanced = widget.negativePrompt?.trim().isNotEmpty == true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -277,79 +286,35 @@ class _TextToImagePageState extends State<TextToImagePage> {
   // ---------------------------------------------------------------------------
 
   Widget _buildPromptCard() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final borderColor = isDark
-        ? AppColors.darkBorder
-        : Colors.white.withValues(alpha: 0.72);
-
-    return GlassPanel(
-      borderRadius: AppSpacing.radiusHero,
-      shadow: AppColors.shadowLift,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                CupertinoIcons.sparkles,
-                size: 18,
-                color: AppColors.sage,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text('描述画面', style: theme.textTheme.titleMedium),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.darkBackground.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border: Border.all(color: borderColor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PromptInputCard(
+          controller: _promptController,
+          enabled: !_submitting,
+          title: '描述画面',
+          hintText: '描述商品画面，如：白色背景，柔光，高级质感…',
+          maxLength: 2000,
+          minLines: 4,
+          maxLines: 6,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            _quickAction(
+              icon: CupertinoIcons.lightbulb,
+              label: '灵感示例',
+              onTap: _fillIdea,
             ),
-            child: TextField(
-              controller: _promptController,
-              enabled: !_submitting,
-              minLines: 4,
-              maxLines: 6,
-              maxLength: 2000,
-              textInputAction: TextInputAction.newline,
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                hintText: '描述商品画面，如：白色背景，柔光，高级质感…',
-                hintStyle: theme.textTheme.bodySmall,
-                counterText: '',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
-              ),
+            const SizedBox(width: AppSpacing.md),
+            _quickAction(
+              icon: CupertinoIcons.arrow_counterclockwise,
+              label: '清空',
+              onTap: _clearPrompt,
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              _quickAction(
-                icon: CupertinoIcons.lightbulb,
-                label: '灵感示例',
-                onTap: _fillIdea,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              _quickAction(
-                icon: CupertinoIcons.arrow_counterclockwise,
-                label: '清空',
-                onTap: _clearPrompt,
-              ),
-            ],
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 

@@ -214,6 +214,8 @@ class AppRouter {
           skillId: state.uri.queryParameters['skillId'],
           // 首页快捷创作带进来的提示词
           prompt: state.uri.queryParameters['prompt'],
+          // Prompt 知识库「一键套用」时一并带过来的反向提示词
+          negativePrompt: state.uri.queryParameters['negativePrompt'],
         ),
       ),
 

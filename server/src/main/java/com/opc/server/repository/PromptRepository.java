@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -31,8 +33,10 @@ public interface PromptRepository extends JpaRepository<Prompt, Long> {
              where p.deleted = false
                and p.isPublic = 1
                and p.status = 1
-               and (:keyword is null or p.title like %:keyword% or p.content like %:keyword%
-                    or p.tags like %:keyword%)
+               and (:keyword is null
+                    or lower(p.title) like lower(concat('%', :keyword, '%'))
+                    or lower(p.content) like lower(concat('%', :keyword, '%'))
+                    or lower(coalesce(p.tags, '')) like lower(concat('%', :keyword, '%')))
                and (:category is null or p.category = :category)
              order by p.favoriteCount desc, p.useCount desc
             """)
@@ -42,4 +46,21 @@ public interface PromptRepository extends JpaRepository<Prompt, Long> {
             Pageable pageable);
 
     Optional<Prompt> findByIdAndDeletedFalse(Long id);
+
+    /** 批量查询当前用户对一页 Prompt 的收藏状态，避免逐条查询。 */
+    default List<Long> findFavoritePromptIds(Long userId, Collection<Long> promptIds) {
+        if (promptIds == null || promptIds.isEmpty()) {
+            return List.of();
+        }
+        return findFavoritePromptIds(userId, promptIds.toArray(Long[]::new));
+    }
+
+    @Query("""
+            select f.promptId from PromptFavorite f
+             where f.userId = :userId
+               and f.promptId in :promptIds
+            """)
+    List<Long> findFavoritePromptIds(
+            @Param("userId") Long userId,
+            @Param("promptIds") Long[] promptIds);
 }

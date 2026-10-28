@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS `t_material` (
   `id`         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '素材ID',
   `user_id`    BIGINT       NOT NULL                COMMENT '所属用户',
   `name`       VARCHAR(100) NOT NULL                COMMENT '素材名称',
+  `title`      VARCHAR(100)          DEFAULT NULL   COMMENT '管理端展示名称',
   `url`        VARCHAR(255) NOT NULL                COMMENT '原图URL',
   `thumb_url`  VARCHAR(255)          DEFAULT NULL   COMMENT '缩略图URL',
   `file_size`  BIGINT                DEFAULT NULL   COMMENT '文件大小（字节）',
@@ -154,7 +155,9 @@ CREATE TABLE IF NOT EXISTS `t_material` (
   `mime_type`  VARCHAR(50)           DEFAULT NULL   COMMENT 'MIME类型',
   `source`     VARCHAR(20)  NOT NULL DEFAULT 'UPLOAD' COMMENT '来源：UPLOAD/CAMERA/GENERATED',
   `group_name` VARCHAR(50)           DEFAULT NULL   COMMENT '分组名',
+  `category_id` BIGINT               DEFAULT NULL   COMMENT '素材分类树节点ID',
   `tags`       VARCHAR(255)          DEFAULT NULL   COMMENT '标签，逗号分隔',
+  `version`    INT                   DEFAULT 1      COMMENT '当前版本号',
   `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted`    TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0未删 1已删',
@@ -162,6 +165,68 @@ CREATE TABLE IF NOT EXISTS `t_material` (
   KEY `idx_user_deleted` (`user_id`, `deleted`),
   KEY `idx_group` (`user_id`, `group_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='素材库表';
+
+-- 素材分类树（parent_id 为空表示一级分类）
+CREATE TABLE IF NOT EXISTS `t_material_category` (
+  `id`         BIGINT      NOT NULL AUTO_INCREMENT,
+  `name`       VARCHAR(50) NOT NULL,
+  `parent_id`  BIGINT               DEFAULT NULL,
+  `sort_order` INT         NOT NULL DEFAULT 0,
+  `created_at` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted`    TINYINT     NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_material_category_parent` (`parent_id`, `deleted`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='素材分类树';
+
+-- 素材多级标签（parent_id 为空表示一级标签）
+CREATE TABLE IF NOT EXISTS `t_material_tag` (
+  `id`         BIGINT      NOT NULL AUTO_INCREMENT,
+  `name`       VARCHAR(50) NOT NULL,
+  `parent_id`  BIGINT               DEFAULT NULL,
+  `sort_order` INT         NOT NULL DEFAULT 0,
+  `created_at` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted`    TINYINT     NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_material_tag_parent` (`parent_id`, `deleted`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='素材多级标签树';
+
+-- 素材与标签的多对多关联
+CREATE TABLE IF NOT EXISTS `t_material_tag_rel` (
+  `material_id` BIGINT NOT NULL,
+  `tag_id`      BIGINT NOT NULL,
+  PRIMARY KEY (`material_id`, `tag_id`),
+  KEY `idx_material_rel_tag` (`tag_id`),
+  CONSTRAINT `fk_material_rel_material` FOREIGN KEY (`material_id`)
+    REFERENCES `t_material` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_material_rel_tag` FOREIGN KEY (`tag_id`)
+    REFERENCES `t_material_tag` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='素材标签关联';
+
+-- 素材版本快照（标签 ID 使用 JSON 数组）
+CREATE TABLE IF NOT EXISTS `t_material_version` (
+  `id`            BIGINT       NOT NULL AUTO_INCREMENT,
+  `material_id`   BIGINT       NOT NULL,
+  `version_no`    INT          NOT NULL,
+  `title`         VARCHAR(100) NOT NULL,
+  `category_id`   BIGINT                DEFAULT NULL,
+  `tag_ids_json`  VARCHAR(2000)         DEFAULT NULL,
+  `file_url`      VARCHAR(255) NOT NULL,
+  `thumb_url`     VARCHAR(255)          DEFAULT NULL,
+  `file_size`     BIGINT                DEFAULT NULL,
+  `mime_type`     VARCHAR(50)           DEFAULT NULL,
+  `width`         INT                   DEFAULT NULL,
+  `height`        INT                   DEFAULT NULL,
+  `change_note`   VARCHAR(500)          DEFAULT NULL,
+  `created_by`    BIGINT                DEFAULT NULL,
+  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_material_version` (`material_id`, `version_no`),
+  CONSTRAINT `fk_material_version_material` FOREIGN KEY (`material_id`)
+    REFERENCES `t_material` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='素材版本快照';
 
 
 -- =============================================================================

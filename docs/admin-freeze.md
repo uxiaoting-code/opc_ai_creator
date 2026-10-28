@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
 | `server/.../admin/setting/`（系统设置） | **前端线** | 同上 |
 | `controller/PromptController.java` | **前端线** | 照 `SkillController` 抄，最简单的一个 |
 | `server/docs/schema.sql` | **两人共写** | 各自只**追加**自己的表：后端线追加冻结项①②③ 的 5 张；前端线追加标签/分类相关表 |
-| `common/ErrorCode.java` | **两人共写** | 各用各的码段：后端线 6000-6499 / 6700-6799；前端线 6500-6599（见 `api-admin.md` §0.4） |
+| `common/ErrorCode.java` | **两人共写** | 各用各的码段：后端线 6000-6499 / 6700-6799；前端线 6500-6699，其中 Prompt/用户 6500-6519、系统设置 6520-6529（见 `api-admin.md` §0.4） |
 | `init/DataSeeder.java` | **两人共写** | **必须拆成 `CoreSeeder`（后端线）/ `CrudSeeder`（前端线）两个类**，各自 `@Component` + `@Order` |
 | `entity/User.java` | 后端线 | 新增列 `last_active_at`；前端线只读使用 |
 | `security/AuthInterceptor.java` | 后端线 | `/api/admin/**` 的 ADMIN 校验 + dev-token 隔离 |

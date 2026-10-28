@@ -111,7 +111,8 @@ public class WorkService {
 
         for (Work work : works) {
             // @Transient 字段，仅用于响应展示
-            work.setSkillName(skillNames.get(work.getSkillId()));
+            Long skillId = work.getSkillId();
+            work.setSkillName(skillId == null ? null : skillNames.get(skillId));
         }
 
         return works.stream().map(WorkResponse::from).toList();

@@ -6,8 +6,10 @@ import 'package:opc_ai_creator/app.dart';
 import 'package:opc_ai_creator/core/network/api_client.dart';
 import 'package:opc_ai_creator/core/router/route_names.dart';
 import 'package:opc_ai_creator/data/datasources/mock_data.dart';
+import 'package:opc_ai_creator/data/models/prompt_model.dart';
 import 'package:opc_ai_creator/data/repositories/material_repository.dart';
 import 'package:opc_ai_creator/data/repositories/notification_repository.dart';
+import 'package:opc_ai_creator/data/repositories/prompt_repository.dart';
 import 'package:opc_ai_creator/data/repositories/skill_repository.dart';
 import 'package:opc_ai_creator/data/repositories/task_repository.dart';
 import 'package:opc_ai_creator/data/repositories/work_repository.dart';
@@ -49,6 +51,7 @@ Future<Widget> buildApp({bool loggedIn = false}) async {
     ),
     taskRepository: TaskRepository(apiClient),
     materialRepository: MaterialRepository(apiClient),
+    promptRepository: PromptRepository(apiClient),
   );
 }
 
@@ -105,6 +108,20 @@ void main() {
         RouteNames.textToImageWithSkill(3),
         '/create/text-to-image?skillId=3',
       );
+    });
+
+    test('PromptModel 能解析收藏和公开状态', () {
+      final prompt = PromptModel.fromJson({
+        'id': 9,
+        'title': '商品主图',
+        'content': 'white background',
+        'favoriteCount': 12,
+        'favorited': true,
+        'isPublic': 1,
+      });
+      expect(prompt.id, 9);
+      expect(prompt.favorited, isTrue);
+      expect(prompt.isPublic, isTrue);
     });
   });
 
@@ -244,6 +261,19 @@ void main() {
       expect(find.text('消息'), findsOneWidget);
       expect(find.text('生成成功'), findsOneWidget);
       expect(find.text('全部已读'), findsOneWidget);
+    });
+
+    testWidgets('首页搜索入口可以打开 Prompt 知识库', (tester) async {
+      useTallPhoneViewport(tester);
+      await tester.pumpWidget(await buildApp(loggedIn: true));
+      await pumpHomeLoaded(tester);
+
+      await tester.tap(find.text('搜索提示词、创作线路'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Prompt 知识库'), findsOneWidget);
+      expect(find.text('搜索标题、正文或标签'), findsOneWidget);
+      expect(find.text('电商'), findsOneWidget);
     });
   });
 }

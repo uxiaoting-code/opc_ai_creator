@@ -16,6 +16,7 @@ import com.opc.server.entity.enums.TaskType;
 import com.opc.server.repository.AiTaskRepository;
 import com.opc.server.repository.SkillRepository;
 import com.opc.server.repository.UserRepository;
+import com.opc.server.service.AdminSettingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -59,6 +60,7 @@ public class HarnessService {
     private final AiProviderRouter providerRouter;
     private final AiTaskRequestFactory requestFactory;
     private final HarnessProperties properties;
+    private final AdminSettingService settingService;
     private final ObjectMapper objectMapper;
 
     public HarnessService(AiTaskRepository taskRepository,
@@ -68,6 +70,7 @@ public class HarnessService {
                           AiProviderRouter providerRouter,
                           AiTaskRequestFactory requestFactory,
                           HarnessProperties properties,
+                          AdminSettingService settingService,
                           ObjectMapper objectMapper) {
         this.taskRepository = taskRepository;
         this.skillRepository = skillRepository;
@@ -76,6 +79,7 @@ public class HarnessService {
         this.providerRouter = providerRouter;
         this.requestFactory = requestFactory;
         this.properties = properties;
+        this.settingService = settingService;
         this.objectMapper = objectMapper;
     }
 
@@ -109,6 +113,14 @@ public class HarnessService {
             throw new BizException(ErrorCode.BAD_REQUEST, "请输入提示词");
         }
 
+        var settings = settingService.getSettings();
+        if (Boolean.TRUE.equals(settings.maintenanceMode())) {
+            throw new BizException(
+                    ErrorCode.BAD_REQUEST,
+                    "平台维护中，暂时无法创建生成任务"
+            );
+        }
+
         // ---- 2. 线路校验 ----
         Skill skill = resolveSkill(skillId, type);
 
@@ -116,8 +128,8 @@ public class HarnessService {
         User user = userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
 
-        // 按任务类型取单价：文生图 10 点、图生视频 15 点
-        int cost = properties.creditsFor(type);
+        // 后台系统设置中的单次生成基础消耗，对文生图和图生视频统一生效
+        int cost = settings.generationCostCredits();
         if (!user.canAfford(cost)) {
             throw new BizException(ErrorCode.BAD_REQUEST,
                     "算力点不足，本次生成需要 %d 点，当前剩余 %d 点"
@@ -375,6 +387,13 @@ public class HarnessService {
 
         AiTaskRequest request = requestFactory.build(task, skill);
         AiProvider provider = providerRouter.route(task.getProvider());
+
+        var settings = settingService.getSettings();
+        if (Boolean.TRUE.equals(settings.aiDebugLogEnabled())) {
+            log.info("AI 调试日志 taskId={} taskNo={} type={} provider={} skill={}",
+                    taskId, task.getTaskNo(), task.getType(),
+                    task.getProvider(), task.getSkillId());
+        }
 
         log.info("开始执行任务 {} provider={} skill={}",
                 taskId, provider.getName(), request.skillCode());

@@ -154,6 +154,7 @@ CREATE TABLE `t_material` (
   `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '素材ID',
   `user_id`     BIGINT       NOT NULL                COMMENT '所属用户',
   `name`        VARCHAR(100) NOT NULL                COMMENT '素材名称',
+  `title`       VARCHAR(100)          DEFAULT NULL   COMMENT '管理端展示名称',
   `url`         VARCHAR(255) NOT NULL                COMMENT '原图URL',
   `thumb_url`   VARCHAR(255)          DEFAULT NULL   COMMENT '缩略图URL',
   `file_size`   BIGINT                DEFAULT NULL   COMMENT '文件大小（字节）',
@@ -162,7 +163,9 @@ CREATE TABLE `t_material` (
   `mime_type`   VARCHAR(50)           DEFAULT NULL   COMMENT 'MIME类型',
   `source`      VARCHAR(20)  NOT NULL DEFAULT 'UPLOAD' COMMENT '来源：UPLOAD/CAMERA/GENERATED',
   `group_name`  VARCHAR(50)           DEFAULT NULL   COMMENT '分组名',
+  `category_id` BIGINT                DEFAULT NULL   COMMENT '素材分类树节点ID',
   `tags`        VARCHAR(255)          DEFAULT NULL   COMMENT '标签，逗号分隔',
+  `version`     INT                   DEFAULT 1      COMMENT '当前版本号',
   `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted`     TINYINT      NOT NULL DEFAULT 0,
@@ -171,6 +174,10 @@ CREATE TABLE `t_material` (
   KEY `idx_group` (`user_id`, `group_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='素材库表';
 ```
+
+素材库后台另有三类增量表：`t_material_category`（分类树）、
+`t_material_tag` + `t_material_tag_rel`（多级标签及关联）、
+`t_material_version`（版本快照）。完整 DDL 以 `server/docs/schema.sql` 为准。
 
 ### 5. t_prompt Prompt 知识库表
 
@@ -381,7 +388,10 @@ JPA 实体与表的对应关系（`@TableName` 是 MyBatis-Plus 写法，二选�
 | `User` | `t_user` | `@TableLogic` 标记 `deleted` 逻辑删除；`password` 用 `@JsonIgnore` 防止序列化泄露 |
 | `Skill` | `t_skill` | `paramsJson` 用 `@TableField(typeHandler = JacksonTypeHandler.class)` 映射 JSON 列 |
 | `AiTask` | `t_ai_task` | `status` 用枚举 `TaskStatus`；`@Version` 乐观锁；`paramsJson`/`resultJson` 同上 |
-| `Material` | `t_material` | `@TableLogic` 逻辑删除 |
+| `Material` | `t_material` | 逻辑删除；`title/url/categoryId/version` 供管理端使用，C 端保留 `name/url` |
+| `MaterialCategory` | `t_material_category` | `parentId` 组成分类树 |
+| `MaterialTag` | `t_material_tag` | `parentId` 组成多级标签树 |
+| `MaterialVersion` | `t_material_version` | 保存标签 ID JSON 与素材文件快照 |
 | `Prompt` | `t_prompt` | `@TableLogic`；`tags` 冗余存储便于检索 |
 | `PromptFavorite` | `t_prompt_favorite` | 联合唯一索引 `uk_user_prompt` |
 | `Work` | `t_work` | `@TableLogic`；`isPublic` 控制画廊可见性 |

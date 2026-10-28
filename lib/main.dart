@@ -5,6 +5,7 @@ import 'core/config/app_config.dart';
 import 'core/network/api_client.dart';
 import 'data/repositories/material_repository.dart';
 import 'data/repositories/notification_repository.dart';
+import 'data/repositories/prompt_repository.dart';
 import 'data/repositories/skill_repository.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/work_repository.dart';
@@ -47,12 +48,8 @@ Future<void> main() async {
   // 依赖方向固定为 Provider → Repository → ApiClient，
   // 页面只认识 Provider。业务数据已切到真实接口
   // （AppConfig.useMockData = false），页面与 Provider 都不用改。
-  final skillProvider = SkillProvider(
-    repository: SkillRepository(apiClient),
-  );
-  final workProvider = WorkProvider(
-    repository: WorkRepository(apiClient),
-  );
+  final skillProvider = SkillProvider(repository: SkillRepository(apiClient));
+  final workProvider = WorkProvider(repository: WorkRepository(apiClient));
   final notificationProvider = NotificationProvider(
     repository: NotificationRepository(apiClient),
   );
@@ -64,6 +61,7 @@ Future<void> main() async {
 
   // 素材仓库同理：只有图生视频创作页在提交时上传一次参考图，没有跨页状态。
   final materialRepository = MaterialRepository(apiClient);
+  final promptRepository = PromptRepository(apiClient);
 
   // ---------------------------------------------------------------------------
   // 2. 恢复本地状态
@@ -96,6 +94,7 @@ Future<void> main() async {
       notificationProvider: notificationProvider,
       taskRepository: taskRepository,
       materialRepository: materialRepository,
+      promptRepository: promptRepository,
     ),
   );
 }

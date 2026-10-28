@@ -81,7 +81,7 @@ Day 1 必须解决：
 
 开工前 30 分钟确认：
 
-- 错误码：素材 `6500-6599`，用户/设置 `6600-6699`
+- 错误码：Prompt/用户 `6500-6599`，系统设置 `6600-6699`
 - `DataSeeder` 谁改哪个类
 - `api-admin.md` 改接口先改文档
 - `schema.sql` 只追加自己的表
@@ -347,7 +347,7 @@ Day 1 必须解决：
 providers、agents、tools、debug、mcp、kb、dashboard、bills、credits、gateway。
 
 另外三件共享的事：
-1. 错误码：素材 6500-6599，用户/设置 6600-6699。
+1. 错误码：Prompt/用户 6500-6599，系统设置 6600-6699。
 2. DataSeeder：你改 CoreSeeder，我新建 CrudSeeder，避免同时改一个文件。
 3. 用户加算力要写 t_credit_transaction，我需要 CreditTransaction 实体/Repository；
    设置里的 signupBonusCredits 要接管三处硬编码，那三处在你那边。

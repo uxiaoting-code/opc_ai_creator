@@ -23,25 +23,19 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    /**
-     * 新用户注册赠送的算力点。
-     *
-     * <p>给得宽裕是**故意的**：这是课设演示环境，文生图一次 10 点、
-     * 图生视频一次 15 点。初始值太小的话演示到一半就会卡在
-     * 「算力点不足」，反而看不到完整链路。
-     */
-    private static final int INITIAL_CREDITS = 10000;
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final AdminSettingService settingService;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       TokenService tokenService) {
+                       TokenService tokenService,
+                       AdminSettingService settingService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
+        this.settingService = settingService;
     }
 
     /**
@@ -53,6 +47,14 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         String username = request.username().trim();
+        var settings = settingService.getSettings();
+
+        if (!Boolean.TRUE.equals(settings.signupEnabled())) {
+            throw new BizException(
+                    ErrorCode.BAD_REQUEST,
+                    "新用户注册暂未开放"
+            );
+        }
 
         if (userRepository.existsByUsernameAndDeletedFalse(username)) {
             throw new BizException(ErrorCode.USERNAME_EXISTS);
@@ -65,7 +67,7 @@ public class AuthService {
                         ? username : request.nickname().trim())
                 .email(request.email())
                 .role("USER")
-                .credits(INITIAL_CREDITS)
+                .credits(settings.signupBonusCredits())
                 .status(1)
                 .deleted(false)
                 .build();

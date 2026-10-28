@@ -1,10 +1,13 @@
 {
   "platformName": "星枢 AI 聚合平台",
   "signupBonusCredits": 10000,
+  "generationCostCredits": 10,
   "rechargeBonusPercent": 5,
   "creditPrice": 1,
   "announcement": "TT Image 2.5 官转通道已上线，按 token 精准计费；9 月 15 日 02:00-04:00 渠道维护，期间自动容错切换。",
+  "announcementEnabled": true,
   "signupEnabled": true,
   "rechargeEnabled": true,
-  "maintenanceMode": false
+  "maintenanceMode": false,
+  "aiDebugLogEnabled": false
 }
