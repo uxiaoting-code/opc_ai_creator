@@ -484,7 +484,7 @@ CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='算力流水表';
 
 -- =============================================================================
---  校验：执行完后确认 12 张表都在（7 张 C 端 + 5 张管理端）
+--  校验：执行完后确认 20 张表都在（7 张 C 端 + 13 张管理端）
 -- =============================================================================
 -- SHOW TABLES;
 -- SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES
@@ -519,3 +519,91 @@ CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
 --           另外 MySQL 原生 JSON 列会强校验内容合法性，普通字符串写不进去就报错，
 --           对课设演示只增加故障点、不带来收益。
 -- =============================================================================
+
+-- =============================================================================
+--  17. t_call_log 调试调用日志表（管理端 P3，需求 3.2）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_call_log` (
+  `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+  `session_id`  VARCHAR(64)           DEFAULT NULL COMMENT '一次调试的会话ID',
+  `agent_id`    BIGINT                DEFAULT NULL,
+  `agent_name`  VARCHAR(100)          DEFAULT NULL COMMENT '智能体名称快照',
+  `mode`        VARCHAR(20)  NOT NULL COMMENT 'NODE/CHAIN/CHAT/REGRESSION',
+  `node_id`     BIGINT                DEFAULT NULL,
+  `node_key`    VARCHAR(50)           DEFAULT NULL,
+  `node_name`   VARCHAR(100)          DEFAULT NULL,
+  `tool_kind`   VARCHAR(30)           DEFAULT NULL,
+  `input`       TEXT                  DEFAULT NULL,
+  `output`      TEXT                  DEFAULT NULL,
+  `success`     TINYINT      NOT NULL DEFAULT 1,
+  `elapsed_ms`  BIGINT                DEFAULT NULL,
+  `credits`     DECIMAL(10,2)         DEFAULT NULL,
+  `error_msg`   VARCHAR(1000)         DEFAULT NULL,
+  `operator`    VARCHAR(50)           DEFAULT NULL,
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_log_agent` (`agent_id`, `id`),
+  KEY `idx_log_session` (`session_id`),
+  KEY `idx_log_mode` (`mode`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='调试调用日志表';
+
+-- =============================================================================
+--  18. t_regression_case 回归测试用例表（管理端 P3，需求 3.2）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_regression_case` (
+  `id`                BIGINT       NOT NULL AUTO_INCREMENT,
+  `agent_id`          BIGINT       NOT NULL,
+  `name`              VARCHAR(100) NOT NULL,
+  `input`             TEXT         NOT NULL,
+  `expected_keywords` VARCHAR(500)          DEFAULT NULL COMMENT '逗号分隔，全部命中才算通过',
+  `enabled`           TINYINT      NOT NULL DEFAULT 1,
+  `created_by`        VARCHAR(50)           DEFAULT NULL,
+  `created_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_case_agent` (`agent_id`, `enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='回归测试用例表';
+
+-- =============================================================================
+--  19. t_mcp_server MCP 服务端表（管理端 P4，需求 3.3）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_mcp_server` (
+  `id`               BIGINT       NOT NULL AUTO_INCREMENT,
+  `name`             VARCHAR(100) NOT NULL,
+  `transport`        VARCHAR(20)  NOT NULL DEFAULT 'HTTP' COMMENT 'HTTP/SSE/STDIO',
+  `endpoint`         VARCHAR(255)          DEFAULT NULL,
+  `command`          VARCHAR(500)          DEFAULT NULL COMMENT 'STDIO 启动命令',
+  `env_json`         VARCHAR(2000)         DEFAULT NULL,
+  `auth_type`        VARCHAR(20)  NOT NULL DEFAULT 'NONE',
+  `api_key`          VARCHAR(255)          DEFAULT NULL,
+  `status`           VARCHAR(20)  NOT NULL DEFAULT 'OFFLINE' COMMENT 'ONLINE/OFFLINE',
+  `last_discover_at` DATETIME              DEFAULT NULL,
+  `tool_count`       INT          NOT NULL DEFAULT 0,
+  `deleted`          TINYINT      NOT NULL DEFAULT 0,
+  `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='MCP服务端表';
+
+-- =============================================================================
+--  20. t_mcp_tool MCP 工具表（管理端 P4，需求 3.3）
+--     tool_key = mcp_{serverId}_{toolName}，映射为平台标准工具。
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_mcp_tool` (
+  `id`              BIGINT       NOT NULL AUTO_INCREMENT,
+  `server_id`       BIGINT       NOT NULL,
+  `tool_name`       VARCHAR(100) NOT NULL,
+  `tool_key`        VARCHAR(120) NOT NULL,
+  `display_name`    VARCHAR(100)          DEFAULT NULL,
+  `description`     VARCHAR(500)          DEFAULT NULL,
+  `input_schema`    TEXT                  DEFAULT NULL,
+  `enabled`         TINYINT      NOT NULL DEFAULT 1,
+  `last_invoked_at` DATETIME              DEFAULT NULL,
+  `deleted`         TINYINT      NOT NULL DEFAULT 0,
+  `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_mcp_tool_key` (`tool_key`),
+  KEY `idx_mcp_server` (`server_id`, `enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='MCP工具表';

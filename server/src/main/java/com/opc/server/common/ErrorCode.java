@@ -48,6 +48,20 @@ public enum ErrorCode {
     PROVIDER_OFFLINE(6004, "该模型未上架"),
     PROVIDER_IMPL_UNSUPPORTED(6005, "不支持的 providerImpl"),
 
+    // --- 管理端：调试面板（6100-6199，后端线专用）---
+    DEBUG_CASE_NOT_FOUND(6101, "回归用例不存在"),
+    DEBUG_AGENT_NOT_FOUND(6102, "调试的智能体不存在"),
+    DEBUG_NODE_NOT_FOUND(6103, "调试的节点不存在"),
+    DEBUG_VERSION_NOT_FOUND(6104, "调试的版本不存在"),
+    DEBUG_CASE_INVALID(6105, "回归用例参数不合法"),
+
+    // --- 管理端：MCP 接入（6200-6299，后端线专用）---
+    MCP_SERVER_NOT_FOUND(6201, "MCP 服务端不存在"),
+    MCP_TOOL_NOT_FOUND(6202, "MCP 工具不存在"),
+    MCP_DISCOVER_FAILED(6203, "MCP 工具发现失败"),
+    MCP_INVOKE_FAILED(6204, "MCP 工具调用失败"),
+    MCP_TRANSPORT_UNSUPPORTED(6205, "暂不支持的 MCP 传输方式"),
+
     // --- 管理端：智能体工作台（6300-6399，后端线专用）---
     AGENT_NOT_FOUND(6301, "智能体不存在"),
     AGENT_CODE_EXISTS(6302, "智能体标识已存在"),

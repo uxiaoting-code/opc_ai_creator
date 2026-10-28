@@ -3,10 +3,12 @@ package com.opc.server.service;
 import com.opc.server.admin.tool.ToolKeys;
 import com.opc.server.dto.AdminToolResponse;
 import com.opc.server.entity.AiProviderConfig;
+import com.opc.server.entity.McpTool;
 import com.opc.server.entity.enums.ProviderType;
 import com.opc.server.entity.enums.ToolKind;
 import com.opc.server.entity.enums.ToolSource;
 import com.opc.server.repository.AiProviderConfigRepository;
+import com.opc.server.repository.McpToolRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +26,12 @@ import java.util.List;
 public class AdminToolService {
 
     private final AiProviderConfigRepository providerRepository;
+    private final McpToolRepository mcpToolRepository;
 
-    public AdminToolService(AiProviderConfigRepository providerRepository) {
+    public AdminToolService(AiProviderConfigRepository providerRepository,
+                            McpToolRepository mcpToolRepository) {
         this.providerRepository = providerRepository;
+        this.mcpToolRepository = mcpToolRepository;
     }
 
     @Transactional(readOnly = true)
@@ -56,7 +61,21 @@ public class AdminToolService {
             ));
         }
 
-        // P4（MCP）/ P5（知识库）实现后在这里追加，返回结构不变
+        for (McpTool tool : mcpToolRepository.findByEnabledTrueAndDeletedFalseOrderByIdAsc()) {
+            tools.add(new AdminToolResponse(
+                    ToolSource.MCP.name(),
+                    ToolSource.MCP.getLabel(),
+                    tool.getId(),
+                    tool.getToolKey(),
+                    ToolKind.HTTP_REQUEST.name(),
+                    ToolKind.HTTP_REQUEST.getLabel(),
+                    tool.getDisplayName() == null ? tool.getToolName() : tool.getDisplayName(),
+                    tool.getDescription() == null ? "MCP 工具" : tool.getDescription(),
+                    true
+            ));
+        }
+
+        // P5（知识库）实现后在这里追加，返回结构不变
         return tools;
     }
 
