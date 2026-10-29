@@ -41,6 +41,16 @@ public enum ErrorCode {
     // --- 作品 ---
     WORK_NOT_FOUND(5001, "作品不存在"),
 
+    // --- 用户端：订单与接单（5500-5599）---
+    ORDER_NOT_FOUND(5501, "订单不存在或已下架"),
+    ORDER_NOT_OPEN(5502, "当前订单不可接取"),
+    ORDER_ALREADY_ACCEPTED(5503, "你已经接过该订单"),
+    ORDER_QUOTA_FULL(5504, "该订单名额已满"),
+    ORDER_ACCESS_DENIED(5505, "无权访问该订单"),
+    ORDER_STATUS_ILLEGAL(5506, "当前订单状态不允许该操作"),
+    ORDER_DEADLINE_PASSED(5507, "订单已过截止时间"),
+    ORDER_ACTIVE_EXISTS(5508, "你已有进行中的接单，请先完成或放弃"),
+
     // --- 管理端：模型 / API 配置（6000-6099，后端线专用）---
     PROVIDER_CONFIG_NOT_FOUND(6001, "模型配置不存在"),
     PROVIDER_TEST_FAILED(6002, "连通性测试失败"),

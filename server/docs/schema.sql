@@ -686,3 +686,45 @@ CREATE TABLE IF NOT EXISTS `t_gateway_endpoint` (
   PRIMARY KEY (`id`),
   KEY `idx_gateway_method_path` (`method`, `path`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='对外网关接口定义表';
+-- =============================================================================
+-- 用户端 v2 · M1 接单市场
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_market_order` (
+  `id`                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '订单ID',
+  `order_no`          VARCHAR(32)  NOT NULL COMMENT '对外订单号',
+  `title`             VARCHAR(120) NOT NULL COMMENT '订单标题',
+  `brand_name`        VARCHAR(100) NOT NULL COMMENT '需求方名称',
+  `description`       TEXT         NOT NULL COMMENT '需求说明',
+  `media_type`        VARCHAR(20)  NOT NULL COMMENT 'IMAGE / VIDEO / AUDIO',
+  `reward_fen`        BIGINT       NOT NULL COMMENT '订单报酬，单位分',
+  `credit_cost`       INT          NOT NULL DEFAULT 0 COMMENT '预计算力消耗',
+  `requirements_json` JSON         DEFAULT NULL COMMENT '交付要求字符串数组',
+  `deadline_at`       DATETIME     NOT NULL COMMENT '截止时间',
+  `tasks_total`       INT          NOT NULL DEFAULT 0 COMMENT '总名额',
+  `tasks_taken`       INT          NOT NULL DEFAULT 0 COMMENT '已接名额',
+  `status`            VARCHAR(20)  NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN / CLOSED / COMPLETED',
+  `version`           BIGINT       NOT NULL DEFAULT 0 COMMENT '乐观锁',
+  `created_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_market_order_no` (`order_no`),
+  KEY `idx_market_status_deadline` (`status`, `deadline_at`),
+  KEY `idx_market_media_type` (`media_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='接单市场订单';
+
+CREATE TABLE IF NOT EXISTS `t_order_acceptance` (
+  `id`             BIGINT      NOT NULL AUTO_INCREMENT COMMENT '接单记录ID',
+  `acceptance_no`  VARCHAR(32) NOT NULL COMMENT '对外接单号',
+  `order_id`       BIGINT      NOT NULL COMMENT '订单ID',
+  `user_id`        BIGINT      NOT NULL COMMENT '接单用户ID',
+  `status`         VARCHAR(20) NOT NULL DEFAULT 'ACCEPTED' COMMENT 'ACCEPTED / SUBMITTED / APPROVED / REJECTED / CANCELLED',
+  `accepted_at`    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `submitted_at`   DATETIME    DEFAULT NULL,
+  `approved_at`    DATETIME    DEFAULT NULL,
+  `created_at`     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_acceptance_no` (`acceptance_no`),
+  UNIQUE KEY `uk_order_user` (`order_id`, `user_id`),
+  KEY `idx_acceptance_user_status` (`user_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户接单记录';

@@ -1,8 +1,8 @@
-# OPC AI · 用户端业务接口契约（M0 冻结版）
+# OPC AI · 用户端业务接口契约（M0 冻结 / M1 已实现）
 
-> 版本：v1.0 · 冻结日期：2026-10-29  
-> 状态：**M0 已冻结，可以据此实现后端和前端 Repository**  
-> 适用范围：Flutter 用户 App 的接单、工作台、提交、审核、钱包、充值、提现。  
+> 版本：v1.1 · 冻结日期：2026-10-29 · M1 实现日期：2026-10-29
+> 状态：**M0 契约已冻结；M1 订单/接单/工作台接口已实现**
+> 适用范围：Flutter 用户 App 的接单、工作台、提交、审核、钱包、充值、提现。
 > 现有登录、Skill、任务查询、素材等接口仍以 `docs/api.md` 为准；本文只新增用户端业务接口，不重复定义已有接口。
 
 ---
@@ -59,7 +59,7 @@ Authorization: Bearer <token>
 
 ### 1.2 `MarketOrderStatus` 订单公共状态
 
-> 这是订单在整个市场中的公共状态，不是某一个用户的状态。  
+> 这是订单在整个市场中的公共状态，不是某一个用户的状态。
 > 一个订单可以有多个人接单，因此不能用公共订单状态表示“我已经做到哪一步”。
 
 | 值 | 含义 |
@@ -392,7 +392,7 @@ POST /api/orders/{orderId}/accept
 GET /api/orders/my?status=ACCEPTED&page=1&pageSize=10
 ```
 
-返回 `data`：`PageResult<OrderAcceptanceResponse>`。  
+返回 `data`：`PageResult<OrderAcceptanceResponse>`。
 用途：用户刷新后恢复工作台当前订单。
 
 ### 3.5 工作台上下文
@@ -412,7 +412,35 @@ GET /api/orders/{orderId}/workbench
 
 失败码：`5501/5505/5506`。
 
----## 4. 提交与审核接口
+### 3.6 M1 快速自测（curl）
+
+以下命令使用开发令牌，后端需运行在 `http://localhost:8080`：
+
+```bash
+# 1. 可接订单
+curl -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/orders/available?page=1&pageSize=10"
+
+# 2. 订单详情
+curl -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/orders/1"
+
+# 3. 接单（把 1 换成实际订单 ID）
+curl -X POST -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/orders/1/accept"
+
+# 4. 我的接单
+curl -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/orders/my?page=1&pageSize=10"
+
+# 5. 工作台上下文
+curl -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/orders/1/workbench"
+```
+
+---
+
+## 4. 提交与审核接口
 
 ### 4.1 提交作品
 
@@ -738,7 +766,7 @@ GET  /api/tasks
 
 ## 7. 错误码冻结（5500～5799）
 
-> M0 只冻结编号；实现阶段再写入 `ErrorCode.java`。  
+> M0 只冻结编号；实现阶段再写入 `ErrorCode.java`。
 > 已有错误码 6000～9099 不被占用。
 
 | 错误码 | 常量建议 | 文案 |
@@ -1027,3 +1055,4 @@ M1/M3/M4 实现时至少准备：
 | 版本 | 日期 | 内容 |
 |---|---|---|
 | v1.0 | 2026-10-29 | M0 首次冻结：订单、接单、提交、审核、钱包、充值、提现、音频生成及 9 张新表 |
+| v1.1 | 2026-10-29 | M1 实现：`t_market_order`、`t_order_acceptance`、订单列表/详情/接单/我的接单/工作台接口，并加入 5501～5508 错误码 |
