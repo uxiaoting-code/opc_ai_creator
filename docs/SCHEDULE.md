@@ -155,14 +155,14 @@
 - [x] P3 收尾（2026-10-28 完成并验收）
 - [x] **【交付】** 调试接口（代码已完成，待推送）
   - [x] 更新 `docs/api-admin.md` 变更记录
-  - [ ] `git commit` + `git push`
+  - [x] `git commit` + `git push`
   - [ ] 搭档开工前 pull
 - [x] P4 MCP 接入（2026-10-28 完成并验收）
   - [x] `McpServer` / `McpTool` 实体
   - [x] 注册 / 发现 / 启用 / 映射 / 试调用
 - [x] **【交付】** MCP 接口（代码已完成，待推送）
   - [x] 更新 `docs/api-admin.md` 变更记录
-  - [ ] `git commit` + `git push`
+  - [x] `git commit` + `git push`
   - [ ] 搭档开工前 pull
 
 ### 前端线（搭档）
@@ -206,14 +206,14 @@
   - [x] `KnowledgeBase` / `Document` / `Chunk`
   - [x] 文本 / 文件 / URL / API 同步（当前支持 TXT/MD/CSV/JSON/HTML；PDF/Word/Excel 待装 PDFBox/POI）
   - [x] 分段 + 检索 + 检索测试 + 绑定智能体
-- [ ] **【交付】** 知识库接口（代码已完成，待推送）
+- [x] **【交付】** 知识库接口（2026-10-29 已推送）
   - [x] 更新 `docs/api-admin.md` 变更记录
-  - [ ] `git commit` + `git push`
+  - [x] `git commit` + `git push`
   - [ ] 搭档开工前 pull
 - [x] 概览 / 算力 / 账单（`CreditTransaction` 流水 + 3 个聚合接口）（2026-10-28 完成并验收）
-- [ ] **【交付】** 运营接口（代码已完成，待推送）
+- [x] **【交付】** 运营接口（2026-10-29 已推送）
   - [x] 更新 `docs/api-admin.md` 变更记录
-  - [ ] `git commit` + `git push`
+  - [x] `git commit` + `git push`
   - [ ] 搭档开工前 pull
 
 ### 前端线（搭档）
@@ -229,9 +229,9 @@
 ### 一起
 
 - [x] 后端线：**API 网关**（对外接口定义 + OpenAPI 导出）（2026-10-28 完成并验收）
-  - [ ] **【交付】** 网关接口（代码已完成，待推送）
+  - [x] **【交付】** 网关接口（2026-10-29 已推送）
     - [x] 更新 `docs/api-admin.md` 变更记录
-    - [ ] `git commit` + `git push`
+    - [x] `git commit` + `git push`
     - [ ] 搭档开工前 pull
 - [ ] 前端线：切「网关」页 + 打包 APK
 - [ ] 端到端联调（App → 后台 → Curl 全链路）

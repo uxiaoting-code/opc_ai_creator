@@ -150,3 +150,25 @@
 - 路由：`/dev/components`
 - 不在 `RouteNames.allBusinessPaths` 里，所以不会影响「13 个业务页面」的测试。
 - 页面上每个组件都有名称、说明和可点击示例。
+
+---
+
+## 管理端组件（待做，见 `docs/SCHEDULE.md` §6.5）
+
+> 目标：把 `admin-web/` 的原生 HTML/CSS 组件用 Flutter 复刻到 `lib/admin/widgets/`。
+> 完成后在本文件补充每个组件的参数/回调表。
+
+| 组件 | 作用 |
+|---|---|
+| `AdminShell` | 深色侧栏 + 顶栏 + 内容区 |
+| `AdminTable<T>` | 通用表格：columns + rows + cellBuilder |
+| `PaginationBar` | 分页条 |
+| `AdminToolbar` | 搜索 + 筛选 + 主按钮 |
+| `StatCard` | 指标卡（大数字 + 环比） |
+| `PanelCard` | 面板容器（标题 + 右侧说明 + 内容） |
+| `StatusBadge` | 状态徽章（正常/冻结、已发布/草稿…） |
+| `AdminToggle` | 上架/启用开关 |
+| `AdminModal` | 弹窗（新建/加算力/接入模型/添加 Skill） |
+| `AdminEmptyState` | 空状态 |
+
+**组件规则**：数据进、事件出；回调可空；状态由外部传入；不 import `api_client` / `repository` / `provider`；不导航、不弹窗、不写死业务文案。
