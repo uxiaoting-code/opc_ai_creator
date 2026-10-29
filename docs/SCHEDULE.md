@@ -1,7 +1,7 @@
 # OPC AI 后台 · 开发排期（5 周主线 + 3 天缓冲）
 
 > 定稿日期：2026-10-17
-> 分工：**后端线** = `server/` 主体；**前端线** = `admin-web/`（视觉参考）+ `lib/`（App）+ **`lib/admin/`（Flutter 管理端）** + 3 个纯 CRUD 后端模块
+> 分工：**后端线** = `server/` 主体；**前端线** = `lib/`（用户 App）+ `admin-web/`（后台控制台）+ 3 个纯 CRUD 后端模块
 > 口径：每周 5 个工作日、每天 6~8 小时有效投入。
 > ⚠️ 如果实际是课余时间（每天 2~3 小时），整体时间 **×2~2.5**（约 10~12 周）。
 >
@@ -11,8 +11,8 @@
 > 群消息只是可选提醒，**以文档为准**；搭档开工前必须 `git pull` 并读变更记录。
 >
 > **完成标准（不是勾全本表就算完）**：
-> 1. App 13 页可运行
-> 2. **Flutter 管理端 12 页可运行（按 admin-web 原型复刻）**
+> 1. Flutter 用户 App 按老师最终确认范围完成 `docs/prototype-user/` 原型复刻并可运行
+> 2. **后台控制台 12 页可运行（admin-web，接真接口）**
 > 3. 管理端 P0~P8 接口可用
 > 4. `docs/api-admin.md` 与代码一致
 > 5. `docs/COMPONENTS.md` 完整
@@ -24,9 +24,9 @@
 
 | | 后端线（你） | 前端线（搭档） |
 |---|---|---|
-| 主目录 | `server/` 主体 | `admin-web/`（参考）+ `lib/`（App）+ `lib/admin/`（Flutter 管理端） |
+| 主目录 | `server/` 主体 | `lib/`（用户 App）+ `admin-web/`（后台控制台） |
 | 外加 | — | `server/.../admin/{material,user,setting}` + `PromptController` |
-| 负责模块 | 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关 | **Flutter 管理端 12 页** / App 收尾 / 素材库后台 / 用户管理 / 系统设置 |
+| 负责模块 | 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关 | **admin-web 12 页接真接口** / Flutter 用户 App 收尾 / 素材库后台 / 用户管理 / 系统设置 |
 | 错误码段 | 6000-6499、6700-6799 | 6500-6599 |
 | 人天 | ≈ 21 | ≈ 19 |
 
@@ -36,9 +36,10 @@
 
 ```
 后端线：P0 → P1 模型配置 → P2 工作台 → P3 调试 → P4 MCP → P5 知识库 → 运营 → 网关
-前端线：Flutter组件 → Web P0 → Prompt/用户/设置/素材库 → 逐页切真数据 → App收尾 → 打包
+用户 App：Flutter 组件/页面 → C 端接口联调 → 收尾 → APK
+运营后台：admin-web 12 页 → 逐页接 /api/admin/** 真接口
                               ↑
-                    每切一页，才需要那一页的接口（异步，不用同时在线）
+                    每接一页，才需要那一页的管理端接口（异步，不用同时在线）
 ```
 
 **后端线是串行的，前端线可并行。你的进度 = 全项目进度。**
@@ -167,35 +168,32 @@
 
 ### 前端线（搭档）
 
-- [x] ~~切「调试」页（admin-web 参考实现）~~ → 已并入 §6.5 Flutter 版
-- [x] ~~切「MCP」页（admin-web 参考实现）~~ → 已并入 §6.5 Flutter 版
-- [ ] App 收尾：Skill 市场页（真实任务，替换当前占位页）
+- [ ] 切「调试」页（`admin-web`，接 `/api/admin/debug/**` 真接口）
+- [ ] 切「MCP」页（`admin-web`，接 `/api/admin/mcp/**` 真接口）
+- [ ] Flutter 用户 App 收尾：Skill 市场页（替换当前占位页）
 
 ---
 
-## 6.5 Flutter 管理端（老师新增要求 · 前端线）
+## 6.5 技术边界（老师 2026-10-29 澄清）
 
-> `admin-web/` 只是**视觉参考**，最终交付物是 `lib/admin/` 的 Flutter 版本。
-> 运行：`flutter run -d chrome -t lib/admin/main_admin.dart`
+> **Flutter 复刻的是用户 App 页面，不是后台控制台。参考代码在 `docs/prototype-user/`。**
+> 原型 28 页与当前 Flutter 的逐页对照见 `docs/USER_PROTOTYPE_GAP.md`。
+> 后台控制台继续使用老师提供的 `admin-web/`（HTML/CSS/JS），不要创建 `lib/admin/`。
 
-- [ ] `lib/admin/main_admin.dart` 独立入口
-- [ ] `lib/admin/theme/admin_theme.dart`（从 `admin-web/css/admin.css` 提取色值/间距/圆角）
-- [ ] `lib/admin/widgets/` 基础组件：
-  - [ ] `AdminShell`（侧栏 + 顶栏 + 内容区）
-  - [ ] `AdminTable` / `PaginationBar`
-  - [ ] `AdminToolbar`（搜索 + 筛选 + 主按钮）
-  - [ ] `StatCard` / `PanelCard`
-  - [ ] `StatusBadge` / `AdminToggle`
-  - [ ] `AdminModal` / `AdminEmptyState`
-- [ ] `lib/admin/pages/` 12 个页面：
-  - [ ] 登录 / 数据概览
-  - [ ] 用户管理 / 账单管理
-  - [ ] 大模型配置 / 智能体配置
-  - [ ] 算力使用 / 系统设置
-  - [ ] 调试 / MCP / 知识库 / 素材库 / 网关
-- [ ] 接 `/api/admin/**` 真接口（`admin-web/mock/*.json` 作字段参考）
-- [ ] `docs/COMPONENTS.md` 增加管理端组件清单
-- [ ] 与 `admin-web/` 逐页截图对照，确认视觉一致
+完整链路：
+
+```text
+Flutter 用户 App ── HTTP 请求 /api/** ─────▶ Spring Boot server ──▶ Harness ──▶ AI Provider
+admin-web 控制台 ── HTTP 请求 /api/admin/** ─▶ Spring Boot server（保存 API / Skill / Harness 配置）
+```
+
+- Flutter 发起文生图 / 图生视频指令，后端鉴权、扣算力、建任务并调用 Harness / AI Provider。
+- 后端立即返回任务 ID 和状态；App 通过任务详情 / 列表接口获取进度、结果 URL 和错误信息。
+- `admin-web` 负责配置模型 API、创建 Skill、搭建 Harness、调试、知识库、素材、账单和网关。
+- 接口由后端暴露给前端调用；“前端暴露接口”应理解为**前端按契约调用后端接口**。
+- 用户端主流程以原型 4 个一级 Tab 为准：课程 / 创作 / 接单 / 我的。
+- 当前 Flutter 是 5 Tab（首页/任务/画廊/素材/我的），因此首页壳和页面归属需要重构，不能只补两个占位页。
+- 详细逐页差异与开发顺序见 `docs/USER_PROTOTYPE_GAP.md`。
 
 ---
 ## 7. Week 5（Day 21~25）· 知识库 + 运营 + 网关
@@ -218,9 +216,9 @@
 
 ### 前端线（搭档）
 
-- [x] ~~切「知识库」页（admin-web 参考实现）~~ → 已并入 §6.5 Flutter 版
-- [x] ~~切「数据概览」「账单」「算力使用」三页（admin-web 参考实现）~~ → 已并入 §6.5 Flutter 版
-- [ ] App 收尾：设置页（实现或删除「待实现」区块）
+- [ ] 切「知识库」页（`admin-web`，接 `/api/admin/kb/**` 真接口）
+- [ ] 切「数据概览」「账单」「算力使用」三页（`admin-web`，接运营接口）
+- [ ] Flutter 用户 App 收尾：设置页（处理「待实现」区块）
 
 ---
 
@@ -233,8 +231,9 @@
     - [x] 更新 `docs/api-admin.md` 变更记录
     - [x] `git commit` + `git push`
     - [ ] 搭档开工前 pull
-- [ ] 前端线：切「网关」页 + 打包 APK
+- [ ] 后台前端：切「网关」页（`admin-web`，接 `/api/admin/gateway/**`）
 - [ ] 端到端联调（App → 后台 → Curl 全链路）
+- [ ] Flutter 用户 App 按老师提供的用户端原型逐页对照（13 页 + 公共组件）
 - [ ] 演示脚本 + 录屏
 - [ ] `docs/COMPONENTS.md` 定稿
 - [ ] 关后门：`opc.security.dev-token-enabled = false`、`AppConfig.bypassLogin = false`
@@ -258,12 +257,12 @@
 
 ## 最终验收清单（交付前逐项确认）
 
-- [ ] App 13 个页面可运行（含 Prompt 知识库、Skill 市场）
-- [ ] **Flutter 管理端 12 个页面可运行（按 `admin-web/` 原型复刻）**
+- [ ] Flutter 用户 App 按老师确认范围完成 28 页原型的视觉/交互复刻，至少包含 4 个一级 Tab 与创作主流程
+- [ ] **后台控制台 `admin-web` 12 个页面可运行并接真接口**
 - [ ] 管理端 P0~P8 接口全部可用
 - [ ] 统一工具库包含：内置 + 模型 + MCP + 知识库
 - [ ] `docs/api-admin.md` 变更记录与代码一致
-- [ ] `docs/COMPONENTS.md` 包含 App + 管理端组件清单
+- [ ] `docs/COMPONENTS.md` 包含 Flutter 用户 App 组件清单
 - [ ] 演示脚本端到端跑通
 - [ ] 关闭 `dev-token-enabled` 与 `bypassLogin`
 

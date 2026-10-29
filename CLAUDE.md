@@ -1,31 +1,31 @@
 # CLAUDE.md
 
-> 本仓库的项目说明统一维护在 [`AGENTS.md`](./AGENTS.md)，**请先读它**。
-> 这里只重复当前任务和最关键的红线。
+> 项目说明统一维护在 [`AGENTS.md`](./AGENTS.md)，**请先读它**。
 
-## 当前任务（最高优先级）
+## 架构（务必理解）
 
-**用 Flutter 复刻 `admin-web/` 的后台原型，交付 `lib/admin/`。**
+- **Flutter = 用户 App**（`lib/`，已有 13 页基础实现；需按 `docs/prototype-user/` 的 28 页原型对齐）
+- **后台控制台 = HTML/CSS/JS**（`admin-web/`，12 页）
+- **后端 = Spring Boot**（`server/`，`/api/**` + `/api/admin/**`）
+- **不要创建 `lib/admin/`**，后台控制台不是 Flutter
 
-- `admin-web/` 是**视觉参考**，不是最终交付物
-- 先做组件（`AdminShell` / `AdminTable` / `AdminToolbar` / `StatCard` / `PanelCard` / `StatusBadge` / `AdminToggle` / `AdminModal` / `PaginationBar`）
-- 再做 12 个页面（登录、概览、用户、账单、模型、智能体、算力、设置、调试、MCP、知识库、素材库、网关）
-- 运行：`flutter run -d chrome -t lib/admin/main_admin.dart`
-- 详细任务：`docs/SCHEDULE.md` §6.5
+## 当前任务
 
+### A. 用户 App（Flutter）
+
+- [ ] 按 `docs/prototype-user/` 的老师用户端原型逐页对照 Flutter 页面与公共组件
+- [ ] Skill 市场页（替换 `lib/pages/skill/skill_market_page.dart` 占位）
+- [ ] 设置页（处理 `lib/pages/settings/settings_page.dart` 的「待实现」区块）
+### B. 后台控制台（admin-web）
+
+- [ ] 12 页接 `/api/admin/**` 真接口（`?mock=0`）
+- [ ] 覆盖 API 配置、Skill 新建、Harness 编排、智能体/调试/MCP/知识库/素材库/账单/网关
+
+详细任务见 `docs/SCHEDULE.md`。
 ## 红线
 
 1. 不许删 `MockAiProvider`
-2. 不许改 `t_skill` 的语义（它是 App 的创作线路，不是原型里的「Skill 工具」）
+2. 不许改 `t_skill` 的语义
 3. 不许改坏 `/api/**` 那 22 个 C 端接口
-4. 管理端 UI 以 `admin-web/` 原型为准，Flutter 版 1:1 复刻
-5. 管理端接口契约见 `docs/api-admin.md`（已冻结），**要改先改契约**
-
-## 关键文档
-
-- 需求文档：`docs/requirements-opc-admin.pdf`（全文文本版：`_req_doc.txt`）
-- 管理端契约：`docs/api-admin.md`
-- 进度与分工：`docs/SCHEDULE.md`
-- 三项冻结 + 文件归属：`docs/admin-freeze.md`
-- 组件清单：`docs/COMPONENTS.md`
-- C 端交接说明：`docs/HANDOFF.md`
+4. 后台控制台 UI 以 `admin-web/` 原型为准
+5. 管理端接口契约见 `docs/api-admin.md`，要改先改契约

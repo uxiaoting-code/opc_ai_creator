@@ -1,5 +1,6 @@
 # Flutter 组件清单
 
+> 视觉与交互基准：`docs/prototype-user/`（老师提供的用户端移动 App HTML 原型）。
 > 预览方式：登录 App 后进入「设置 → 打开组件预览（开发用）」，或直接打开 `/dev/components`。
 > 预览页：`lib/pages/dev/component_gallery_page.dart`
 
@@ -153,22 +154,14 @@
 
 ---
 
-## 管理端组件（待做，见 `docs/SCHEDULE.md` §6.5）
+## 后台控制台组件（不属于 Flutter）
 
-> 目标：把 `admin-web/` 的原生 HTML/CSS 组件用 Flutter 复刻到 `lib/admin/widgets/`。
-> 完成后在本文件补充每个组件的参数/回调表。
+老师要求 Flutter 复刻的是**用户 App**，不是后台控制台。后台控制台使用
+`admin-web/` 中的原生 HTML/CSS/JS 组件和页面，本文件不再维护 `lib/admin/` 组件清单。
 
-| 组件 | 作用 |
-|---|---|
-| `AdminShell` | 深色侧栏 + 顶栏 + 内容区 |
-| `AdminTable<T>` | 通用表格：columns + rows + cellBuilder |
-| `PaginationBar` | 分页条 |
-| `AdminToolbar` | 搜索 + 筛选 + 主按钮 |
-| `StatCard` | 指标卡（大数字 + 环比） |
-| `PanelCard` | 面板容器（标题 + 右侧说明 + 内容） |
-| `StatusBadge` | 状态徽章（正常/冻结、已发布/草稿…） |
-| `AdminToggle` | 上架/启用开关 |
-| `AdminModal` | 弹窗（新建/加算力/接入模型/添加 Skill） |
-| `AdminEmptyState` | 空状态 |
+后台接入真接口时，遵循：
 
-**组件规则**：数据进、事件出；回调可空；状态由外部传入；不 import `api_client` / `repository` / `provider`；不导航、不弹窗、不写死业务文案。
+1. 页面状态与请求统一走 `admin-web/js/api.js`（`AdminApi`），不要直接散写 `fetch`。
+2. 表格、筛选、弹窗、分页沿用 `admin-web/index.html` 和 `admin-web/css/admin.css` 的结构与样式。
+3. 字段、错误码、枚举以 `docs/api-admin.md` 为准；改接口先改契约。
+4. 保持 mock 模式可用，真接口模式通过 `?mock=0` 切换。
