@@ -1,290 +1,425 @@
-# OPC AI 后台 · 开发排期（5 周主线 + 3 天缓冲）
+# OPC AI · 当前分工与模块排期
 
-> 定稿日期：2026-10-17
-> 分工：**后端线** = `server/` 主体；**前端线** = `lib/`（用户 App）+ `admin-web/`（后台控制台）+ 3 个纯 CRUD 后端模块
-> 口径：每周 5 个工作日、每天 6~8 小时有效投入。
-> ⚠️ 如果实际是课余时间（每天 2~3 小时），整体时间 **×2~2.5**（约 10~12 周）。
->
-> 配套文档：`docs/api-admin.md`（接口契约）、`docs/admin-freeze.md`（三项冻结 + 文件归属）、`docs/ADMIN_PLAN.md`（背景）
->
-> **交付定义**：交付 = 更新 `docs/api-admin.md` 的「变更记录」+ `git commit` + `git push`。
-> 群消息只是可选提醒，**以文档为准**；搭档开工前必须 `git pull` 并读变更记录。
->
-> **完成标准（不是勾全本表就算完）**：
-> 1. Flutter 用户 App 按老师最终确认范围完成 `docs/prototype-user/` 原型复刻并可运行
-> 2. **后台控制台 12 页可运行（admin-web，接真接口）**
-> 3. 管理端 P0~P8 接口可用
-> 4. `docs/api-admin.md` 与代码一致
-> 5. `docs/COMPONENTS.md` 完整
-> 6. 演示脚本可端到端跑通
+> 最后更新：2026-10-29
+> **本文件是当前唯一执行版排期。旧的分周计划不再作为执行依据。**
+> Codex / Claude Code 开始工作前必须先读本文件 §0～§4，再读 `AGENTS.md`、`docs/USER_APP_V2.md`、`docs/api.md`、`docs/api-admin.md`。
+> 不要删除旧页面，不要执行 `git reset`，不要直接在 GitHub 网页改文件。
 
 ---
 
-## 0. 分工速查
+## 0. 当前真实状态
 
-| | 后端线（你） | 前端线（搭档） |
-|---|---|---|
-| 主目录 | `server/` 主体 | `lib/`（用户 App）+ `admin-web/`（后台控制台） |
-| 外加 | — | `server/.../admin/{material,user,setting}` + `PromptController` |
-| 负责模块 | 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关 | **admin-web 12 页接真接口** / Flutter 用户 App 收尾 / 素材库后台 / 用户管理 / 系统设置 |
-| 错误码段 | 6000-6499、6700-6799 | 6500-6599 |
-| 人天 | ≈ 21 | ≈ 19 |
+### 已完成
 
----
+- [x] 管理端后端 P0～P8：鉴权、模型/API 配置、智能体工作台、调试、MCP、知识库、运营账单、网关。
+- [x] `admin-web/` 已有 12 个后台页面和 mock 数据，部分页面已接真接口。
+- [x] Flutter 用户端 v2 已有 16 页可交互前端演示。
+- [x] `flutter analyze`、`flutter test`、`flutter build web --release` 通过。
 
-## 1. 依赖链（记住这一条就够）
+### 尚未完成
 
-```
-后端线：P0 → P1 模型配置 → P2 工作台 → P3 调试 → P4 MCP → P5 知识库 → 运营 → 网关
-用户 App：Flutter 组件/页面 → C 端接口联调 → 收尾 → APK
-运营后台：admin-web 12 页 → 逐页接 /api/admin/** 真接口
-                              ↑
-                    每接一页，才需要那一页的管理端接口（异步，不用同时在线）
-```
-
-**后端线是串行的，前端线可并行。你的进度 = 全项目进度。**
+- [ ] 用户端订单、提交、审核、钱包、充值、提现使用内存演示数据，刷新会重置。
+- [ ] 文生图 / 图生视频尚未接现有 Harness 任务接口。
+- [ ] 音频生成尚无后端 TTS 接口。
+- [ ] 充值渠道、支付回调和提现处理尚未接真实后端。
+- [ ] 16 页 UI 仍有乱码、字体、小屏和视觉细节问题。
+- [ ] 审核页的“模拟通过/模拟驳回”需要在真实接口完成后删除。
+- [ ] `admin-web` 仍有部分页面使用 mock。
 
 ---
 
-## 2. Week 0 · Day 1 上午（一起，30 分钟）
+## 1. 执行模式
 
-- [ ] 一起过 `docs/api-admin.md` §0（返回体 / 分页 / 错误码分段 / 枚举字典）
-- [ ] 一起过 `docs/admin-freeze.md` §4.1（文件归属）
-- [ ] 确认 3 个共写文件的规矩：
-  - `schema.sql`：后端线先改先推，前端线后改
-  - `ErrorCode.java`：各用各的码段
-  - `DataSeeder.java`：各建新类（`CoreSeeder` / `CrudSeeder`），不动老文件
-
----
-
-## 3. Week 1（Day 1~5）· 地基 + 组件
-
-### 后端线（你）
-
-- [x] **P0-1** `common/ErrorCode.java` 追加 9001~9005
-- [x] **P0-2** `entity/User.java` 增加 `last_active_at`
-- [x] **P0-3** `security/AuthInterceptor.java`：`/api/admin/**` 要求 ADMIN；dev-token 隔离；最近活跃节流
-- [x] **P0-4** `service/AuthService.java`：`loginAdmin()`（非 ADMIN → 403）
-- [x] **P0-5** `controller/admin/AdminAuthController.java`：`POST /api/admin/auth/login` + `GET /api/admin/auth/profile`
-- [x] **P0-6** `config/WebConfig.java`：放行 `/api/admin/auth/login`
-- [x] **P0-7** `server/docs/schema.sql`：追加 5 张新表 + `last_active_at`
-- [x] **P0 自测**（2026-10-17 已跑通）：
-  - [x] `admin/admin123` → HTTP 200 / role=ADMIN
-  - [x] `admin` 令牌调 `/profile` → 200
-  - [x] `demo/demo123` 登后台 → HTTP 403 / code=9002
-  - [x] `demo` 令牌调管理接口 → HTTP 403 / code=9002
-  - [x] `mock-token-for-scaffold` 调管理接口 → HTTP 403
-  - [x] 无 token → HTTP 401
-  - [x] C 端回归：`/api/skills` 200、`/api/auth/profile` 200、`/api/health` 200
-- [x] Day 3~5：**P1 模型/API 配置**（2026-10-22 完成并验收）
-  - [x] `AiProviderConfig` 实体 + Repository
-  - [x] 列表 / 新增 / 详情 / 修改
-  - [x] 鉴权配置、请求模板、响应模板
-  - [x] 连通性测试 `POST /api/admin/providers/{id}/test`
-  - [x] `AiProviderRouter.routeByConfig()` + 新增 `HttpApiProvider`
-
-### 前端线（搭档）
-
-- [x] Day 1~2：**Flutter 组件第一批**（老师明确要求优先）
-  - [x] 组件预览页 `lib/pages/dev/component_gallery_page.dart`
-  - [x] `PromptInputCard` / `SkillSelector` / `SizePicker` / `ParamSliderRow`
-  - [x] `GenerateBar` / `ResultPreviewCard` / `TaskStatusCard` / `CreditChip`
-  - [x] 组件只依赖 `data/models`，**不 import** `api_client` / `repository` / `provider`
-  - [x] 列出 `docs/COMPONENTS.md` 组件清单
-- [x] Day 3~5：**Web P0**
-  - [x] `admin-web/js/api.js`（baseURL + Authorization + 统一错误 + `USE_MOCK` 开关）
-  - [x] `admin-web/js/util.js`（`formatCredits()` 等）
-  - [x] 拆 `admin.js` → `admin-web/js/pages/*.js`
-  - [x] 登录页走 `api.js`（mock 模式可假登录）
-  - [x] `admin-web/mock/*.json`（字段照 `api-admin.md`）
-  - [x] `index.html` 侧栏追加 5 个新页入口
-
-### 同步点
-
-- [x] **Day 2 末**：P0 联合验收（前端真登录）—— 2026-10-22 通过（login/profile 200；数据接口待 P1+ 逐页接入）
-- [x] **Day 5 末**：mock 层验收（12 页能点通）—— 2026-10-22 通过
-
----
-
-## 4. Week 2（Day 6~10）· 模型配置 + 前端闭环模块
-
-### 后端线（你）
-
-- [x] P1 收尾（连通性测试 + 路由改造 + `HttpApiProvider`）—— 已随 2026-10-22 一并完成
-- [x] **【交付】** 模型配置全套接口（2026-10-22 已推送）
-  - [x] 更新 `docs/api-admin.md` 变更记录
-  - [x] `git commit` + `git push`
-  - [x] 搭档开工前 `git pull` 并读变更记录
-- [x] P2 智能体工作台（2026-10-22 完成并验收）
-  - [x] `Agent` / `AgentNode` / `AgentVersion` 实体
-  - [x] 列表 / 新建 / 详情 / 保存编排
-  - [x] `GET /api/admin/tools`（统一工具库）
-
-### 前端线（搭档）
-
-- [x] `PromptController` + App 的 Prompt 知识库页（2026-10-28 搭档完成并推送）
-- [x] 用户管理后端 + 页面（列表 / 加算力 / 冻结 / 重置密码）（2026-10-28 搭档完成并推送）
-- [x] 系统设置后端 + 页面（平台参数 / 公告 / 3 个开关）（2026-10-28 搭档完成并推送）
-
----
-
-## 5. Week 3（Day 11~15）· 工作台 + 调试
-
-### 后端线（你）
-
-- [x] P2 收尾（发布 / 复制 / 版本回滚 / 条件路由 / 预览）—— 已随 2026-10-22 一并完成
-- [x] **【交付】** 工作台接口（2026-10-22 已推送）
-  - [x] 更新 `docs/api-admin.md` 变更记录
-  - [x] `git commit` + `git push`
-  - [x] 搭档开工前 `git pull` 并读变更记录
-- [x] P3 调试面板（2026-10-28 完成并验收）
-  - [x] `CallLog` 表
-  - [x] 单节点调试 / 全链路调试 / 对话式 / 版本对比 / 回归用例
-
-### 前端线（搭档）
-
-- [x] 素材库后台（后端 + 页面：分类 / 多级标签 / 检索 / 版本）（2026-10-28 搭档完成并推送）
-- [x] 切「大模型配置」页（`USE_MOCK = false`）（2026-10-28 搭档完成并推送）
-- [x] 切「智能体配置」页（两层结构）（2026-10-28 搭档完成并推送）
-
----
-
-## 6. Week 4（Day 16~20）· 调试 + MCP
-
-### 后端线（你）
-
-- [x] P3 收尾（2026-10-28 完成并验收）
-- [x] **【交付】** 调试接口（代码已完成，待推送）
-  - [x] 更新 `docs/api-admin.md` 变更记录
-  - [x] `git commit` + `git push`
-  - [ ] 搭档开工前 pull
-- [x] P4 MCP 接入（2026-10-28 完成并验收）
-  - [x] `McpServer` / `McpTool` 实体
-  - [x] 注册 / 发现 / 启用 / 映射 / 试调用
-- [x] **【交付】** MCP 接口（代码已完成，待推送）
-  - [x] 更新 `docs/api-admin.md` 变更记录
-  - [x] `git commit` + `git push`
-  - [ ] 搭档开工前 pull
-
-### 前端线（搭档）
-
-- [ ] 切「调试」页（`admin-web`，接 `/api/admin/debug/**` 真接口）
-- [ ] 切「MCP」页（`admin-web`，接 `/api/admin/mcp/**` 真接口）
-- [ ] Flutter 用户 App 收尾：Skill 市场页（替换当前占位页）
-
----
-
-## 6.5 技术边界（老师 2026-10-29 澄清）
-
-> **Flutter 复刻的是用户 App 页面，不是后台控制台。参考代码在 `docs/prototype-user/`。**
-> 原型 28 页与当前 Flutter 的逐页对照见 `docs/USER_PROTOTYPE_GAP.md`。
-> 后台控制台继续使用老师提供的 `admin-web/`（HTML/CSS/JS），不要创建 `lib/admin/`。
-
-完整链路：
+采用 **契约先行 + 后端先行 + 前端 UI 并行 + 前端接口后接**：
 
 ```text
-Flutter 用户 App ── HTTP 请求 /api/** ─────▶ Spring Boot server ──▶ Harness ──▶ AI Provider
-admin-web 控制台 ── HTTP 请求 /api/admin/** ─▶ Spring Boot server（保存 API / Skill / Harness 配置）
+第 1 步：冻结用户端接口契约和状态机
+        ↓
+第 2 步：后端按模块实现并测试
+        同时：前端只做 UI 修复和组件整理，不接未完成接口
+        ↓
+第 3 步：后端模块完成后 push
+        ↓
+第 4 步：前端逐个模块接真实接口
+        ↓
+第 5 步：每接完一个业务模块，双方做一次联合验收
+        ↓
+第 6 步：全部模块完成后做最终端到端验收
 ```
 
-- Flutter 发起文生图 / 图生视频指令，后端鉴权、扣算力、建任务并调用 Harness / AI Provider。
-- 后端立即返回任务 ID 和状态；App 通过任务详情 / 列表接口获取进度、结果 URL 和错误信息。
-- `admin-web` 负责配置模型 API、创建 Skill、搭建 Harness、调试、知识库、素材、账单和网关。
-- 接口由后端暴露给前端调用；“前端暴露接口”应理解为**前端按契约调用后端接口**。
-- 用户端主流程以原型 4 个一级 Tab 为准：课程 / 创作 / 接单 / 我的。
-- 当前 Flutter 是 5 Tab（首页/任务/画廊/素材/我的），因此首页壳和页面归属需要重构，不能只补两个占位页。
-- 详细逐页差异与开发顺序见 `docs/USER_PROTOTYPE_GAP.md`。
+### 是否可以先把后端全部做完，再让搭档做前端？
 
----
-## 7. Week 5（Day 21~25）· 知识库 + 运营 + 网关
+**可以。** 但建议采用下面的组合，避免搭档完全闲置和最后集中爆雷：
 
-### 后端线（你）
-
-- [x] P5 知识库（2026-10-28 完成并验收）
-  - [x] `KnowledgeBase` / `Document` / `Chunk`
-  - [x] 文本 / 文件 / URL / API 同步（当前支持 TXT/MD/CSV/JSON/HTML；PDF/Word/Excel 待装 PDFBox/POI）
-  - [x] 分段 + 检索 + 检索测试 + 绑定智能体
-- [x] **【交付】** 知识库接口（2026-10-29 已推送）
-  - [x] 更新 `docs/api-admin.md` 变更记录
-  - [x] `git commit` + `git push`
-  - [ ] 搭档开工前 pull
-- [x] 概览 / 算力 / 账单（`CreditTransaction` 流水 + 3 个聚合接口）（2026-10-28 完成并验收）
-- [x] **【交付】** 运营接口（2026-10-29 已推送）
-  - [x] 更新 `docs/api-admin.md` 变更记录
-  - [x] `git commit` + `git push`
-  - [ ] 搭档开工前 pull
-
-### 前端线（搭档）
-
-- [ ] 切「知识库」页（`admin-web`，接 `/api/admin/kb/**` 真接口）
-- [ ] 切「数据概览」「账单」「算力使用」三页（`admin-web`，接运营接口）
-- [ ] Flutter 用户 App 收尾：设置页（处理「待实现」区块）
+- 你：按 M0 → M1 → M2 → M3 → M4 做完全部后端。
+- 搭档：同时先做 M5 的 UI 乱码、字体、小屏和组件整理。
+- 你完成一个后端模块并 push 后，搭档可以开始接该模块；也可以等你全部后端完成后再集中接。
+- 不能等所有页面和所有后端最后一天才第一次联调；每个模块仍要保留一次验收。
 
 ---
 
-## 8. 缓冲（Day 26~28，约 3 天）
+## 2. 模块拆解
 
-### 一起
-
-- [x] 后端线：**API 网关**（对外接口定义 + OpenAPI 导出）（2026-10-28 完成并验收）
-  - [x] **【交付】** 网关接口（2026-10-29 已推送）
-    - [x] 更新 `docs/api-admin.md` 变更记录
-    - [x] `git commit` + `git push`
-    - [ ] 搭档开工前 pull
-- [ ] 后台前端：切「网关」页（`admin-web`，接 `/api/admin/gateway/**`）
-- [ ] 端到端联调（App → 后台 → Curl 全链路）
-- [ ] Flutter 用户 App 按老师提供的用户端原型逐页对照（13 页 + 公共组件）
-- [ ] 演示脚本 + 录屏
-- [ ] `docs/COMPONENTS.md` 定稿
-- [ ] 关后门：`opc.security.dev-token-enabled = false`、`AppConfig.bypassLogin = false`
-- [ ] （如老师要求容器化）`Dockerfile` + `docker-compose.yml` + `docs/DEPLOY.md`
-
----
-
-## 9. 同步点总表
-
-| # | 时间 | 做什么 | 时长 |
-|---|---|---|---|
-| 1 | Day 1 上午 | 对齐契约 / 归属 / 共写文件规矩 | 30 分钟 |
-| 2 | Day 2 末 | P0 联合验收（真登录） | 30 分钟 |
-| 3 | 每次交付接口 | 后端更新 `api-admin.md` 变更记录 + push；前端开工前 pull | 2 分钟 |
-| 4 | 每周五 | 15 分钟进度同步（改了哪些接口/字段） | 15 分钟 |
-| 5 | Day 28 | 端到端联调 + 演示脚本 | 1 天 |
-
-**除此之外全部各做各的。**
-
----
-
-## 最终验收清单（交付前逐项确认）
-
-- [ ] Flutter 用户 App 按老师确认范围完成 28 页原型的视觉/交互复刻，至少包含 4 个一级 Tab 与创作主流程
-- [ ] **后台控制台 `admin-web` 12 个页面可运行并接真接口**
-- [ ] 管理端 P0~P8 接口全部可用
-- [ ] 统一工具库包含：内置 + 模型 + MCP + 知识库
-- [ ] `docs/api-admin.md` 变更记录与代码一致
-- [ ] `docs/COMPONENTS.md` 包含 Flutter 用户 App 组件清单
-- [ ] 演示脚本端到端跑通
-- [ ] 关闭 `dev-token-enabled` 与 `bypassLogin`
-
----
-## 10. 进度落后时的取舍顺序
-
-| 优先级 | 内容 |
-|---|---|
-| **必保（答辩核心）** | P1 模型配置、P2 工作台、P3 调试、账单/算力 |
-| **尽量保** | 知识库、用户管理、系统设置 |
-| **可以砍** | MCP 试调用细节、素材库版本管理、向量化、网关 OpenAPI 导出、Docker |
-
-> 从下往上砍。**P1/P2/P3 是「AI 后台」的门面，不能砍。**
-
----
-
-## 11. 每周五填写
-
-| 周次 | 后端线完成 | 前端线完成 | 阻塞项 | 下周调整 |
+| 模块 | 内容 | 负责人 | 前置依赖 | 完成后交付 |
 |---|---|---|---|---|
-| W1 | | | | |
-| W2 | | | | |
-| W3 | | | | |
-| W4 | | | | |
-| W5 | | | | |
+| **M0** | 用户端接口契约、错误码、状态机、数据库模型 | 你 | 无 | `docs/api-user.md`、表设计、枚举说明 |
+| **M1** | 接单大厅、订单详情、接单、工作台上下文 | 你 | M0 | 后端 API + 测试 + curl 示例 |
+| **M2** | 作品提交、提交列表、审核状态、审核意见 | 你 | M1 | 后端 API + 测试 + 状态流转 |
+| **M3** | 钱包汇总、流水、充值订单、提现申请、渠道配置 | 你 | M2 的钱包入账规则 | 后端 API + 金额测试 |
+| **M4** | 文生图、图生视频 Harness 接入、音频 TTS | 你 | M2 的提交记录 | 三类生成链路和结果回写 |
+| **M5** | 16 页 Flutter UI 精修、乱码、小屏、公共组件 | 搭档 | 无，可立即开始 | UI 检查表、修复后的页面 |
+| **M6** | Flutter Repository、API Client、真实接口接入 | 搭档 | 对应后端模块已 push | 页面使用真实接口 |
+| **M7** | 端到端验收、Web 构建、APK、演示脚本 | 两人共同 | M1～M6 | 可答辩版本 |
+| **M8** | `admin-web` 剩余页面接真接口 | 搭档，稍后 | 用户端主线稳定 | 后台真数据页面 |
+
+### 模块依赖图
+
+```text
+M0 契约
+ ├── M1 订单/工作台
+ │    └── M2 提交/审核
+ │         ├── M3 钱包/充值/提现
+ │         └── M4 图片/视频/音频生成
+ ├── M5 UI 精修（可立即并行）
+ │    └── M6 前端接口接入（依赖 M1/M2/M3/M4 对应模块）
+ └── M7 端到端验收
+      └── M8 admin-web 收尾
+```
+
+---
+
+## 3. 人员分工
+
+### 你（后端线）
+
+负责：
+
+- `docs/api-user.md`；
+- 订单、接单、工作台、提交、审核；
+- 钱包汇总、流水、充值、提现；
+- 文生图、图生视频 Harness；
+- 音频 TTS；
+- 数据库表、Seeder、错误码、后端测试；
+- 后端模块完成后 `commit + push`。
+
+文件范围：
+
+```text
+server/src/main/java/com/opc/server/
+server/src/main/resources/
+server/docs/
+docs/api-user.md
+```
+
+### 搭档（前端线）
+
+负责：
+
+- `lib/creator_flow/` 的 16 页 UI 和组件；
+- 修复 UTF-8 乱码、字体、特殊字符、小屏溢出；
+- 搭建用户端 Repository / API Client；
+- 将 `CreatorFlowProvider` 的演示方法切换到真实后端；
+- 审核页删除“模拟通过/模拟驳回”；
+- 最终 `flutter analyze`、`flutter test`、`flutter build web --release`；
+- 用户端主线稳定后再处理 `admin-web` 剩余真接口。
+
+文件范围：
+
+```text
+lib/creator_flow/
+admin-web/
+```
+
+### 共享规则
+
+- `docs/api-user.md`：你负责维护；搭档只读，发现字段问题先反馈。
+- `ErrorCode.java`：你使用 6000～6499；搭档使用 6500～6599。
+- `server/docs/schema.sql`：你统一合并核心表；搭档后续如需新增，单独放迁移/说明文件。
+- `DataSeeder`：各建新 Seeder，不修改对方 Seeder。
+- `lib/creator_flow/`：搭档负责 UI/接口接入时，你不要同时大改同一页面；你通过 API 和测试支持。
+
+---
+
+## 4. 后端先行的详细顺序
+
+### 第 1 阶段：M0 冻结契约（所有人先等这一阶段）
+
+你必须先完成：
+
+- 订单结构和状态：
+
+```text
+OPEN -> ACCEPTED -> SUBMITTED -> APPROVED / REJECTED
+```
+
+- 提交和审核结构：
+
+```text
+PENDING -> APPROVED / REJECTED
+```
+
+- 钱包规则：
+  - 审核通过前不计入可提现余额；
+  - 审核通过后写收入流水；
+  - 提现申请先冻结金额；
+  - 提现成功或失败都要更新流水；
+  - 前端不自行计算最终余额。
+- 错误码：
+  - 未接单；
+  - 重复接单；
+  - 无权访问订单；
+  - 重复审核入账；
+  - 余额不足；
+  - 提现金额非法。
+
+**M0 完成后先 push，搭档才能开始 M6。**
+
+### 第 2 阶段：M1 订单链路
+
+你完成：
+
+```text
+GET  /api/orders/available
+GET  /api/orders/{id}
+POST /api/orders/{id}/accept
+GET  /api/orders/{id}/workbench
+```
+
+测试：
+
+- 未登录不能访问；
+- 同一用户不能重复接单；
+- 不能接不存在/已关闭订单；
+- 接单后工作台返回正确订单上下文。
+
+M1 push 后，搭档可以先接接单大厅、订单详情、工作台。
+
+### 第 3 阶段：M2 提交与审核
+
+你完成：
+
+```text
+POST /api/submissions
+GET  /api/submissions/my
+GET  /api/submissions/{id}
+GET  /api/submissions/{id}/review
+```
+
+测试：
+
+- 没有接单不能提交；
+- 提交后订单进入 `SUBMITTED`；
+- 只有审核方/管理员能审核；
+- 审核通过只入账一次；
+- 审核驳回可重新提交。
+
+M2 push 后，搭档接提交页、审核页和作品详情页。
+
+### 第 4 阶段：M3 钱包
+
+你完成：
+
+```text
+GET  /api/wallet/summary
+GET  /api/wallet/transactions
+GET  /api/wallet/recharge-channels
+POST /api/wallet/recharges
+GET  /api/wallet/withdraw-channels
+POST /api/wallet/withdrawals
+```
+
+测试：
+
+- 充值回调幂等；
+- 提现不能超过可提现余额；
+- 提现冻结和成功/失败状态正确；
+- 审核通过收入只入账一次。
+
+### 第 5 阶段：M4 AI 生成
+
+你完成：
+
+- 文生图接现有 Harness；
+- 图生视频接现有 Harness；
+- 音频生成新增 TTS Provider / Mock Provider；
+- 三类任务的结果 URL、状态和错误回传；
+- 任务完成后写入提交记录。
+
+M4 完成后再做最终真实生成联调。
+
+---
+
+## 5. 前端搭档的执行顺序
+
+### P0：UI 稳定性（可立即开始）
+
+- 检查 `lib/creator_flow/` 所有文件 UTF-8；
+- 修复乱码、错误换行、特殊字符；
+- 统一使用 Material Icons；
+- 检查 360×800、390×844 和键盘弹起；
+- 修卡片、按钮、状态标签、金额输入、渠道卡；
+- 运行：
+  - `flutter analyze`
+  - `flutter test`
+  - `flutter build web --release`
+
+### P1：Repository 准备
+
+在 `docs/api-user.md` 冻结后，建立：
+
+```text
+lib/creator_flow/data/
+├── models/
+├── repositories/
+└── datasources/
+```
+
+页面禁止直接写 `Dio` / `fetch`，统一通过 Repository。
+
+### P2：按模块接接口
+
+顺序固定为：
+
+```text
+订单模块 M1
+→ 提交/审核模块 M2
+→ 钱包模块 M3
+→ AI 生成模块 M4
+```
+
+每接完一个模块，和你的后端做一次 30 分钟联合验收，通过后继续下一个。
+
+---
+
+## 6. 时间排期
+
+### Day 1：M0 + M5
+
+| 人员 | 任务 |
+|---|---|
+| 你 | 完成 `docs/api-user.md`、表设计、错误码、状态机 |
+| 搭档 | 16 页 UI 问题清单、乱码和小屏检查 |
+| 共同 | 30 分钟确认接口字段 |
+
+### Day 2～3：M1 + M5
+
+| 人员 | 任务 |
+|---|---|
+| 你 | 订单、接单、工作台接口和测试 |
+| 搭档 | 接单大厅、订单详情、工作台 UI 精修 |
+| 同步 | M1 push 后，搭档 pull并确认字段 |
+
+### Day 4～5：M2 + M4 + M5
+
+| 人员 | 任务 |
+|---|---|
+| 你 | 提交、审核、图片/视频 Harness 结果回写 |
+| 搭档 | 提交页、审核页、作品详情页 UI 精修 |
+| 同步 | M2 push 后做一次提交审核联调 |
+
+### Day 6：M3 + M5
+
+| 人员 | 任务 |
+|---|---|
+| 你 | 钱包、充值、提现接口和金额测试 |
+| 搭档 | 钱包、充值、提现页面 UI 精修 |
+| 同步 | 确认钱包字段与流水展示 |
+
+### Day 7：M6 集中接单、提交、审核
+
+| 人员 | 任务 |
+|---|---|
+| 搭档 | 将订单、提交、审核页面切真实接口 |
+| 你 | 处理联调字段、错误码和权限问题 |
+| 共同 | 删除模拟审核按钮，走真实审核 |
+
+### Day 8：M6 钱包 + M4 音频
+
+| 人员 | 任务 |
+|---|---|
+| 搭档 | 钱包、充值、提现页面接真实接口 |
+| 你 | 音频 TTS 和三类生成完整链路 |
+| 共同 | 验证生成→提交→审核→入账 |
+
+### Day 9：M7 端到端验收
+
+- 登录 → 接单 → 工作台 → 文生图/视频/音频 → 提交 → 审核 → 提现；
+- 360×800 / 390×844 UI 检查；
+- Web 构建和 APK；
+- 演示脚本和录屏。
+
+### Day 10：缓冲
+
+- 修剩余 bug；
+- `admin-web` 剩余页接真接口；
+- 关闭 `dev-token` 和 `bypassLogin`；
+- 最终回归。
+
+---
+
+## 7. 完成标准
+
+### 后端完成标准
+
+- [ ] `docs/api-user.md` 与代码一致。
+- [ ] 订单、提交、审核、钱包接口均有测试。
+- [ ] 重复接单、重复入账、余额不足都有明确错误码。
+- [ ] 文生图、图生视频、音频 TTS 能生成并回写结果。
+- [ ] 充值、提现、审核收入有流水和幂等保护。
+- [ ] `mvn test` 通过。
+
+### 前端完成标准
+
+- [ ] 16 页无乱码、无小屏溢出。
+- [ ] 表单有加载、校验、成功、失败状态。
+- [ ] 订单、审核、钱包刷新后数据不会丢。
+- [ ] 图片、视频、音频都能查看审核状态。
+- [ ] 页面没有模拟审核按钮。
+- [ ] `flutter analyze`、`flutter test`、`flutter build web --release` 通过。
+
+### 最终答辩链路
+
+```text
+登录
+→ 接单大厅
+→ 订单详情
+→ 接单
+→ 工作台
+→ 文生图 / 图生视频 / 生音频
+→ 提交作品
+→ 审核中
+→ 审核通过
+→ 钱包收入增加
+→ 提现
+→ 查看流水
+```
+
+---
+
+## 8. 之前的工作是否做错了
+
+之前的工作**不是全部做错，也不是白做**：
+
+- 管理端后端 P0～P8 继续保留；
+- `admin-web/` 继续保留；
+- 旧 13 个 Flutter 页面、组件、Repository、数据模型仍然可以复用；
+- 新的 16 页是当前用户端主页面。
+
+真正需要纠正的是**优先级和信息架构**：
+
+- 早期把较多时间放在旧页面和后台页；
+- 老师最终确认的主线是用户端接单创作闭环；
+- 当前应集中完成订单、生成、提交、审核、钱包和提现，不再继续扩旧页面。
+
+**不要删除旧文件，不要整体推倒重写。** 保留可复用底层，把新页面作为主路由，逐步接入真实后端。
+
+---
+
+## 9. Git 纪律
+
+1. 开工前先 `git pull origin main`。
+2. 接口先改 `docs/api-user.md`，再改代码。
+3. 每个模块完成就 commit；需要搭档使用的接口必须 push。
+4. 搭档接接口前必须 pull 并读变更记录。
+5. 不在 GitHub 网页直接改文件。
+6. 不为赶进度删除旧文件或执行 Git reset。

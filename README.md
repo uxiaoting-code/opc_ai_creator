@@ -15,7 +15,7 @@ OPC（一人公司）场景的 AI 内容生产平台，核心链路是 **文生�
 
 | 部分 | 目录 | 技术栈 | 状态 |
 |---|---|---|---|
-| **用户 App（前台）** | `lib/` | Flutter 3（Web + Android） | 已有 13 页基础实现；需按老师 28 页 HTML 原型重构/补齐 |
+| **用户 App（前台）** | `lib/` | Flutter 3（Web + Android） | v2 已实现 16 页接单创作闭环；当前使用演示数据 |
 | **后端 API** | `server/` | Spring Boot 4.1.1 + Java 21 + JPA + H2/MySQL | C 端 22 个接口 + 管理端 P0~P8 已跑通 |
 | **后台控制台（运营配置）** | `admin-web/` | 原生 HTML + CSS + JS | 老师原型 + 12 页实现；待逐页接真接口 |
 
@@ -84,11 +84,12 @@ Harness 编排、知识库和运营配置。
 ```text
 opc_ai_creator/
 ├── lib/                      Flutter 用户 App
-│   ├── core/                 配置 / 路由 / 网络 / 主题 / 工具
-│   ├── data/                 models / repositories / mock
-│   ├── pages/                13 个业务页面
-│   ├── providers/            状态管理
-│   └── widgets/              通用组件 + 业务组件
+│   ├── creator_flow/         新接单创作闭环：16 页 / 路由 / 演示状态
+│   ├── core/                 配置 / 网络 / 主题 / 工具
+│   ├── data/                 旧版数据模型、Repository 与 Mock
+│   ├── pages/                旧版 13 页页面（保留但不接入新路由）
+│   ├── providers/            认证、主题与旧版业务 Provider
+│   └── widgets/              通用组件、毛玻璃组件与旧版创作组件
 ├── server/                   Spring Boot 后端
 │   ├── src/main/java/...     controller / service / entity / harness / ai / admin
 │   ├── src/main/resources/   application.yml / application-mysql.yml
@@ -165,7 +166,8 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 |---|---|
 | [docs/requirements-opc-admin.pdf](docs/requirements-opc-admin.pdf) | 老师给的后台需求文档 |
 | [docs/prototype-user/](docs/prototype-user/) | **老师提供的用户端移动 App HTML/CSS/JS 原型与页面清单** |
-| [docs/USER_PROTOTYPE_GAP.md](docs/USER_PROTOTYPE_GAP.md) | **原型 28 页与当前 Flutter 的差异、缺口和开发顺序** |
+| [docs/USER_PROTOTYPE_GAP.md](docs/USER_PROTOTYPE_GAP.md) | **原型 28 页与旧 Flutter 的差异和视觉参考** |
+| [docs/USER_APP_V2.md](docs/USER_APP_V2.md) | **当前 16 页接单创作闭环、路由和待接后端接口** |
 | [docs/api-admin.md](docs/api-admin.md) | **管理端接口契约**（12 页 / 错误码 / 枚举 / 变更记录） |
 | [docs/SCHEDULE.md](docs/SCHEDULE.md) | **开发排期、分工、当前进度、最终验收清单** |
 | [docs/admin-freeze.md](docs/admin-freeze.md) | 三项共用模型冻结 + 文件归属 |
@@ -184,14 +186,17 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 
 - [x] 后端 P0~P8：鉴权、模型配置、工作台、调试、MCP、知识库、运营账单、API 网关
 - [x] Harness 任务调度 + Mock 出图/出视频
-- [x] Flutter 用户 App 已有 13 页基础实现（不等于已完成老师新原型的复刻）
+- [x] Flutter 用户 App v2：16 页接单创作闭环（登录、接单、工作台、图片/视频/音频生成、提交审核、钱包、充值提现）
+- [x] `flutter analyze` 与 `flutter test` 通过
 - [x] Prompt 知识库页
 - [x] 素材库 / 用户管理 / 系统设置（C 端与后台接口）
 - [x] `admin-web/` 原型、12 页界面与 mock 数据
 
 ### 待完成
 
-- [ ] **Flutter 用户 App 按 `docs/prototype-user/` 逐页复刻老师原型，先组件、再 4 个一级 Tab 和创作主流程**
+- [ ] Flutter 用户 App v2 接真实后端：订单市场、提交审核、钱包、充值提现
+- [ ] 文生图 / 图生视频接 Harness，音频接后端 TTS
+- [ ] 按 `docs/prototype-user/` 做视觉精修与小屏回归
 - [ ] **`admin-web/` 12 页逐页接 `/api/admin/**` 真接口**
 - [ ] 端到端联调：Flutter 指令 → 后端 → Harness → AI → 结果回传
 - [ ] 演示脚本 + 打包 APK
@@ -203,7 +208,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 
 ## 九、交付前检查
 
-- [ ] Flutter 用户 App 13 个页面可运行
+- [ ] Flutter 用户 App v2 的 16 个页面可运行并完成真实接口联调
 - [ ] 后台控制台 `admin-web` 12 个页面可运行并接真接口
 - [ ] 管理端 P0~P8 接口全部可用
 - [ ] 统一工具库包含：内置 + 模型 + MCP + 知识库

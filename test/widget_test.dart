@@ -4,9 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:opc_ai_creator/app.dart';
 import 'package:opc_ai_creator/core/network/api_client.dart';
-import 'package:opc_ai_creator/core/router/route_names.dart';
-import 'package:opc_ai_creator/data/datasources/mock_data.dart';
-import 'package:opc_ai_creator/data/models/prompt_model.dart';
+import 'package:opc_ai_creator/creator_flow/creator_flow_provider.dart';
+import 'package:opc_ai_creator/creator_flow/models/creator_models.dart';
 import 'package:opc_ai_creator/data/repositories/material_repository.dart';
 import 'package:opc_ai_creator/data/repositories/notification_repository.dart';
 import 'package:opc_ai_creator/data/repositories/prompt_repository.dart';
@@ -19,25 +18,15 @@ import 'package:opc_ai_creator/providers/skill_provider.dart';
 import 'package:opc_ai_creator/providers/theme_provider.dart';
 import 'package:opc_ai_creator/providers/work_provider.dart';
 
-/// 构造一棵完整的 App 组件树。
-///
-/// [loggedIn] 为 true 时会先恢复登录态（脚手架模式下即建立本地模拟会话），
-/// 这样路由守卫才会放行到首页；为 false 则停在登录页。
-///
-/// ⚠️ **这些测试必须带 `--dart-define=USE_MOCK_DATA=true` 运行**：
-/// ```bash
-/// flutter test --dart-define=USE_MOCK_DATA=true
-/// ```
-/// 因为 `AppConfig.useMockData` 的默认值已经改成 `false`（联调真实后端），
-/// 而测试环境里没有后端 —— flutter_test 会把所有 HTTP 请求拦成 400，
-/// 于是首页拿不到线路和作品，下面那些断言 Mock 数据的用例会全部失败。
-/// 带上这个 flag 就临时切回 MockData，测试重新变成纯粹的 UI 回归测试。
 Future<Widget> buildApp({bool loggedIn = false}) async {
   final apiClient = ApiClient(onUnauthorized: () {});
   final authProvider = AuthProvider(apiClient: apiClient);
-
   if (loggedIn) {
-    await authProvider.restoreSession();
+    final error = await authProvider.login(
+      username: 'demo',
+      password: 'demo123',
+    );
+    expect(error, isNull);
   }
 
   return OpcApp(
@@ -55,225 +44,121 @@ Future<Widget> buildApp({bool loggedIn = false}) async {
   );
 }
 
-/// 等待首页数据加载完成。
-///
-/// ⚠️ 这里不能只写 `await tester.pumpAndSettle()`：
-/// pumpAndSettle 只在「还有帧排队」时才推进时钟，加载态一旦静止它立刻就返回了，
-/// 于是 `Future.delayed(320ms)` 的定时器根本不会触发，测试会断言在骨架屏上。
-/// 必须显式把时钟往前拨过 Mock 的模拟延迟。
-Future<void> pumpHomeLoaded(WidgetTester tester) async {
-  await tester.pumpAndSettle();
-  await tester.pump(MockData.latency + const Duration(milliseconds: 50));
-  await tester.pumpAndSettle();
-}
-
-/// 把测试窗口设成一块够高的手机竖屏。
-///
-/// ListView 是**懒加载**的，默认 800×600 的测试窗口只会构建视口内的区块，
-/// 首页下半部分（更多功能 / 最近作品）压根不会被创建，断言自然找不到。
-/// 这里把逻辑尺寸调高，保证首页所有区块都进入构建范围。
-void useTallPhoneViewport(WidgetTester tester) {
-  tester.view.physicalSize = const Size(480, 1600);
-  tester.view.devicePixelRatio = 1.0;
+void usePhoneViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 }
 
 void main() {
   setUp(() {
-    // Provider 会读写 SharedPreferences，测试里给个假实现
     SharedPreferences.setMockInitialValues({});
   });
 
-  // ===========================================================================
-  // 路由表
-  // ===========================================================================
-  group('路由表', () {
-    test('13 个业务页面全部登记，且路径不重复', () {
-      expect(
-        RouteNames.allBusinessPaths.length,
-        RouteNames.requiredPageCount,
-        reason: '课程设计要求至少 13 个业务页面',
-      );
-      expect(
-        RouteNames.allBusinessPaths.toSet().length,
-        RouteNames.requiredPageCount,
-        reason: '存在重复的路由路径',
-      );
-    });
+  group('CreatorFlowProvider', () {
+    test('接单、生成、提交、审核和提现形成完整闭环', () {
+      final flow = CreatorFlowProvider();
+      final beforeWithdrawable = flow.withdrawable;
 
-    test('带参数路由能正确拼接', () {
-      expect(RouteNames.taskDetailOf(42), '/tasks/42');
-      expect(RouteNames.workDetailOf(7), '/gallery/7');
-      expect(
-        RouteNames.textToImageWithSkill(3),
-        '/create/text-to-image?skillId=3',
-      );
-    });
+      flow.acceptOrder('o-1001');
+      expect(flow.currentOrder?.id, 'o-1001');
 
-    test('PromptModel 能解析收藏和公开状态', () {
-      final prompt = PromptModel.fromJson({
-        'id': 9,
-        'title': '商品主图',
-        'content': 'white background',
-        'favoriteCount': 12,
-        'favorited': true,
-        'isPublic': 1,
-      });
-      expect(prompt.id, 9);
-      expect(prompt.favorited, isTrue);
-      expect(prompt.isPublic, isTrue);
+      final created = flow.createDraft(
+        mode: CreationMode.image,
+        prompt: '香水产品主图，奶油色背景',
+        model: 'GPT-4o Image',
+      );
+      expect(created, isTrue);
+      expect(flow.draft, isNotNull);
+
+      final submission = flow.submitDraft(
+        title: '香水主图最终稿',
+        note: '已经按要求完成四张主图',
+      );
+      expect(submission, isNotNull);
+      expect(submission!.status, ReviewStatus.pending);
+      expect(flow.pendingReviewCount, greaterThanOrEqualTo(1));
+
+      flow.reviewSubmission(submission.id, approved: true);
+      final approved = flow.submissionById(submission.id)!;
+      expect(approved.status, ReviewStatus.approved);
+      expect(flow.withdrawable, closeTo(beforeWithdrawable + 68, 0.001));
+
+      final withdrawn = flow.withdraw(amount: 100, channel: '支付宝');
+      expect(withdrawn, isTrue);
+      expect(flow.withdrawable, closeTo(beforeWithdrawable + 68 - 100, 0.001));
     });
   });
 
-  // ===========================================================================
-  // 登录守卫
-  // ===========================================================================
-  group('登录守卫', () {
-    testWidgets('未登录时打开首页会被重定向到登录页', (tester) async {
+  group('用户端页面', () {
+    testWidgets('未登录启动时显示登录注册页', (tester) async {
+      usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp());
       await tester.pumpAndSettle();
 
-      // 初始地址是 /home，被 redirect 拦到 /login
-      expect(find.text('OPC AI 创作平台'), findsOneWidget);
-      expect(find.text('登 录'), findsOneWidget);
+      expect(find.text('欢迎回来'), findsOneWidget);
       expect(find.text('注册'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, '登录'), findsOneWidget);
     });
-  });
 
-  // ===========================================================================
-  // 首页
-  // ===========================================================================
-  group('首页', () {
-    testWidgets('登录后展示顶部栏、Skill 线路、创作入口、功能入口与最近作品', (tester) async {
-      useTallPhoneViewport(tester);
-      await tester.pumpWidget(await buildApp(loggedIn: true));
-      await pumpHomeLoaded(tester);
+    testWidgets('演示账号可以登录并进入接单大厅', (tester) async {
+      usePhoneViewport(tester);
+      await tester.pumpWidget(await buildApp());
+      await tester.pumpAndSettle();
 
-      // --- 需求 1：顶部栏 ---
-      expect(find.textContaining('你好，'), findsOneWidget);
-      expect(find.text('搜索提示词、创作线路'), findsOneWidget);
-      expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, '登录'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
 
-      // --- 需求 2：Skill 线路（Mock 数据里的线路名） ---
-      expect(find.text('创作线路'), findsOneWidget);
-      expect(find.text('二次元插画'), findsOneWidget);
-      expect(find.text('写实摄影'), findsOneWidget);
-      expect(find.text('电商海报'), findsOneWidget);
-
-      // --- 需求 3：两大创作入口 ---
-      expect(find.text('开始创作'), findsOneWidget);
-      expect(find.text('文生图'), findsWidgets);
-      expect(find.text('图生视频'), findsWidgets);
-
-      // --- 需求 4：功能入口 ---
-      expect(find.text('更多功能'), findsOneWidget);
-      expect(find.text('Prompt 知识库'), findsOneWidget);
-      expect(find.text('Skill 市场'), findsOneWidget);
-
-      // --- 需求 5：最近作品 ---
-      expect(find.text('最近作品'), findsOneWidget);
-      expect(find.text('赛博朋克少女'), findsOneWidget);
-
-      // --- UI 迁移后仍保留 5 个底部入口 ---
-      expect(find.text('首页'), findsOneWidget);
-      expect(find.text('任务'), findsOneWidget);
-      expect(find.text('画廊'), findsOneWidget);
-      expect(find.text('素材'), findsOneWidget);
+      expect(find.text('接单大厅'), findsOneWidget);
+      expect(find.text('春季香水商品主图套组'), findsOneWidget);
+      expect(find.text('接单'), findsOneWidget);
+      expect(find.text('工作台'), findsOneWidget);
+      expect(find.text('审核'), findsOneWidget);
       expect(find.text('我的'), findsOneWidget);
     });
 
-    testWidgets('点击 Skill 线路卡片会带着 skillId 进入文生图创作页', (tester) async {
-      useTallPhoneViewport(tester);
+    testWidgets('登录后可以查看订单并接单进入工作台', (tester) async {
+      usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp(loggedIn: true));
-      await pumpHomeLoaded(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
 
-      // Mock 数据里 id=1 是「二次元插画」，类型为文生图
-      await tester.tap(find.text('二次元插画'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.text('春季香水商品主图套组').first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text('订单要求'), findsOneWidget);
+      expect(find.text('立即接单'), findsOneWidget);
 
-      // 应该跳到真实的文生图创作页（不再是脚手架占位页）
-      expect(find.text('文生图创作'), findsOneWidget);
-      expect(find.text('开始生成'), findsOneWidget);
+      await tester.tap(find.text('立即接单'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
 
-      // skillId=1 预选成功的证据：线路参数预览只在「选中了某条线路」时才渲染，
-      // 而「自动前缀」来自 anime_v1 的 promptPrefix。
-      // 比断言路由字符串更能反映真实行为 —— 预选失败时这块根本不会出现。
-      expect(find.textContaining('自动前缀'), findsOneWidget);
+      expect(find.text('创作工作台'), findsOneWidget);
+      expect(find.text('图片生成'), findsOneWidget);
+      expect(find.text('视频生成'), findsOneWidget);
+      expect(find.text('音频生成'), findsOneWidget);
     });
 
-    testWidgets('点击「图生视频」创作入口进入图生视频页', (tester) async {
-      useTallPhoneViewport(tester);
+    testWidgets('工作台能打开文生图页面且小屏幕不溢出', (tester) async {
+      usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp(loggedIn: true));
-      await pumpHomeLoaded(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
 
-      // 创作入口卡片上的标题（区别于 Skill 卡片的类型角标）
-      await tester.tap(find.text('让静态图片动起来'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.text('春季香水商品主图套组').first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.text('立即接单'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.text('图片生成'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
 
-      expect(find.text('图生视频创作'), findsOneWidget);
-      expect(find.text('首帧参考图'), findsOneWidget);
-      expect(find.text('点击选择首帧图片'), findsOneWidget);
-      expect(find.text('镜头缓慢推进'), findsOneWidget);
-      expect(find.text('开始生成视频'), findsOneWidget);
-    });
-
-    testWidgets('图生视频页在 360×800 小屏不出现布局溢出', (tester) async {
-      useTallPhoneViewport(tester);
-      await tester.pumpWidget(await buildApp(loggedIn: true));
-      await pumpHomeLoaded(tester);
-
-      await tester.tap(find.text('让静态图片动起来'));
-      await tester.pumpAndSettle();
-
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      await tester.pumpAndSettle();
-
-      expect(find.text('首帧参考图'), findsOneWidget);
-      expect(find.text('开始生成视频'), findsOneWidget);
+      expect(find.text('文生图'), findsOneWidget);
+      expect(find.textContaining('预计消耗 12 算力'), findsOneWidget);
       expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('在 360×800 的小屏手机上不出现布局溢出', (tester) async {
-      // 360×800 是典型的安卓窄屏机型（约等于 720×1600 实机）
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await tester.pumpWidget(await buildApp(loggedIn: true));
-      await pumpHomeLoaded(tester);
-
-      // RenderFlex overflow 会被测试框架记成异常，
-      // 这里显式断言没有异常，等于给首页布局加了一道小屏回归防线。
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('顶部消息入口能打开消息弹层', (tester) async {
-      useTallPhoneViewport(tester);
-      await tester.pumpWidget(await buildApp(loggedIn: true));
-      await pumpHomeLoaded(tester);
-
-      await tester.tap(find.byIcon(Icons.notifications_none_rounded));
-      await tester.pumpAndSettle();
-
-      // 弹层里的 Mock 消息
-      expect(find.text('消息'), findsOneWidget);
-      expect(find.text('生成成功'), findsOneWidget);
-      expect(find.text('全部已读'), findsOneWidget);
-    });
-
-    testWidgets('首页搜索入口可以打开 Prompt 知识库', (tester) async {
-      useTallPhoneViewport(tester);
-      await tester.pumpWidget(await buildApp(loggedIn: true));
-      await pumpHomeLoaded(tester);
-
-      await tester.tap(find.text('搜索提示词、创作线路'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Prompt 知识库'), findsOneWidget);
-      expect(find.text('搜索标题、正文或标签'), findsOneWidget);
-      expect(find.text('电商'), findsOneWidget);
     });
   });
 }

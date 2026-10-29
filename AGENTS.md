@@ -2,6 +2,11 @@
 
 > 本文件供 Codex / Claude Code 等 AI 助手自动读取，人类协作者也可以按它索引文档。
 > 最后更新：2026-10-29
+>
+> 🔴 **开始写代码前必须先读 `docs/SCHEDULE.md` §0～§3。**
+> 当前冲刺优先级：**用户 App v2 UI 稳定 → 用户端订单/提交/审核/钱包后端 → 真实接口联调**。
+> 如果当前执行者是前端搭档：先做 `lib/creator_flow/` 的乱码、字体、小屏和组件精修；后端接口未 push 前不要自行发明接口，也不要先做 `admin-web`。
+> 如果当前执行者是后端：先写 `docs/api-user.md` 并冻结订单、提交、审核、钱包模型，再实现接口。
 
 ---
 
@@ -11,7 +16,7 @@ OPC（一人公司）场景的 AI 内容生产平台，由三部分组成：
 
 | 部分 | 目录 | 技术栈 | 状态 |
 |---|---|---|---|
-| **用户 App（前台）** | `lib/` | **Flutter 3（Web + Android）** | 已有 13 页基础实现；需按老师 28 页 HTML 原型重构/补齐 |
+| **用户 App（前台）** | `lib/` | **Flutter 3（Web + Android）** | v2 已实现 16 页接单创作闭环；当前为演示数据，待接后端 |
 | 后端 API | `server/` | Spring Boot 4.1.1 + Java 21 + Spring Data JPA + H2/MySQL | C 端 22 个接口 + 管理端 P0~P8 已完成 |
 | **后台控制台（运营配置）** | **`admin-web/`** | **原生 HTML + CSS + JS** | 老师给的原型 + 已实现 12 页；需接真接口 |
 
@@ -38,7 +43,9 @@ OPC（一人公司）场景的 AI 内容生产平台，由三部分组成：
 | `docs/requirements-opc-admin.pdf` | **老师给的需求文档**：《OPC 文生图/图生视频 App 后台需求文档》 |
 | `_req_doc.txt` | PDF 的全文文本提取版 |
 | `docs/prototype-user/` | **老师提供的用户端移动 App HTML/CSS/JS 原型（28 个页面）**；Flutter 用户 App 的视觉和交互以此为准 |
-| `docs/USER_PROTOTYPE_GAP.md` | **28 页原型与当前 Flutter 的对照、缺口和开发顺序** |
+| `docs/USER_PROTOTYPE_GAP.md` | **28 页原型与旧 Flutter 的对照、缺口和视觉参考** |
+| `docs/USER_APP_V2.md` | **当前 16 页 Flutter 接单创作闭环、路由、演示状态和待接后端接口** |
+| `docs/api-user.md` | 当前用户端订单/提交/审核/钱包接口契约（后端线下一步创建） |
 | `admin-web/` | **老师给的高保真原型** + 后台控制台实现（12 页） |
 | `docs/api-admin.md` | **管理端接口契约（已冻结）** |
 | `docs/api.md` | C 端 22 个接口契约 |
@@ -55,9 +62,14 @@ OPC（一人公司）场景的 AI 内容生产平台，由三部分组成：
 
 ### A. 用户 App（Flutter，`lib/`）
 
-- [ ] 按 `docs/prototype-user/` 的用户端原型逐页对照 Flutter 页面，修正布局、交互和组件表现
-- [ ] Skill 市场页（`lib/pages/skill/skill_market_page.dart`，当前是 1,360 字节占位）
-- [ ] 设置页（`lib/pages/settings/settings_page.dart`，处理「待实现」区块）
+- [x] 新用户端 v2：登录/注册、接单大厅、订单详情、工作台、文生图、图生视频/生音频、提交、审核、作品详情、我的、充值/渠道、提现/渠道，共 16 页（2026-10-29）
+- [ ] 前端搭档先修 16 页乱码、UTF-8、字体、特殊符号、小屏溢出和组件一致性
+- [ ] 前端搭档完成 UI 检查表后，运行 `flutter analyze`、`flutter test`、`flutter build web --release`
+- [ ] 后端线完成 `docs/api-user.md`：订单、工作台、提交、审核、钱包、充值、提现
+- [ ] 后端线实现订单/接单/工作台接口，并将文生图 / 图生视频接入 Harness
+- [ ] 后端线新增音频 TTS 接口
+- [ ] 后端线先按 M0～M4 完成契约、订单、提交审核、钱包和 AI 生成
+- [ ] 前后端联调后，删除“模拟审核”按钮，所有状态改由后端返回
 
 ### B. 后台控制台（`admin-web/`，HTML/CSS/JS）
 
@@ -113,11 +125,14 @@ flutter run -d chrome
 
 ## 六、交付前必须处理
 
+- 用户 App v2 的 16 页无乱码、无小屏溢出
+- 接单、提交、审核、钱包、充值、提现全部接真实后端
+- 文生图、图生视频、音频 TTS 端到端可用
+- `admin-web` 剩余页面接真接口
+- 删除所有模拟审核入口
 - `opc.security.dev-token-enabled` 改为 `false`
 - `AppConfig.bypassLogin` 改为 `false`
-- App 的 Skill 市场页完成
-- 后台控制台 12 页接真接口
-- 设置页「待实现」区块处理
+- Web 构建、Flutter 测试、后端测试通过
 - 端到端联调 + APK
 
 ---
@@ -125,6 +140,6 @@ flutter run -d chrome
 ## 七、协作纪律
 
 - 不要在 github.com 网页上直接编辑文件
-- 改接口 → 先改 `docs/api-admin.md` 并记变更
+- C 端接口 → 先改 `docs/api-user.md`；管理端接口 → 先改 `docs/api-admin.md`，并记变更
 - 开工前 `git pull`；完成一组任务就 commit；每周至少 push 一次
 - `docs/SCHEDULE.md` 是进度真相源

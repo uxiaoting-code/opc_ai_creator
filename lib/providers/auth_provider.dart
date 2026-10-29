@@ -55,13 +55,6 @@ class AuthProvider extends ChangeNotifier {
   /// 拿本地 token 直接放行，真正的有效性由后端 401 来判定
   /// （由 [AuthInterceptor] 触发 [handleUnauthorized]）。
   Future<void> restoreSession() async {
-    if (AppConfig.bypassLogin && _token == null) {
-      // 脚手架模式：直接给一个模拟会话，省得每次热重载都要重新登录
-      _applyMockSession();
-      notifyListeners();
-      return;
-    }
-
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedToken = prefs.getString(_tokenKey);
@@ -98,7 +91,6 @@ class AuthProvider extends ChangeNotifier {
     try {
       if (AppConfig.bypassLogin) {
         // ---- 脚手架模式：不调后端，本地造一个会话 ----
-        await Future<void>.delayed(const Duration(milliseconds: 300));
         _applyMockSession(username: username);
         debugPrint('[AuthProvider] 脚手架模式登录，未调用后端接口');
         return null;
@@ -120,7 +112,9 @@ class AuthProvider extends ChangeNotifier {
         token: token,
         user: result?['user'] == null
             ? null
-            : UserModel.fromJson(Map<String, dynamic>.from(result!['user'] as Map)),
+            : UserModel.fromJson(
+                Map<String, dynamic>.from(result!['user'] as Map),
+              ),
       );
       return null;
     } on ApiException catch (e) {
@@ -142,7 +136,6 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       if (AppConfig.bypassLogin) {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
         _applyMockSession(username: username, nickname: nickname);
         return null;
       }

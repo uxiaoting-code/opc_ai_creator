@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/network/api_client.dart';
-import 'core/router/app_router.dart';
+import 'creator_flow/creator_flow_provider.dart';
+import 'creator_flow/creator_router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/material_repository.dart';
 import 'data/repositories/prompt_repository.dart';
@@ -61,7 +62,7 @@ class OpcApp extends StatefulWidget {
 
 class _OpcAppState extends State<OpcApp> {
   /// 路由只创建一次，避免每次 build 都重建整个路由表。
-  late final AppRouter _appRouter = AppRouter(widget.authProvider);
+  late final CreatorRouter _appRouter = CreatorRouter(widget.authProvider);
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +71,9 @@ class _OpcAppState extends State<OpcApp> {
         // ApiClient 用 .value 提供：它的生命周期由 main 掌控，这里只做注入
         Provider<ApiClient>.value(value: widget.apiClient),
         ChangeNotifierProvider<AuthProvider>.value(value: widget.authProvider),
+        ChangeNotifierProvider<CreatorFlowProvider>(
+          create: (_) => CreatorFlowProvider(),
+        ),
         ChangeNotifierProvider<ThemeProvider>.value(
           value: widget.themeProvider,
         ),
@@ -90,7 +94,7 @@ class _OpcAppState extends State<OpcApp> {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp.router(
-            title: 'OPC AI 创作平台',
+            title: 'MUSE AI 电商创作',
             debugShowCheckedModeBanner: false,
 
             // ---------- 主题 ----------
