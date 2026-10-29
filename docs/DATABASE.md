@@ -3,7 +3,18 @@
 > OPC AI 多模态创作平台 · 后端数据模型
 > 字符集 `utf8mb4` / 排序规则 `utf8mb4_general_ci` / 引擎 `InnoDB`
 
-## 表清单
+## 用户端 v2 扩展表（M0 冻结）
+
+用户端接单创作闭环新增 9 张表：`t_market_order`、`t_order_acceptance`、`t_submission`、`t_review_record`、`t_wallet_account`、`t_wallet_transaction`、`t_recharge_order`、`t_withdraw_request`、`t_payment_channel`。
+
+完整字段、DDL、金额口径、状态机和事务规则已冻结在：
+
+- `docs/api-user.md` §8 数据库模型
+- `docs/api-user.md` §9 事务与并发规则
+
+本文件继续维护原有 C 端表和管理端扩展表；新增 9 张表不在本文件重复粘贴，避免两份 DDL 漂移。
+
+## 原有表清单
 
 | # | 表名 | 说明 | 对应需求 |
 |---|------|------|---------|

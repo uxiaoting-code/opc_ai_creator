@@ -168,6 +168,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 | [docs/prototype-user/](docs/prototype-user/) | **老师提供的用户端移动 App HTML/CSS/JS 原型与页面清单** |
 | [docs/USER_PROTOTYPE_GAP.md](docs/USER_PROTOTYPE_GAP.md) | **原型 28 页与旧 Flutter 的差异和视觉参考** |
 | [docs/USER_APP_V2.md](docs/USER_APP_V2.md) | **当前 16 页接单创作闭环、路由和待接后端接口** |
+| [docs/api-user.md](docs/api-user.md) | **用户端 v2 M0 冻结契约**：订单、提交、审核、钱包、充值、提现、音频生成与 9 张扩展表 |
 | [docs/api-admin.md](docs/api-admin.md) | **管理端接口契约**（12 页 / 错误码 / 枚举 / 变更记录） |
 | [docs/SCHEDULE.md](docs/SCHEDULE.md) | **开发排期、分工、当前进度、最终验收清单** |
 | [docs/admin-freeze.md](docs/admin-freeze.md) | 三项共用模型冻结 + 文件归属 |
@@ -187,6 +188,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 - [x] 后端 P0~P8：鉴权、模型配置、工作台、调试、MCP、知识库、运营账单、API 网关
 - [x] Harness 任务调度 + Mock 出图/出视频
 - [x] Flutter 用户 App v2：16 页接单创作闭环（登录、接单、工作台、图片/视频/音频生成、提交审核、钱包、充值提现）
+- [x] M0 用户端业务契约已冻结：`docs/api-user.md`
 - [x] `flutter analyze` 与 `flutter test` 通过
 - [x] Prompt 知识库页
 - [x] 素材库 / 用户管理 / 系统设置（C 端与后台接口）

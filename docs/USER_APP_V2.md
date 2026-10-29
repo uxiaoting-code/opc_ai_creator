@@ -99,7 +99,7 @@ lib/creator_flow/creator_flow_provider.dart
 
 后续接后端时，页面不需要重写，只需要把 Provider 内部方法替换为真实接口调用：
 
-| 能力 | 后续接口建议 |
+| 能力 | M0 冻结接口（以 `docs/api-user.md` 为准） |
 |---|---|
 | 登录注册 | `/api/auth/**`（已存在） |
 | 接单大厅 | `/api/orders/available` |
@@ -113,9 +113,10 @@ lib/creator_flow/creator_flow_provider.dart
 | 审核状态 | `GET /api/submissions/{id}` |
 | 审核列表 | `GET /api/submissions/my` |
 | 充值下单 | `POST /api/wallet/recharges` |
-| 充值渠道 | `GET /api/wallet/payment-channels` |
+| 充值渠道 | `GET /api/wallet/recharge/channels` |
 | 提现申请 | `POST /api/wallet/withdrawals` |
 | 提现渠道 | `GET /api/wallet/withdraw-channels` |
+| 钱包汇总 | `GET /api/wallet/summary` |
 | 钱包流水 | `GET /api/wallet/transactions` |
 
 **红线：** API Key、模型供应商凭证和 Harness 编排细节只能留在 `server/`，不能进入 Flutter 客户端。
