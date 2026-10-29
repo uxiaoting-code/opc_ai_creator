@@ -128,6 +128,8 @@
 | 总用户数 / 今日活跃 / 今日营收 / 今日算力消耗 | `totalUsers` `activeUsersToday` `revenueToday` `creditsUsedToday` + 各自的 `*Delta`（百分比，可正可负） | `GET /api/admin/dashboard/overview` |
 | 近 14 日营收趋势 | `date` + `revenue` | `GET /api/admin/dashboard/revenue-trend?days=14` |
 | 模型调用占比 | `modelName` `calls` `percent` | `GET /api/admin/dashboard/model-share?range=today` |
+
+> P7 阶段 `t_call_log` 还没有 model 字段，`model-share` 先按 `toolKind`（能力类型）聚合，前端显示为「能力调用占比」；后续补模型字段后再切换。
 | 最近订单（「查看全部」跳账单页） | 同账单行 | `GET /api/admin/dashboard/recent-orders?limit=5` |
 
 `GET /api/admin/dashboard/overview` → `data`：
@@ -490,11 +492,15 @@
 | POST | `/api/admin/kbs` | `{name, description, embeddingModel}`（需求：名称/描述/向量化模型） |
 | GET/PUT/DELETE | `/api/admin/kbs/{id}` | 详情 / 修改 / 删除 |
 | POST | `/api/admin/kbs/{id}/documents` | 录入，`type` 决定分支，见下 |
+| POST | `/api/admin/kbs/{id}/documents/upload` | multipart `file`；当前支持 TXT/MD/CSV/JSON/HTML |
 | GET | `/api/admin/kbs/{id}/documents?page` | 文档列表 |
 | DELETE | `/api/admin/kbs/{id}/documents/{docId}` | 删除文档（连带 chunk） |
 | POST | `/api/admin/kbs/{id}/reindex` | 重新分段 + 向量化（全量替换） |
 | POST | `/api/admin/kbs/{id}/search` | `{query, topK}` → 检索测试 |
 | PUT | `/api/admin/kbs/{id}/bind-agents` | `{agentIds: [1,2]}` 绑定智能体 |
+
+> 文件解析说明：当前离线环境未引入 PDFBox/POI，PDF/Word/Excel 会返回明确的「待装依赖」提示；
+> 装上依赖后在 `KnowledgeBaseService.uploadDocument` 里扩展即可，接口形状不变。
 
 **录入的 4 种方式（需求 3.4.1）**
 
@@ -620,7 +626,7 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 10. PUT  /api/admin/agents/{id}     保存编排（带 nodes 数组）
 11. POST /api/admin/agents/{id}/publish
 12. POST /api/admin/debug/chain     {"agentId":1,"input":"测试"}                 → 看到每个节点的轨迹
-13. POST /api/admin/kbs + documents 传一份 PDF → POST /kbs/{id}/search           → 检索出片段
+13. POST /api/admin/kbs + documents 传一份 TXT/MD → POST /kbs/{id}/search      → 检索出片段（PDF 需装 PDFBox）
 14. GET  /api/admin/bills?page=1    账单流水
 15. GET  /api/admin/settings        平台参数
 ```
@@ -646,5 +652,7 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 | 2026-10-27 | v1.4 | 素材库落地：分类/多级标签树、分页检索、新增/编辑/下架、版本快照与恢复；使用 6530-6539 错误码 | 前端线 |
 | 2026-10-27 | v1.5 | 智能体工作台前端落地：增加 `PUT /api/admin/agents/{id}/nodes` 语义化保存别名，保留原 `PUT /api/admin/agents/{id}` 兼容 | 前端线 |
 | 2026-10-28 | v1.6 | P3 调试面板 + P4 MCP 接入：CallLog / 回归用例、单节点·全链路·对话式·版本对比·回归、MCP 注册/发现/启用/试调用、工具库接入 MCP；调试日志新增 `status` 字段 | 后端线 |
+| 2026-10-28 | v1.7 | P5 知识库落地：KnowledgeBase/KbDocument/KbChunk、文本/文件/URL/API 同步、分段检索、绑定智能体；新增 documents/upload；工具库接入知识库；当前文件解析支持 TXT/MD/CSV/JSON/HTML | 后端线 |
+| 2026-10-28 | v1.8 | P7 运营落地：CreditTransaction 流水、账单/充值/退款/导出、概览/营收趋势/调用占比、算力统计/TOP 用户；建任务与后台加算力自动写流水；API 网关接口定义 + OpenAPI 导出 | 后端线 |
 
 > 规则：接口一旦开工，**改字段名 = 改契约**，必须两人同时改代码 + 在这里记一行。

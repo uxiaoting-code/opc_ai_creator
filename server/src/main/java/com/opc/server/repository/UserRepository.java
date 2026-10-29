@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -20,6 +21,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsernameAndDeletedFalse(String username);
 
     long countByDeletedFalse();
+
+    long countByDeletedFalseAndLastActiveAtAfter(LocalDateTime time);
+
+    long countByDeletedFalseAndLastActiveAtBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("select coalesce(sum(u.credits), 0) from User u where u.deleted = false")
+    Long sumCredits();
 
     /** 管理端：按用户名/邮箱搜索并按状态过滤。 */
     @Query("""

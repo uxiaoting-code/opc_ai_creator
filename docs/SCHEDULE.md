@@ -1,7 +1,7 @@
 # OPC AI 后台 · 开发排期（5 周主线 + 3 天缓冲）
 
 > 定稿日期：2026-10-17
-> 分工：**后端线** = `server/` 主体；**前端线** = `admin-web/` + `lib/` + 3 个纯 CRUD 后端模块
+> 分工：**后端线** = `server/` 主体；**前端线** = `admin-web/`（视觉参考）+ `lib/`（App）+ **`lib/admin/`（Flutter 管理端）** + 3 个纯 CRUD 后端模块
 > 口径：每周 5 个工作日、每天 6~8 小时有效投入。
 > ⚠️ 如果实际是课余时间（每天 2~3 小时），整体时间 **×2~2.5**（约 10~12 周）。
 >
@@ -9,6 +9,14 @@
 >
 > **交付定义**：交付 = 更新 `docs/api-admin.md` 的「变更记录」+ `git commit` + `git push`。
 > 群消息只是可选提醒，**以文档为准**；搭档开工前必须 `git pull` 并读变更记录。
+>
+> **完成标准（不是勾全本表就算完）**：
+> 1. App 13 页可运行
+> 2. **Flutter 管理端 12 页可运行（按 admin-web 原型复刻）**
+> 3. 管理端 P0~P8 接口可用
+> 4. `docs/api-admin.md` 与代码一致
+> 5. `docs/COMPONENTS.md` 完整
+> 6. 演示脚本可端到端跑通
 
 ---
 
@@ -16,9 +24,9 @@
 
 | | 后端线（你） | 前端线（搭档） |
 |---|---|---|
-| 主目录 | `server/` 主体 | `admin-web/` + `lib/` |
+| 主目录 | `server/` 主体 | `admin-web/`（参考）+ `lib/`（App）+ `lib/admin/`（Flutter 管理端） |
 | 外加 | — | `server/.../admin/{material,user,setting}` + `PromptController` |
-| 负责模块 | 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关 | 控制台 12 页 / App 收尾 / 素材库后台 / 用户管理 / 系统设置 |
+| 负责模块 | 模型配置 / 工作台 / 调试 / MCP / 知识库 / 概览·算力·账单 / 网关 | **Flutter 管理端 12 页** / App 收尾 / 素材库后台 / 用户管理 / 系统设置 |
 | 错误码段 | 6000-6499、6700-6799 | 6500-6599 |
 | 人天 | ≈ 21 | ≈ 19 |
 
@@ -165,16 +173,48 @@
 
 ---
 
+## 6.5 Flutter 管理端（老师新增要求 · 前端线）
+
+> `admin-web/` 只是**视觉参考**，最终交付物是 `lib/admin/` 的 Flutter 版本。
+> 运行：`flutter run -d chrome -t lib/admin/main_admin.dart`
+
+- [ ] `lib/admin/main_admin.dart` 独立入口
+- [ ] `lib/admin/theme/admin_theme.dart`（从 `admin-web/css/admin.css` 提取色值/间距/圆角）
+- [ ] `lib/admin/widgets/` 基础组件：
+  - [ ] `AdminShell`（侧栏 + 顶栏 + 内容区）
+  - [ ] `AdminTable` / `PaginationBar`
+  - [ ] `AdminToolbar`（搜索 + 筛选 + 主按钮）
+  - [ ] `StatCard` / `PanelCard`
+  - [ ] `StatusBadge` / `AdminToggle`
+  - [ ] `AdminModal` / `AdminEmptyState`
+- [ ] `lib/admin/pages/` 12 个页面：
+  - [ ] 登录 / 数据概览
+  - [ ] 用户管理 / 账单管理
+  - [ ] 大模型配置 / 智能体配置
+  - [ ] 算力使用 / 系统设置
+  - [ ] 调试 / MCP / 知识库 / 素材库 / 网关
+- [ ] 接 `/api/admin/**` 真接口（`admin-web/mock/*.json` 作字段参考）
+- [ ] `docs/COMPONENTS.md` 增加管理端组件清单
+- [ ] 与 `admin-web/` 逐页截图对照，确认视觉一致
+
+---
 ## 7. Week 5（Day 21~25）· 知识库 + 运营 + 网关
 
 ### 后端线（你）
 
-- [ ] P5 知识库
-  - [ ] `KnowledgeBase` / `Document` / `Chunk`
-  - [ ] 文本 / 文件（PDFBox / POI）/ URL / API 同步
-  - [ ] 分段 + 检索 + 检索测试 + 绑定智能体
-- [ ] **【交付】** 知识库接口（更新 `api-admin.md` 变更记录 + push）
-- [ ] 概览 / 算力 / 账单（`CreditTransaction` 流水 + 3 个聚合接口）
+- [x] P5 知识库（2026-10-28 完成并验收）
+  - [x] `KnowledgeBase` / `Document` / `Chunk`
+  - [x] 文本 / 文件 / URL / API 同步（当前支持 TXT/MD/CSV/JSON/HTML；PDF/Word/Excel 待装 PDFBox/POI）
+  - [x] 分段 + 检索 + 检索测试 + 绑定智能体
+- [ ] **【交付】** 知识库接口（代码已完成，待推送）
+  - [x] 更新 `docs/api-admin.md` 变更记录
+  - [ ] `git commit` + `git push`
+  - [ ] 搭档开工前 pull
+- [x] 概览 / 算力 / 账单（`CreditTransaction` 流水 + 3 个聚合接口）（2026-10-28 完成并验收）
+- [ ] **【交付】** 运营接口（代码已完成，待推送）
+  - [x] 更新 `docs/api-admin.md` 变更记录
+  - [ ] `git commit` + `git push`
+  - [ ] 搭档开工前 pull
 
 ### 前端线（搭档）
 
@@ -188,7 +228,11 @@
 
 ### 一起
 
-- [ ] 后端线：**API 网关**（对外接口定义 + OpenAPI 导出）→ **【交付】**（更新 `api-admin.md` + push）
+- [x] 后端线：**API 网关**（对外接口定义 + OpenAPI 导出）（2026-10-28 完成并验收）
+  - [ ] **【交付】** 网关接口（代码已完成，待推送）
+    - [x] 更新 `docs/api-admin.md` 变更记录
+    - [ ] `git commit` + `git push`
+    - [ ] 搭档开工前 pull
 - [ ] 前端线：切「网关」页 + 打包 APK
 - [ ] 端到端联调（App → 后台 → Curl 全链路）
 - [ ] 演示脚本 + 录屏
@@ -212,6 +256,18 @@
 
 ---
 
+## 最终验收清单（交付前逐项确认）
+
+- [ ] App 13 个页面可运行（含 Prompt 知识库、Skill 市场）
+- [ ] **Flutter 管理端 12 个页面可运行（按 `admin-web/` 原型复刻）**
+- [ ] 管理端 P0~P8 接口全部可用
+- [ ] 统一工具库包含：内置 + 模型 + MCP + 知识库
+- [ ] `docs/api-admin.md` 变更记录与代码一致
+- [ ] `docs/COMPONENTS.md` 包含 App + 管理端组件清单
+- [ ] 演示脚本端到端跑通
+- [ ] 关闭 `dev-token-enabled` 与 `bypassLogin`
+
+---
 ## 10. 进度落后时的取舍顺序
 
 | 优先级 | 内容 |

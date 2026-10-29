@@ -3,11 +3,13 @@ package com.opc.server.service;
 import com.opc.server.admin.tool.ToolKeys;
 import com.opc.server.dto.AdminToolResponse;
 import com.opc.server.entity.AiProviderConfig;
+import com.opc.server.entity.KnowledgeBase;
 import com.opc.server.entity.McpTool;
 import com.opc.server.entity.enums.ProviderType;
 import com.opc.server.entity.enums.ToolKind;
 import com.opc.server.entity.enums.ToolSource;
 import com.opc.server.repository.AiProviderConfigRepository;
+import com.opc.server.repository.KnowledgeBaseRepository;
 import com.opc.server.repository.McpToolRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,20 +20,22 @@ import java.util.List;
 /**
  * 统一工具库（{@code GET /api/admin/tools}）。
  *
- * <p>工作台编排时从这个接口挑选能力。当前 P2 返回：
- * 内置工具 6 个 + 已上架模型若干；
- * MCP（P4）与知识库（P5）上线后自动追加，返回形状不变。
+ * <p>工作台编排时从这个接口挑选能力：内置工具 + 已上架模型 + MCP 工具 + 知识库。
+ * 返回结构一旦冻结，新增能力来源不需要改前端。
  */
 @Service
 public class AdminToolService {
 
     private final AiProviderConfigRepository providerRepository;
     private final McpToolRepository mcpToolRepository;
+    private final KnowledgeBaseRepository knowledgeBaseRepository;
 
     public AdminToolService(AiProviderConfigRepository providerRepository,
-                            McpToolRepository mcpToolRepository) {
+                            McpToolRepository mcpToolRepository,
+                            KnowledgeBaseRepository knowledgeBaseRepository) {
         this.providerRepository = providerRepository;
         this.mcpToolRepository = mcpToolRepository;
+        this.knowledgeBaseRepository = knowledgeBaseRepository;
     }
 
     @Transactional(readOnly = true)
@@ -75,7 +79,20 @@ public class AdminToolService {
             ));
         }
 
-        // P5（知识库）实现后在这里追加，返回结构不变
+        for (KnowledgeBase kb : knowledgeBaseRepository.findAllByDeletedFalseOrderByIdAsc()) {
+            tools.add(new AdminToolResponse(
+                    ToolSource.KNOWLEDGE.name(),
+                    ToolSource.KNOWLEDGE.getLabel(),
+                    kb.getId(),
+                    ToolKeys.KB_RETRIEVE,
+                    ToolKind.KB_RETRIEVE.name(),
+                    ToolKind.KB_RETRIEVE.getLabel(),
+                    kb.getName(),
+                    "知识库检索（" + (kb.getChunkCount() == null ? 0 : kb.getChunkCount()) + " 个分段）",
+                    true
+            ));
+        }
+
         return tools;
     }
 

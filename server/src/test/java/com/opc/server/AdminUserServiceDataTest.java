@@ -5,11 +5,14 @@ import com.opc.server.common.ErrorCode;
 import com.opc.server.dto.AdminUserCreditsRequest;
 import com.opc.server.dto.AdminUserStatusRequest;
 import com.opc.server.entity.User;
+import com.opc.server.repository.CallLogRepository;
+import com.opc.server.repository.CreditTransactionRepository;
 import com.opc.server.repository.UserRepository;
 import com.opc.server.security.PasswordEncoder;
 import com.opc.server.security.TokenService;
 import com.opc.server.security.UserContext;
 import com.opc.server.service.AdminUserService;
+import com.opc.server.service.CreditTransactionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,12 @@ class AdminUserServiceDataTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CreditTransactionRepository creditTransactionRepository;
+
+    @Autowired
+    private CallLogRepository callLogRepository;
 
     private final PasswordEncoder passwordEncoder = new PasswordEncoder();
 
@@ -57,10 +66,16 @@ class AdminUserServiceDataTest {
 
         TokenService tokenService = new TokenService();
         ReflectionTestUtils.setField(tokenService, "tokenTtlHours", 1L);
+        CreditTransactionService creditTransactionService = new CreditTransactionService(
+                creditTransactionRepository,
+                userRepository,
+                callLogRepository
+        );
         AdminUserService service = new AdminUserService(
                 userRepository,
                 passwordEncoder,
-                tokenService
+                tokenService,
+                creditTransactionService
         );
 
         UserContext.set(user.getId());

@@ -62,6 +62,14 @@ public enum ErrorCode {
     MCP_INVOKE_FAILED(6204, "MCP 工具调用失败"),
     MCP_TRANSPORT_UNSUPPORTED(6205, "暂不支持的 MCP 传输方式"),
 
+    // --- 管理端：知识库（6400-6499，前端线/知识库模块）---
+    KB_NOT_FOUND(6401, "知识库不存在"),
+    KB_DOCUMENT_NOT_FOUND(6402, "知识库文档不存在"),
+    KB_DOCUMENT_PARSE_FAILED(6403, "文档解析失败"),
+    KB_SOURCE_UNSUPPORTED(6404, "暂不支持该文档类型"),
+    KB_SEARCH_FAILED(6405, "知识库检索失败"),
+    KB_AGENT_NOT_FOUND(6406, "绑定的智能体不存在"),
+
     // --- 管理端：智能体工作台（6300-6399，后端线专用）---
     AGENT_NOT_FOUND(6301, "智能体不存在"),
     AGENT_CODE_EXISTS(6302, "智能体标识已存在"),
@@ -99,6 +107,11 @@ public enum ErrorCode {
     MATERIAL_TAG_NOT_FOUND(6535, "素材标签不存在"),
     MATERIAL_VERSION_NOT_FOUND(6536, "素材版本不存在"),
     MATERIAL_FORBIDDEN(6537, "没有素材库管理权限"),
+
+    // --- 管理端：API 网关（6780-6799，后端线专用）---
+    GATEWAY_ENDPOINT_NOT_FOUND(6781, "网关接口不存在"),
+    GATEWAY_ENDPOINT_EXISTS(6782, "相同方法和路径的接口已存在"),
+    GATEWAY_EXPORT_FAILED(6783, "OpenAPI 导出失败"),
 
     // --- 管理端通用（9000-9099，公共段）---
     ADMIN_LOGIN_REQUIRED(9001, "请先以管理员身份登录"),

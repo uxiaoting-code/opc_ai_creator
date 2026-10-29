@@ -484,7 +484,7 @@ CREATE TABLE IF NOT EXISTS `t_credit_transaction` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='算力流水表';
 
 -- =============================================================================
---  校验：执行完后确认 20 张表都在（7 张 C 端 + 13 张管理端）
+--  校验：执行完后确认 24 张表都在（7 张 C 端 + 17 张管理端）
 -- =============================================================================
 -- SHOW TABLES;
 -- SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES
@@ -607,3 +607,82 @@ CREATE TABLE IF NOT EXISTS `t_mcp_tool` (
   UNIQUE KEY `uk_mcp_tool_key` (`tool_key`),
   KEY `idx_mcp_server` (`server_id`, `enabled`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='MCP工具表';
+
+-- =============================================================================
+--  21. t_knowledge_base 知识库表（管理端 P5，需求 3.4.1）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_knowledge_base` (
+  `id`              BIGINT       NOT NULL AUTO_INCREMENT,
+  `name`            VARCHAR(100) NOT NULL,
+  `description`     VARCHAR(500)          DEFAULT NULL,
+  `embedding_model` VARCHAR(100)          DEFAULT 'keyword-v1',
+  `status`          VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE',
+  `document_count`  INT          NOT NULL DEFAULT 0,
+  `chunk_count`     INT          NOT NULL DEFAULT 0,
+  `bound_agent_ids` VARCHAR(1000)         DEFAULT NULL COMMENT '绑定的智能体ID，逗号分隔',
+  `deleted`         TINYINT      NOT NULL DEFAULT 0,
+  `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='知识库表';
+
+-- =============================================================================
+--  22. t_kb_document 知识库文档表（管理端 P5，需求 3.4.1）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_kb_document` (
+  `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+  `kb_id`       BIGINT       NOT NULL,
+  `name`        VARCHAR(200) NOT NULL,
+  `source_type` VARCHAR(20)  NOT NULL COMMENT 'TEXT/FILE/URL/API_SYNC',
+  `source_url`  VARCHAR(500)          DEFAULT NULL,
+  `content`     TEXT                  DEFAULT NULL,
+  `mime_type`   VARCHAR(100)          DEFAULT NULL,
+  `file_size`   BIGINT                DEFAULT NULL,
+  `chunk_count` INT          NOT NULL DEFAULT 0,
+  `status`      VARCHAR(20)  NOT NULL DEFAULT 'READY',
+  `error_msg`   VARCHAR(1000)         DEFAULT NULL,
+  `deleted`     TINYINT      NOT NULL DEFAULT 0,
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_kb_doc` (`kb_id`, `deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='知识库文档表';
+
+-- =============================================================================
+--  23. t_kb_chunk 知识库分段表（管理端 P5，需求 3.4.1）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_kb_chunk` (
+  `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+  `kb_id`       BIGINT       NOT NULL,
+  `document_id` BIGINT       NOT NULL,
+  `chunk_index` INT          NOT NULL,
+  `content`     TEXT         NOT NULL,
+  `keywords`    VARCHAR(500)          DEFAULT NULL,
+  `deleted`     TINYINT      NOT NULL DEFAULT 0,
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_kb_chunk` (`kb_id`, `deleted`),
+  KEY `idx_doc_chunk` (`document_id`, `chunk_index`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='知识库分段表';
+
+-- =============================================================================
+--  24. t_gateway_endpoint 对外网关接口定义表（管理端 P8，需求 1.3）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_gateway_endpoint` (
+  `id`            BIGINT       NOT NULL AUTO_INCREMENT,
+  `name`          VARCHAR(100) NOT NULL,
+  `method`        VARCHAR(10)  NOT NULL DEFAULT 'POST',
+  `path`          VARCHAR(200) NOT NULL,
+  `agent_id`      BIGINT                DEFAULT NULL,
+  `auth_required` TINYINT      NOT NULL DEFAULT 1,
+  `rate_limit`    VARCHAR(50)           DEFAULT NULL,
+  `online`        TINYINT      NOT NULL DEFAULT 1,
+  `call_count`    BIGINT       NOT NULL DEFAULT 0,
+  `remark`        VARCHAR(500)          DEFAULT NULL,
+  `deleted`       TINYINT      NOT NULL DEFAULT 0,
+  `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_gateway_method_path` (`method`, `path`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='对外网关接口定义表';

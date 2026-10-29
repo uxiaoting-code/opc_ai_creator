@@ -17,6 +17,7 @@ import com.opc.server.repository.AiTaskRepository;
 import com.opc.server.repository.SkillRepository;
 import com.opc.server.repository.UserRepository;
 import com.opc.server.service.AdminSettingService;
+import com.opc.server.service.CreditTransactionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -62,6 +63,7 @@ public class HarnessService {
     private final HarnessProperties properties;
     private final AdminSettingService settingService;
     private final ObjectMapper objectMapper;
+    private final CreditTransactionService creditTransactionService;
 
     public HarnessService(AiTaskRepository taskRepository,
                           SkillRepository skillRepository,
@@ -71,7 +73,8 @@ public class HarnessService {
                           AiTaskRequestFactory requestFactory,
                           HarnessProperties properties,
                           AdminSettingService settingService,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          CreditTransactionService creditTransactionService) {
         this.taskRepository = taskRepository;
         this.skillRepository = skillRepository;
         this.userRepository = userRepository;
@@ -81,6 +84,7 @@ public class HarnessService {
         this.properties = properties;
         this.settingService = settingService;
         this.objectMapper = objectMapper;
+        this.creditTransactionService = creditTransactionService;
     }
 
     // =========================================================================
@@ -167,6 +171,7 @@ public class HarnessService {
         }
 
         AiTask saved = taskRepository.save(task);
+        creditTransactionService.recordConsume(user, cost, saved.getId(), saved.getTaskNo());
         if (skill != null) {
             saved.setSkillName(skill.getName());
             saved.setSkillCode(skill.getCode());

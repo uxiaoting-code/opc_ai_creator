@@ -34,15 +34,18 @@ public class AdminUserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final CreditTransactionService creditTransactionService;
     private final SecureRandom random = new SecureRandom();
 
     public AdminUserService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            TokenService tokenService) {
+            TokenService tokenService,
+            CreditTransactionService creditTransactionService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
+        this.creditTransactionService = creditTransactionService;
     }
 
     @Transactional(readOnly = true)
@@ -88,7 +91,9 @@ public class AdminUserService {
             );
         }
         user.setCredits((int) next);
-        return AdminUserResponse.from(userRepository.save(user));
+        User saved = userRepository.save(user);
+        creditTransactionService.recordAdjust(saved, request.delta(), "后台调整算力");
+        return AdminUserResponse.from(saved);
     }
 
     @Transactional
