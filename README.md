@@ -93,7 +93,7 @@ opc_ai_creator/
 ├── server/                   Spring Boot 后端
 │   ├── src/main/java/...     controller / service / entity / harness / ai / admin
 │   ├── src/main/resources/   application.yml / application-mysql.yml
-│   └── docs/schema.sql       MySQL 建表脚本（M1 后 26 张表）
+│   └── docs/schema.sql       MySQL 建表脚本（M2 后 28 张表）
 ├── admin-web/                老师给的 HTML 原型 + 后台控制台实现（12 页）
 ├── web/                      Flutter Web 启动壳
 ├── docs/                     需求、契约、架构、排期等文档
@@ -168,7 +168,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 | [docs/prototype-user/](docs/prototype-user/) | **老师提供的用户端移动 App HTML/CSS/JS 原型与页面清单** |
 | [docs/USER_PROTOTYPE_GAP.md](docs/USER_PROTOTYPE_GAP.md) | **原型 28 页与旧 Flutter 的差异和视觉参考** |
 | [docs/USER_APP_V2.md](docs/USER_APP_V2.md) | **当前 16 页接单创作闭环、路由和待接后端接口** |
-| [docs/api-user.md](docs/api-user.md) | **用户端 v2 契约**：M0 冻结；M1 订单/接单/工作台已实现 |
+| [docs/api-user.md](docs/api-user.md) | **用户端 v2 契约**：M0 冻结；M1 订单、M2 提交/审核已实现 |
 | [docs/api-admin.md](docs/api-admin.md) | **管理端接口契约**（12 页 / 错误码 / 枚举 / 变更记录） |
 | [docs/SCHEDULE.md](docs/SCHEDULE.md) | **开发排期、分工、当前进度、最终验收清单** |
 | [docs/admin-freeze.md](docs/admin-freeze.md) | 三项共用模型冻结 + 文件归属 |
@@ -190,6 +190,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 - [x] Flutter 用户 App v2：16 页接单创作闭环（登录、接单、工作台、图片/视频/音频生成、提交审核、钱包、充值提现）
 - [x] M0 用户端业务契约已冻结：`docs/api-user.md`
 - [x] M1 订单/接单/工作台接口已实现：5 个 C 端 API、2 张表、6 条演示订单和后端测试
+- [x] M2 作品提交/审核接口已实现：用户提交/列表/详情/结果与后台审核，2 张表
 - [x] `flutter analyze` 与 `flutter test` 通过
 - [x] Prompt 知识库页
 - [x] 素材库 / 用户管理 / 系统设置（C 端与后台接口）

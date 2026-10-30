@@ -728,3 +728,44 @@ CREATE TABLE IF NOT EXISTS `t_order_acceptance` (
   UNIQUE KEY `uk_order_user` (`order_id`, `user_id`),
   KEY `idx_acceptance_user_status` (`user_id`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户接单记录';
+-- =============================================================================
+-- 用户端 v2 · M2 作品提交与审核
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_submission` (
+  `id`             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '提交记录ID',
+  `submission_no`  VARCHAR(32)  NOT NULL COMMENT '对外提交号',
+  `order_id`       BIGINT       NOT NULL COMMENT '订单ID',
+  `acceptance_id`  BIGINT       NOT NULL COMMENT '接单记录ID',
+  `user_id`        BIGINT       NOT NULL COMMENT '用户ID',
+  `task_id`        BIGINT       NOT NULL COMMENT '生成任务ID',
+  `media_type`     VARCHAR(20)  NOT NULL COMMENT 'IMAGE / VIDEO / AUDIO',
+  `title`          VARCHAR(120) NOT NULL COMMENT '作品标题',
+  `note`           VARCHAR(1000) DEFAULT NULL COMMENT '交付说明',
+  `result_url`     VARCHAR(500) NOT NULL COMMENT '结果资源地址',
+  `thumbnail_url`  VARCHAR(500) DEFAULT NULL COMMENT '缩略图地址',
+  `duration_ms`    BIGINT       DEFAULT NULL COMMENT '媒体时长',
+  `version_no`     INT          NOT NULL DEFAULT 1 COMMENT '同一订单下的提交版本',
+  `status`         VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING / APPROVED / REJECTED',
+  `review_note`    VARCHAR(1000) DEFAULT NULL COMMENT '审核意见',
+  `submitted_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `reviewed_at`    DATETIME     DEFAULT NULL,
+  `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_submission_no` (`submission_no`),
+  UNIQUE KEY `uk_order_user_version` (`order_id`, `user_id`, `version_no`),
+  KEY `idx_submission_user_status` (`user_id`, `status`),
+  KEY `idx_submission_task` (`task_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单作品提交记录';
+
+CREATE TABLE IF NOT EXISTS `t_review_record` (
+  `id`             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '审核记录ID',
+  `submission_id`  BIGINT       NOT NULL COMMENT '提交记录ID',
+  `reviewer_id`    BIGINT       DEFAULT NULL COMMENT '审核人ID',
+  `decision`       VARCHAR(20)  NOT NULL COMMENT 'APPROVED / REJECTED',
+  `comment`        VARCHAR(1000) DEFAULT NULL COMMENT '审核意见',
+  `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_review_submission` (`submission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='作品审核记录';

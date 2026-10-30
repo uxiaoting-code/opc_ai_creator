@@ -7,6 +7,7 @@ import com.opc.server.dto.AcceptOrderResponse;
 import com.opc.server.dto.MarketOrderResponse;
 import com.opc.server.dto.OrderAcceptanceResponse;
 import com.opc.server.dto.OrderDetailResponse;
+import com.opc.server.dto.SubmissionSummaryResponse;
 import com.opc.server.dto.WorkbenchContextResponse;
 import com.opc.server.entity.MarketOrder;
 import com.opc.server.entity.OrderAcceptance;
@@ -15,6 +16,7 @@ import com.opc.server.entity.enums.MarketOrderStatus;
 import com.opc.server.entity.enums.MediaType;
 import com.opc.server.repository.MarketOrderRepository;
 import com.opc.server.repository.OrderAcceptanceRepository;
+import com.opc.server.repository.SubmissionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,11 +42,14 @@ public class OrderService {
 
     private final MarketOrderRepository marketOrderRepository;
     private final OrderAcceptanceRepository acceptanceRepository;
+    private final SubmissionRepository submissionRepository;
 
     public OrderService(MarketOrderRepository marketOrderRepository,
-                        OrderAcceptanceRepository acceptanceRepository) {
+                        OrderAcceptanceRepository acceptanceRepository,
+                        SubmissionRepository submissionRepository) {
         this.marketOrderRepository = marketOrderRepository;
         this.acceptanceRepository = acceptanceRepository;
+        this.submissionRepository = submissionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -155,7 +160,10 @@ public class OrderService {
                 MarketOrderResponse.from(order, acceptance.getStatus()),
                 OrderAcceptanceResponse.from(acceptance),
                 order.getMediaType(),
-                null,
+                submissionRepository
+                        .findTopByOrderIdAndUserIdOrderBySubmittedAtDesc(order.getId(), acceptance.getUserId())
+                        .map(SubmissionSummaryResponse::from)
+                        .orElse(null),
                 canGenerate,
                 reason);
     }

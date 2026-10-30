@@ -8,6 +8,7 @@ import com.opc.server.entity.enums.MarketOrderStatus;
 import com.opc.server.entity.enums.MediaType;
 import com.opc.server.repository.MarketOrderRepository;
 import com.opc.server.repository.OrderAcceptanceRepository;
+import com.opc.server.repository.SubmissionRepository;
 import com.opc.server.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,11 +32,14 @@ class OrderServiceDataTest {
     @Autowired
     private OrderAcceptanceRepository acceptanceRepository;
 
+    @Autowired
+    private SubmissionRepository submissionRepository;
+
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderService(marketOrderRepository, acceptanceRepository);
+        orderService = new OrderService(marketOrderRepository, acceptanceRepository, submissionRepository);
     }
 
     @Test

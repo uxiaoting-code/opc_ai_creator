@@ -51,6 +51,15 @@ public enum ErrorCode {
     ORDER_DEADLINE_PASSED(5507, "订单已过截止时间"),
     ORDER_ACTIVE_EXISTS(5508, "你已有进行中的接单，请先完成或放弃"),
 
+    // --- 用户端：作品提交与审核（5600-5699）---
+    SUBMISSION_NOT_FOUND(5601, "作品提交记录不存在"),
+    SUBMISSION_NOT_ALLOWED(5602, "当前订单状态不允许提交"),
+    SUBMISSION_ALREADY_PENDING(5603, "该订单已有待审核作品"),
+    REVIEW_NOT_FOUND(5604, "审核记录不存在"),
+    REVIEW_NOT_PENDING(5605, "当前作品不在待审核状态"),
+    REVIEW_ALREADY_FINALIZED(5606, "该作品已经审核完成"),
+    SUBMISSION_MEDIA_INVALID(5607, "任务媒体类型与订单要求不匹配"),
+
     // --- 管理端：模型 / API 配置（6000-6099，后端线专用）---
     PROVIDER_CONFIG_NOT_FOUND(6001, "模型配置不存在"),
     PROVIDER_TEST_FAILED(6002, "连通性测试失败"),

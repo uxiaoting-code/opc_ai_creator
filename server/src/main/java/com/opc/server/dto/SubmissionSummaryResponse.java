@@ -1,12 +1,22 @@
 package com.opc.server.dto;
 
+import com.opc.server.entity.Submission;
+
 import java.time.LocalDateTime;
 
-/** M2 提交记录接入前的轻量摘要，M1 工作台固定返回 null。 */
+/** 工作台最近一次提交的轻量摘要。 */
 public record SubmissionSummaryResponse(
         Long id,
         String status,
         String title,
         LocalDateTime submittedAt
 ) {
+
+    public static SubmissionSummaryResponse from(Submission submission) {
+        return new SubmissionSummaryResponse(
+                submission.getId(),
+                submission.getStatus() == null ? null : submission.getStatus().name(),
+                submission.getTitle(),
+                submission.getSubmittedAt());
+    }
 }

@@ -1,7 +1,7 @@
-# OPC AI · 用户端业务接口契约（M0 冻结 / M1 已实现）
+# OPC AI · 用户端业务接口契约（M0 冻结 / M1、M2 已实现）
 
-> 版本：v1.1 · 冻结日期：2026-10-29 · M1 实现日期：2026-10-29
-> 状态：**M0 契约已冻结；M1 订单/接单/工作台接口已实现**
+> 版本：v1.2 · 冻结日期：2026-10-29 · M1/M2 实现日期：2026-10-29～2026-10-30
+> 状态：**M0 契约已冻结；M1 订单、M2 作品提交/审核接口已实现**
 > 适用范围：Flutter 用户 App 的接单、工作台、提交、审核、钱包、充值、提现。
 > 现有登录、Skill、任务查询、素材等接口仍以 `docs/api.md` 为准；本文只新增用户端业务接口，不重复定义已有接口。
 
@@ -554,6 +554,37 @@ GET /api/submissions/{submissionId}/result
 
 前端作品详情页优先使用该接口，不依赖任务列表分页。
 
+### 4.6 M2 快速自测（curl）
+
+前置条件：当前用户已接订单，并且有一个状态为 `SUCCESS`、结果地址非空的任务。
+
+```bash
+# 1. 提交作品，taskId 换成自己的成功任务 ID
+curl -X POST -H "Authorization: Bearer mock-token-for-scaffold" \
+  -H "Content-Type: application/json" \
+  -d '{"orderId":1,"taskId":33,"title":"香水主图最终稿","note":"已完成 4 张主图"}' \
+  "http://localhost:8080/api/submissions"
+
+# 2. 我的提交
+curl -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/submissions/my?page=1&pageSize=10"
+
+# 3. 审核状态
+curl -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/submissions/1"
+
+# 4. 作品结果
+curl -H "Authorization: Bearer mock-token-for-scaffold" \
+  "http://localhost:8080/api/submissions/1/result"
+
+# 5. 管理员审核
+ADMIN_TOKEN="<管理员登录返回的 token>"
+curl -X PUT -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"decision":"APPROVED","comment":"符合订单要求"}' \
+  "http://localhost:8080/api/admin/submissions/1/review"
+```
+
 ---
 
 ## 5. 钱包、充值和提现接口
@@ -892,8 +923,9 @@ CREATE TABLE `t_review_record` (
   `decision` VARCHAR(20) NOT NULL,
   `comment` VARCHAR(1000) DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_submission` (`submission_id`)
+  UNIQUE KEY `uk_review_submission` (`submission_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='作品审核记录';
 ```
 
@@ -1056,3 +1088,4 @@ M1/M3/M4 实现时至少准备：
 |---|---|---|
 | v1.0 | 2026-10-29 | M0 首次冻结：订单、接单、提交、审核、钱包、充值、提现、音频生成及 9 张新表 |
 | v1.1 | 2026-10-29 | M1 实现：`t_market_order`、`t_order_acceptance`、订单列表/详情/接单/我的接单/工作台接口，并加入 5501～5508 错误码 |
+| v1.2 | 2026-10-30 | M2 实现：`t_submission`、`t_review_record`、作品提交/我的提交/审核状态/作品结果/后台审核接口，并加入 5601～5607 错误码 |
