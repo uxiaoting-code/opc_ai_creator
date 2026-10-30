@@ -54,17 +54,20 @@ public class SubmissionService {
     private final MarketOrderRepository marketOrderRepository;
     private final OrderAcceptanceRepository acceptanceRepository;
     private final AiTaskRepository taskRepository;
+    private final WalletService walletService;
 
     public SubmissionService(SubmissionRepository submissionRepository,
                              ReviewRecordRepository reviewRecordRepository,
                              MarketOrderRepository marketOrderRepository,
                              OrderAcceptanceRepository acceptanceRepository,
-                             AiTaskRepository taskRepository) {
+                             AiTaskRepository taskRepository,
+                             WalletService walletService) {
         this.submissionRepository = submissionRepository;
         this.reviewRecordRepository = reviewRecordRepository;
         this.marketOrderRepository = marketOrderRepository;
         this.acceptanceRepository = acceptanceRepository;
         this.taskRepository = taskRepository;
+        this.walletService = walletService;
     }
 
     @Transactional
@@ -200,7 +203,15 @@ public class SubmissionService {
         }
         acceptanceRepository.save(acceptance);
 
-        return SubmissionResponse.from(submission, getOrder(submission.getOrderId()));
+        MarketOrder order = getOrder(submission.getOrderId());
+        if (request.decision() == ReviewStatus.APPROVED) {
+            walletService.creditOrderIncome(
+                    submission.getUserId(),
+                    submission.getId(),
+                    order.getRewardFen(),
+                    "订单收入 · " + order.getTitle());
+        }
+        return SubmissionResponse.from(submission, order);
     }
 
     private MediaType mediaTypeOf(TaskType taskType) {

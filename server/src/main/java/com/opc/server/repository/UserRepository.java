@@ -4,6 +4,7 @@ import com.opc.server.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -28,6 +29,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("select coalesce(sum(u.credits), 0) from User u where u.deleted = false")
     Long sumCredits();
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update User u set u.credits = u.credits + :credits where u.id = :userId and u.deleted = false")
+    int addCredits(@Param("userId") Long userId, @Param("credits") int credits);
 
     /** 管理端：按用户名/邮箱搜索并按状态过滤。 */
     @Query("""

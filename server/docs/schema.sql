@@ -769,3 +769,96 @@ CREATE TABLE IF NOT EXISTS `t_review_record` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_review_submission` (`submission_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='作品审核记录';
+-- =============================================================================
+-- 用户端 v2 · M3 钱包、充值、提现
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `t_wallet_account` (
+  `id`                   BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id`              BIGINT NOT NULL,
+  `withdrawable_fen`     BIGINT NOT NULL DEFAULT 0,
+  `frozen_fen`           BIGINT NOT NULL DEFAULT 0,
+  `total_income_fen`     BIGINT NOT NULL DEFAULT 0,
+  `total_withdrawn_fen`  BIGINT NOT NULL DEFAULT 0,
+  `version`              BIGINT NOT NULL DEFAULT 0,
+  `created_at`           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_wallet_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户现金钱包账户';
+
+CREATE TABLE IF NOT EXISTS `t_wallet_transaction` (
+  `id`                 BIGINT NOT NULL AUTO_INCREMENT,
+  `transaction_no`     VARCHAR(32) NOT NULL,
+  `user_id`            BIGINT NOT NULL,
+  `type`               VARCHAR(30) NOT NULL,
+  `amount_fen`         BIGINT NOT NULL,
+  `balance_after_fen`  BIGINT NOT NULL,
+  `reference_type`     VARCHAR(30) DEFAULT NULL,
+  `reference_id`       BIGINT DEFAULT NULL,
+  `description`        VARCHAR(255) NOT NULL,
+  `created_at`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_wallet_transaction_no` (`transaction_no`),
+  UNIQUE KEY `uk_wallet_reference` (`type`, `reference_type`, `reference_id`),
+  KEY `idx_wallet_tx_user_time` (`user_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='现金钱包流水';
+
+CREATE TABLE IF NOT EXISTS `t_recharge_order` (
+  `id`                BIGINT NOT NULL AUTO_INCREMENT,
+  `recharge_no`       VARCHAR(32) NOT NULL,
+  `user_id`           BIGINT NOT NULL,
+  `amount_fen`        BIGINT NOT NULL,
+  `credits`           INT NOT NULL,
+  `channel_code`      VARCHAR(30) NOT NULL,
+  `status`            VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  `external_trade_no` VARCHAR(100) DEFAULT NULL,
+  `pay_url`           VARCHAR(500) DEFAULT NULL,
+  `paid_at`           DATETIME DEFAULT NULL,
+  `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_recharge_no` (`recharge_no`),
+  UNIQUE KEY `uk_recharge_external` (`external_trade_no`),
+  KEY `idx_recharge_user_time` (`user_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='算力充值订单';
+
+CREATE TABLE IF NOT EXISTS `t_withdraw_request` (
+  `id`                    BIGINT NOT NULL AUTO_INCREMENT,
+  `withdraw_no`           VARCHAR(32) NOT NULL,
+  `user_id`               BIGINT NOT NULL,
+  `amount_fen`            BIGINT NOT NULL,
+  `channel_code`          VARCHAR(30) NOT NULL,
+  `account_name`          VARCHAR(100) NOT NULL,
+  `account_no_masked`     VARCHAR(100) NOT NULL,
+  `account_snapshot_json` TEXT DEFAULT NULL,
+  `status`                VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  `failure_reason`        VARCHAR(500) DEFAULT NULL,
+  `external_trade_no`     VARCHAR(100) DEFAULT NULL,
+  `processed_at`          DATETIME DEFAULT NULL,
+  `created_at`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_withdraw_no` (`withdraw_no`),
+  UNIQUE KEY `uk_withdraw_external` (`external_trade_no`),
+  KEY `idx_withdraw_user_time` (`user_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='提现申请';
+
+CREATE TABLE IF NOT EXISTS `t_payment_channel` (
+  `id`             BIGINT NOT NULL AUTO_INCREMENT,
+  `code`           VARCHAR(30) NOT NULL,
+  `name`           VARCHAR(50) NOT NULL,
+  `direction`      VARCHAR(20) NOT NULL,
+  `icon`           VARCHAR(50) DEFAULT NULL,
+  `enabled`        TINYINT NOT NULL DEFAULT 1,
+  `min_fen`        BIGINT NOT NULL DEFAULT 100,
+  `max_fen`        BIGINT NOT NULL DEFAULT 500000,
+  `fee_rate_bps`   INT NOT NULL DEFAULT 0,
+  `config_json`    TEXT DEFAULT NULL,
+  `sort_order`     INT NOT NULL DEFAULT 0,
+  `created_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_channel_code` (`code`),
+  KEY `idx_channel_enabled_sort` (`enabled`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='充值提现渠道配置';

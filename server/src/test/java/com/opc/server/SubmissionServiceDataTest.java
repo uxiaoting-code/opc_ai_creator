@@ -19,11 +19,14 @@ import com.opc.server.repository.MarketOrderRepository;
 import com.opc.server.repository.OrderAcceptanceRepository;
 import com.opc.server.repository.ReviewRecordRepository;
 import com.opc.server.repository.SubmissionRepository;
+import com.opc.server.repository.WalletAccountRepository;
 import com.opc.server.service.SubmissionService;
+import com.opc.server.service.WalletService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -33,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
+@Import(WalletService.class)
 @Transactional
 class SubmissionServiceDataTest {
 
@@ -46,6 +50,10 @@ class SubmissionServiceDataTest {
     private OrderAcceptanceRepository acceptanceRepository;
     @Autowired
     private AiTaskRepository taskRepository;
+    @Autowired
+    private WalletService walletService;
+    @Autowired
+    private WalletAccountRepository walletAccountRepository;
 
     private SubmissionService submissionService;
 
@@ -56,7 +64,8 @@ class SubmissionServiceDataTest {
                 reviewRecordRepository,
                 marketOrderRepository,
                 acceptanceRepository,
-                taskRepository);
+                taskRepository,
+                walletService);
     }
 
     @Test
@@ -137,6 +146,8 @@ class SubmissionServiceDataTest {
         assertThat(reviewRecordRepository.findBySubmissionId(created.getId())).isPresent();
         assertThat(acceptanceRepository.findById(acceptance.getId()).orElseThrow().getStatus())
                 .isEqualTo(AcceptanceStatus.APPROVED);
+        assertThat(walletAccountRepository.findByUserId(1L).orElseThrow().getWithdrawableFen())
+                .isEqualTo(6800L);
     }
 
     @Test

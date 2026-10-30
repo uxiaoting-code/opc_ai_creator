@@ -60,6 +60,18 @@ public enum ErrorCode {
     REVIEW_ALREADY_FINALIZED(5606, "该作品已经审核完成"),
     SUBMISSION_MEDIA_INVALID(5607, "任务媒体类型与订单要求不匹配"),
 
+    // --- 用户端：钱包、充值、提现（5700-5799）---
+    WALLET_ACCOUNT_NOT_FOUND(5701, "钱包账户不存在"),
+    WALLET_INSUFFICIENT_BALANCE(5702, "可提现余额不足"),
+    WITHDRAW_AMOUNT_INVALID(5703, "提现金额不合法"),
+    PAYMENT_CHANNEL_UNSUPPORTED(5704, "不支持的支付渠道"),
+    RECHARGE_AMOUNT_INVALID(5705, "充值金额不合法"),
+    RECHARGE_ORDER_NOT_FOUND(5706, "充值订单不存在"),
+    RECHARGE_STATUS_ILLEGAL(5707, "充值订单状态不允许该操作"),
+    PAYMENT_CALLBACK_INVALID(5708, "支付回调校验失败"),
+    WITHDRAW_STATUS_ILLEGAL(5709, "提现状态不允许该操作"),
+    WALLET_DUPLICATE_OPERATION(5710, "重复的钱包操作"),
+
     // --- 管理端：模型 / API 配置（6000-6099，后端线专用）---
     PROVIDER_CONFIG_NOT_FOUND(6001, "模型配置不存在"),
     PROVIDER_TEST_FAILED(6002, "连通性测试失败"),

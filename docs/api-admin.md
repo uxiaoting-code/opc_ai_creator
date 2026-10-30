@@ -616,6 +616,40 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 
 ---
 
+## ⑫.2 用户提现处理（M3）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| PUT | `/api/admin/withdrawals/{id}/status` | 更新提现申请状态 |
+
+请求体：
+
+```json
+{
+  "status": "SUCCESS",
+  "failureReason": null,
+  "externalTradeNo": "PAYOUT202610300001"
+}
+```
+
+允许流转：
+
+```text
+PENDING → PROCESSING → SUCCESS
+PENDING / PROCESSING → FAILED
+PENDING → CANCELLED
+```
+
+规则：
+
+- 创建提现时冻结用户可提现余额；
+- `SUCCESS` 扣减冻结余额并累计已提现；
+- `FAILED` / `CANCELLED` 将冻结金额退回可提现余额；
+- 每次状态变化写钱包流水；
+- 终态不能重复处理，返回 `5709`。
+
+---
+
 ## ⑬ 与现有 C 端代码的关系（**红线，动之前先读**）
 
 管理端是**纯增量**，下面的东西一行都不许改坏：
@@ -684,5 +718,6 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 | 2026-10-28 | v1.7 | P5 知识库落地：KnowledgeBase/KbDocument/KbChunk、文本/文件/URL/API 同步、分段检索、绑定智能体；新增 documents/upload；工具库接入知识库；当前文件解析支持 TXT/MD/CSV/JSON/HTML | 后端线 |
 | 2026-10-28 | v1.8 | P7 运营落地：CreditTransaction 流水、账单/充值/退款/导出、概览/营收趋势/调用占比、算力统计/TOP 用户；建任务与后台加算力自动写流水；API 网关接口定义 + OpenAPI 导出 | 后端线 |
 | 2026-10-30 | v1.9 | M2 用户订单作品审核：`PUT /api/admin/submissions/{id}/review`，审核状态回写 submission/acceptance，并使用 5601～5607 错误码 | 后端线 |
+| 2026-10-30 | v2.0 | M3 钱包与提现：钱包汇总/流水、充值渠道与回调、提现冻结/退回、PUT /api/admin/withdrawals/{id}/status，审核通过自动入账，使用 5701～5710 错误码 | 后端线 |
 
 > 规则：接口一旦开工，**改字段名 = 改契约**，必须两人同时改代码 + 在这里记一行。

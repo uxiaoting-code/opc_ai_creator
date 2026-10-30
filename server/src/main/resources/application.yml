@@ -98,6 +98,10 @@ opc:
       api-key: ""
       timeout-seconds: 180
 
+  # --- 支付回调（课设使用共享密钥模拟渠道验签）---
+  payment:
+    callback-secret: dev-callback-secret
+
   # --- 安全 ---
   security:
     token-ttl-hours: 168          # 令牌有效期 7 天

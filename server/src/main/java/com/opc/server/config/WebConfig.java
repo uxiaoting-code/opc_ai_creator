@@ -112,6 +112,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/auth/login",
                         "/api/auth/register",
                         "/api/admin/auth/login",
+                        "/api/payments/callback/**",
                         "/api/health"
                 );
     }

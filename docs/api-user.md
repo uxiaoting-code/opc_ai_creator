@@ -1,7 +1,7 @@
-# OPC AI · 用户端业务接口契约（M0 冻结 / M1、M2 已实现）
+# OPC AI · 用户端业务接口契约（M0 冻结 / M1～M3 已实现）
 
-> 版本：v1.2 · 冻结日期：2026-10-29 · M1/M2 实现日期：2026-10-29～2026-10-30
-> 状态：**M0 契约已冻结；M1 订单、M2 作品提交/审核接口已实现**
+> 版本：v1.3 · 冻结日期：2026-10-29 · M1～M3 实现日期：2026-10-29～2026-10-30
+> 状态：**M0 契约已冻结；M1 订单、M2 提交审核、M3 钱包/充值/提现接口已实现**
 > 适用范围：Flutter 用户 App 的接单、工作台、提交、审核、钱包、充值、提现。
 > 现有登录、Skill、任务查询、素材等接口仍以 `docs/api.md` 为准；本文只新增用户端业务接口，不重复定义已有接口。
 
@@ -742,6 +742,48 @@ M3 实现；Flutter 用户端只读自己的提现状态。
 
 ---
 
+### 5.11 M3 快速自测（curl）
+
+```bash
+TOKEN="mock-token-for-scaffold"
+
+# 钱包汇总
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/wallet/summary"
+
+# 钱包流水
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/wallet/transactions?page=1&pageSize=10"
+
+# 充值渠道
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/wallet/recharge/channels"
+
+# 创建 50 元充值订单
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"amountFen":5000,"channelCode":"ALIPAY"}' \
+  "http://localhost:8080/api/wallet/recharges"
+
+# 模拟渠道回调（开发共享密钥，无需 Bearer token）
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"rechargeNo":"RC...","externalTradeNo":"ALI-001","paidFen":5000,"signature":"dev-callback-secret"}' \
+  "http://localhost:8080/api/payments/callback/ALIPAY"
+
+# 提现渠道
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/wallet/withdraw/channels"
+
+# 创建提现申请
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"amountFen":10000,"channelCode":"ALIPAY","accountName":"张三","accountNo":"13800001234"}' \
+  "http://localhost:8080/api/wallet/withdrawals"
+```
+
+---
+
 ## 6. 音频生成接口（M4）
 
 ### 6.1 文本生成音频
@@ -1089,3 +1131,4 @@ M1/M3/M4 实现时至少准备：
 | v1.0 | 2026-10-29 | M0 首次冻结：订单、接单、提交、审核、钱包、充值、提现、音频生成及 9 张新表 |
 | v1.1 | 2026-10-29 | M1 实现：`t_market_order`、`t_order_acceptance`、订单列表/详情/接单/我的接单/工作台接口，并加入 5501～5508 错误码 |
 | v1.2 | 2026-10-30 | M2 实现：`t_submission`、`t_review_record`、作品提交/我的提交/审核状态/作品结果/后台审核接口，并加入 5601～5607 错误码 |
+| v1.3 | 2026-10-30 | M3 实现：钱包汇总/流水、充值渠道/订单/回调、提现渠道/申请、后台提现状态；审核通过自动钱包入账；加入 5701～5710 错误码 |

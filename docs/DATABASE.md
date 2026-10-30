@@ -5,7 +5,7 @@
 
 ## 用户端 v2 扩展表（M0 冻结）
 
-用户端接单创作闭环规划新增 9 张表。M1 已实现 `t_market_order`、`t_order_acceptance`；M2 已实现 `t_submission`、`t_review_record`；其余表由 M3 实现：`t_wallet_account`、`t_wallet_transaction`、`t_recharge_order`、`t_withdraw_request`、`t_payment_channel`。
+用户端接单创作闭环规划新增 9 张表。M1 已实现 `t_market_order`、`t_order_acceptance`；M2 已实现 `t_submission`、`t_review_record`；M3 已实现 `t_wallet_account`、`t_wallet_transaction`、`t_recharge_order`、`t_withdraw_request`、`t_payment_channel`。用户端 v2 规划的 9 张扩展表已全部落地。
 
 完整字段、DDL、金额口径、状态机和事务规则已冻结在：
 
