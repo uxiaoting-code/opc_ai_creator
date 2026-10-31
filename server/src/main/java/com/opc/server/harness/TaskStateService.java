@@ -85,16 +85,18 @@ public class TaskStateService {
         task.markSuccess(result.resultUrl(), result.thumbnailUrl(), result.resultJson());
         taskRepository.save(task);
 
-        // 同一任务重复落作品时覆盖旧记录，避免重试后画廊出现两条一样的图
-        Work work = workRepository.findByTaskIdAndDeletedFalse(taskId)
-                .orElseGet(() -> Work.fromTask(task, task.getSkillName(),
-                        result.thumbnailUrl()));
-        work.setResourceUrl(result.resultUrl());
-        work.setCoverUrl(result.thumbnailUrl());
-        // 把生成结果的尺寸 / 视频时长同步进作品记录。
-        // 这两样前端都要用：画廊瀑布流靠宽高比排版，视频卡片靠 duration 显示时长角标。
-        applyResultMeta(work, result);
-        workRepository.save(work);
+        // 音频属于交付素材，不进入图片/视频作品表；其 URL 由 submission/task 返回。
+        if (task.getType() != com.opc.server.entity.enums.TaskType.TEXT_TO_AUDIO) {
+            // 同一任务重复落作品时覆盖旧记录，避免重试后画廊出现两条一样的图
+            Work work = workRepository.findByTaskIdAndDeletedFalse(taskId)
+                    .orElseGet(() -> Work.fromTask(task, task.getSkillName(),
+                            result.thumbnailUrl()));
+            work.setResourceUrl(result.resultUrl());
+            work.setCoverUrl(result.thumbnailUrl());
+            // 把生成结果的尺寸 / 视频时长同步进作品记录。
+            applyResultMeta(work, result);
+            workRepository.save(work);
+        }
 
         log.info("任务 {} 生成成功 url={} 耗时={}ms",
                 taskId, result.resultUrl(), result.elapsedMs());

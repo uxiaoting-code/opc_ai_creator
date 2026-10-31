@@ -379,6 +379,10 @@ public class HttpApiProvider implements ConfigAwareAiProvider {
         vars.put("refImageUrl", safe(request.referenceImageUrl()));
         vars.put("taskNo", safe(request.taskNo()));
         vars.put("apiKey", safe(config.apiKey()));
+        if (request.extraParams() != null) {
+            request.extraParams().forEach((key, value) ->
+                    vars.put(key, value == null ? "" : String.valueOf(value)));
+        }
         return vars;
     }
 

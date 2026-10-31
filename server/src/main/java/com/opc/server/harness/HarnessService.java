@@ -8,12 +8,18 @@ import com.opc.server.ai.AiTaskResult;
 import com.opc.server.common.BizException;
 import com.opc.server.common.ErrorCode;
 import com.opc.server.entity.AiTask;
+import com.opc.server.entity.MarketOrder;
+import com.opc.server.entity.OrderAcceptance;
 import com.opc.server.entity.Skill;
 import com.opc.server.entity.User;
+import com.opc.server.entity.enums.AcceptanceStatus;
+import com.opc.server.entity.enums.MarketOrderStatus;
 import com.opc.server.entity.enums.SkillType;
 import com.opc.server.entity.enums.TaskStatus;
 import com.opc.server.entity.enums.TaskType;
 import com.opc.server.repository.AiTaskRepository;
+import com.opc.server.repository.MarketOrderRepository;
+import com.opc.server.repository.OrderAcceptanceRepository;
 import com.opc.server.repository.SkillRepository;
 import com.opc.server.repository.UserRepository;
 import com.opc.server.service.AdminSettingService;
@@ -57,6 +63,8 @@ public class HarnessService {
     private final AiTaskRepository taskRepository;
     private final SkillRepository skillRepository;
     private final UserRepository userRepository;
+    private final MarketOrderRepository marketOrderRepository;
+    private final OrderAcceptanceRepository acceptanceRepository;
     private final TaskStateService stateService;
     private final AiProviderRouter providerRouter;
     private final AiTaskRequestFactory requestFactory;
@@ -68,6 +76,8 @@ public class HarnessService {
     public HarnessService(AiTaskRepository taskRepository,
                           SkillRepository skillRepository,
                           UserRepository userRepository,
+                          MarketOrderRepository marketOrderRepository,
+                          OrderAcceptanceRepository acceptanceRepository,
                           TaskStateService stateService,
                           AiProviderRouter providerRouter,
                           AiTaskRequestFactory requestFactory,
@@ -78,6 +88,8 @@ public class HarnessService {
         this.taskRepository = taskRepository;
         this.skillRepository = skillRepository;
         this.userRepository = userRepository;
+        this.marketOrderRepository = marketOrderRepository;
+        this.acceptanceRepository = acceptanceRepository;
         this.stateService = stateService;
         this.providerRouter = providerRouter;
         this.requestFactory = requestFactory;
@@ -104,6 +116,18 @@ public class HarnessService {
                              String prompt,
                              String negativePrompt,
                              String refImageUrl) {
+        return createTask(userId, type, skillId, prompt, negativePrompt, refImageUrl, null, Map.of());
+    }
+
+    @Transactional
+    public AiTask createTask(Long userId,
+                             TaskType type,
+                             Long skillId,
+                             String prompt,
+                             String negativePrompt,
+                             String refImageUrl,
+                             Long orderId,
+                             Map<String, Object> creationParams) {
 
         // ---- 1. 参数校验 ----
         if (type == null) {
@@ -113,7 +137,8 @@ public class HarnessService {
                 && (refImageUrl == null || refImageUrl.isBlank())) {
             throw new BizException(ErrorCode.BAD_REQUEST, "图生视频必须提供首帧参考图");
         }
-        if (type == TaskType.TEXT_TO_IMAGE && (prompt == null || prompt.isBlank())) {
+        if ((type == TaskType.TEXT_TO_IMAGE || type == TaskType.TEXT_TO_AUDIO)
+                && (prompt == null || prompt.isBlank())) {
             throw new BizException(ErrorCode.BAD_REQUEST, "请输入提示词");
         }
 
@@ -128,12 +153,35 @@ public class HarnessService {
         // ---- 2. 线路校验 ----
         Skill skill = resolveSkill(skillId, type);
 
+        // ---- 2.5 接单上下文校验 ----
+        MarketOrder order = null;
+        OrderAcceptance acceptance = null;
+        if (orderId != null) {
+            order = marketOrderRepository.findById(orderId)
+                    .orElseThrow(() -> new BizException(ErrorCode.ORDER_NOT_FOUND));
+            acceptance = acceptanceRepository.findByOrderIdAndUserId(orderId, userId)
+                    .orElseThrow(() -> new BizException(ErrorCode.ORDER_ACCESS_DENIED));
+            if (acceptance.getStatus() != AcceptanceStatus.ACCEPTED
+                    && acceptance.getStatus() != AcceptanceStatus.REJECTED) {
+                throw new BizException(ErrorCode.ORDER_STATUS_ILLEGAL,
+                        "当前接单状态不允许继续生成");
+            }
+            if (order.getStatus() == MarketOrderStatus.CLOSED) {
+                throw new BizException(ErrorCode.ORDER_STATUS_ILLEGAL, "订单已关闭");
+            }
+            if (order.getMediaType() != type.mediaType()) {
+                throw new BizException(ErrorCode.SUBMISSION_MEDIA_INVALID);
+            }
+        }
+
         // ---- 3. 用户与算力点 ----
         User user = userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new BizException(ErrorCode.USER_NOT_FOUND));
 
         // 后台系统设置中的单次生成基础消耗，对文生图和图生视频统一生效
-        int cost = settings.generationCostCredits();
+        int cost = type == TaskType.TEXT_TO_AUDIO
+                ? properties.getCreditsPerAudioTask()
+                : settings.generationCostCredits();
         if (!user.canAfford(cost)) {
             throw new BizException(ErrorCode.BAD_REQUEST,
                     "算力点不足，本次生成需要 %d 点，当前剩余 %d 点"
@@ -151,7 +199,9 @@ public class HarnessService {
                 .negativePrompt(skill == null
                         ? negativePrompt : skill.resolveNegativePrompt(negativePrompt))
                 .refImageUrl(refImageUrl)
-                .paramsJson(snapshotParams(skill))
+                .orderId(order == null ? null : order.getId())
+                .acceptanceId(acceptance == null ? null : acceptance.getId())
+                .paramsJson(snapshotParams(skill, creationParams))
                 .provider(skill == null ? "mock" : skill.getProvider())
                 .status(TaskStatus.QUEUED)
                 .progress(0)
@@ -212,26 +262,29 @@ public class HarnessService {
      * 半年后运营把某条线路的模型换了，用户回看历史任务时看到的参数
      * 就和当初实际生成的不一致了。快照保证了历史可追溯。
      */
-    private String snapshotParams(Skill skill) {
-        if (skill == null) {
-            return null;
-        }
+    private String snapshotParams(Skill skill, Map<String, Object> creationParams) {
         try {
             Map<String, Object> params = new java.util.LinkedHashMap<>();
-            params.put("skillCode", skill.getCode());
-            params.put("skillName", skill.getName());
-            params.put("provider", skill.getProvider());
-            params.put("modelName", skill.getModelName());
-            params.put("sampler", skill.getSampler());
-            params.put("steps", skill.getSteps());
-            params.put("cfgScale", skill.getCfgScale());
-            params.put("width", skill.getWidth());
-            params.put("height", skill.getHeight());
-            params.put("promptPrefix", skill.getPromptPrefix());
-            params.put("promptSuffix", skill.getPromptSuffix());
-            return objectMapper.writeValueAsString(params);
+            if (skill != null) {
+                params.put("skillCode", skill.getCode());
+                params.put("skillName", skill.getName());
+                params.put("provider", skill.getProvider());
+                params.put("modelName", skill.getModelName());
+                params.put("sampler", skill.getSampler());
+                params.put("steps", skill.getSteps());
+                params.put("cfgScale", skill.getCfgScale());
+                params.put("width", skill.getWidth());
+                params.put("height", skill.getHeight());
+                params.put("promptPrefix", skill.getPromptPrefix());
+                params.put("promptSuffix", skill.getPromptSuffix());
+            }
+            if (creationParams != null) {
+                params.putAll(creationParams);
+            }
+            return params.isEmpty() ? null : objectMapper.writeValueAsString(params);
         } catch (Exception e) {
-            log.warn("线路参数快照失败 skillId={}: {}", skill.getId(), e.getMessage());
+            log.warn("任务参数快照失败 skillId={}: {}",
+                    skill == null ? null : skill.getId(), e.getMessage());
             return null;
         }
     }

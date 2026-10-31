@@ -168,7 +168,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 | [docs/prototype-user/](docs/prototype-user/) | **老师提供的用户端移动 App HTML/CSS/JS 原型与页面清单** |
 | [docs/USER_PROTOTYPE_GAP.md](docs/USER_PROTOTYPE_GAP.md) | **原型 28 页与旧 Flutter 的差异和视觉参考** |
 | [docs/USER_APP_V2.md](docs/USER_APP_V2.md) | **当前 16 页接单创作闭环、路由和待接后端接口** |
-| [docs/api-user.md](docs/api-user.md) | **用户端 v2 契约**：M0 冻结；M1 订单、M2 审核、M3 钱包已实现 |
+| [docs/api-user.md](docs/api-user.md) | **用户端 v2 契约**：M0 冻结；M1～M4 已实现 |
 | [docs/api-admin.md](docs/api-admin.md) | **管理端接口契约**（12 页 / 错误码 / 枚举 / 变更记录） |
 | [docs/SCHEDULE.md](docs/SCHEDULE.md) | **开发排期、分工、当前进度、最终验收清单** |
 | [docs/admin-freeze.md](docs/admin-freeze.md) | 三项共用模型冻结 + 文件归属 |
@@ -192,6 +192,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 - [x] M1 订单/接单/工作台接口已实现：5 个 C 端 API、2 张表、6 条演示订单和后端测试
 - [x] M2 作品提交/审核接口已实现：用户提交/列表/详情/结果与后台审核，2 张表
 - [x] M3 钱包/充值/提现接口已实现：钱包流水、充值回调、提现冻结与审核入账，5 张表
+- [x] M4 生成链路已实现：订单绑定任务、图片/视频 Harness、文本转音频 Mock WAV 与 HTTP 扩展参数
 - [x] `flutter analyze` 与 `flutter test` 通过
 - [x] Prompt 知识库页
 - [x] 素材库 / 用户管理 / 系统设置（C 端与后台接口）

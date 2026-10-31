@@ -182,6 +182,52 @@ class SubmissionServiceDataTest {
         assertThat(page.list().getFirst().title()).isEqualTo("列表作品");
     }
 
+    @Test
+    void submitsAudioTaskLinkedToOrder() {
+        MarketOrder order = saveOrder("MO-S-008", MediaType.AUDIO);
+        OrderAcceptance acceptance = saveAcceptance(order.getId(), 1L, AcceptanceStatus.ACCEPTED);
+        AiTask task = taskRepository.save(AiTask.builder()
+                .taskNo("TASK-S-AUDIO")
+                .userId(1L)
+                .orderId(order.getId())
+                .acceptanceId(acceptance.getId())
+                .type(TaskType.TEXT_TO_AUDIO)
+                .status(TaskStatus.SUCCESS)
+                .progress(100)
+                .resultUrl("/upload/audio-test.wav")
+                .durationMs(1800L)
+                .deleted(false)
+                .build());
+
+        var response = submissionService.submit(1L, new SubmissionCreateRequest(
+                order.getId(), task.getId(), "商品配音", "音频审核"));
+
+        assertThat(response.mediaType()).isEqualTo(MediaType.AUDIO);
+        assertThat(response.resultUrl()).isEqualTo("/upload/audio-test.wav");
+    }
+
+    @Test
+    void rejectsTaskLinkedToAnotherOrder() {
+        MarketOrder order = saveOrder("MO-S-009", MediaType.IMAGE);
+        OrderAcceptance acceptance = saveAcceptance(order.getId(), 1L, AcceptanceStatus.ACCEPTED);
+        AiTask task = taskRepository.save(AiTask.builder()
+                .taskNo("TASK-S-WRONG-ORDER")
+                .userId(1L)
+                .orderId(999L)
+                .acceptanceId(999L)
+                .type(TaskType.TEXT_TO_IMAGE)
+                .status(TaskStatus.SUCCESS)
+                .progress(100)
+                .resultUrl("/upload/wrong-order.png")
+                .deleted(false)
+                .build());
+
+        assertThatThrownBy(() -> submissionService.submit(1L, new SubmissionCreateRequest(
+                order.getId(), task.getId(), "错误订单任务", null)))
+                .isInstanceOf(BizException.class)
+                .extracting(ex -> ((BizException) ex).getErrorCode())
+                .isEqualTo(ErrorCode.SUBMISSION_NOT_ALLOWED);
+    }
     private MarketOrder saveOrder(String orderNo, MediaType mediaType) {
         return marketOrderRepository.save(MarketOrder.builder()
                 .orderNo(orderNo)

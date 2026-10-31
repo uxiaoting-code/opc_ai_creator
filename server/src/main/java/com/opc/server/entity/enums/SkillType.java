@@ -8,7 +8,8 @@ package com.opc.server.entity.enums;
 public enum SkillType {
 
     TEXT_TO_IMAGE("TEXT_TO_IMAGE", "文生图"),
-    IMAGE_TO_VIDEO("IMAGE_TO_VIDEO", "图生视频");
+    IMAGE_TO_VIDEO("IMAGE_TO_VIDEO", "图生视频"),
+    TEXT_TO_AUDIO("TEXT_TO_AUDIO", "文本转音频");
 
     private final String value;
     private final String label;
@@ -28,12 +29,20 @@ public enum SkillType {
 
     /** 线路类型 → 任务类型。 */
     public TaskType toTaskType() {
-        return this == IMAGE_TO_VIDEO ? TaskType.IMAGE_TO_VIDEO : TaskType.TEXT_TO_IMAGE;
+        return switch (this) {
+            case TEXT_TO_IMAGE -> TaskType.TEXT_TO_IMAGE;
+            case IMAGE_TO_VIDEO -> TaskType.IMAGE_TO_VIDEO;
+            case TEXT_TO_AUDIO -> TaskType.TEXT_TO_AUDIO;
+        };
     }
 
     /** 任务类型 → 线路类型（查线路时用）。 */
     public static SkillType fromTaskType(TaskType taskType) {
-        return taskType == TaskType.IMAGE_TO_VIDEO ? IMAGE_TO_VIDEO : TEXT_TO_IMAGE;
+        return switch (taskType) {
+            case TEXT_TO_IMAGE -> TEXT_TO_IMAGE;
+            case IMAGE_TO_VIDEO -> IMAGE_TO_VIDEO;
+            case TEXT_TO_AUDIO -> TEXT_TO_AUDIO;
+        };
     }
 
     /**

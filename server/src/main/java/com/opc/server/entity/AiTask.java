@@ -48,8 +48,16 @@ public class AiTask extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    /** 关联的接单订单 ID；老版本 C 端创作可为空。 */
+    @Column(name = "order_id")
+    private Long orderId;
+
+    /** 关联的接单记录 ID；工作台创作时写入，用于提交时校验归属。 */
+    @Column(name = "acceptance_id")
+    private Long acceptanceId;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 20)
+    @Column(name = "type", nullable = false, length = 20, columnDefinition = "varchar(20)")
     private TaskType type;
 
     @Column(name = "skill_id")

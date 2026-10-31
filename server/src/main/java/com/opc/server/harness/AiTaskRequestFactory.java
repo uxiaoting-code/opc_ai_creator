@@ -56,7 +56,7 @@ public class AiTaskRequestFactory {
                 skill == null ? null : skill.getHeight(),
                 null,                       // seed：本轮不开放用户指定，服务商侧随机
                 task.getRetryCount(),
-                parseExtraParams(skill)
+                parseExtraParams(task, skill)
         );
     }
 
@@ -66,17 +66,21 @@ public class AiTaskRequestFactory {
      * <p>解析失败不能让任务挂掉 —— 扩展参数是可选的锦上添花，
      * 坏了就当作没有，任务照常跑。
      */
-    private Map<String, Object> parseExtraParams(Skill skill) {
-        if (skill == null || skill.getParamsJson() == null || skill.getParamsJson().isBlank()) {
+    private Map<String, Object> parseExtraParams(AiTask task, Skill skill) {
+        String json = task.getParamsJson();
+        if (json == null || json.isBlank()) {
+            json = skill == null ? null : skill.getParamsJson();
+        }
+        if (json == null || json.isBlank()) {
             return Collections.emptyMap();
         }
         try {
             return objectMapper.readValue(
-                    skill.getParamsJson(), new TypeReference<Map<String, Object>>() {
+                    json, new TypeReference<Map<String, Object>>() {
                     });
         } catch (Exception e) {
-            log.warn("线路 {} 的 paramsJson 解析失败，已忽略: {}",
-                    skill.getCode(), e.getMessage());
+            log.warn("任务 {} 的 paramsJson 解析失败，已忽略: {}",
+                    task.getTaskNo(), e.getMessage());
             return Collections.emptyMap();
         }
     }

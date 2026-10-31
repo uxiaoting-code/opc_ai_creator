@@ -91,6 +91,13 @@ public class SubmissionService {
 
         AiTask task = taskRepository.findByIdAndUserIdAndDeletedFalse(request.taskId(), userId)
                 .orElseThrow(() -> new BizException(ErrorCode.TASK_NOT_FOUND));
+        boolean linkedToOrder = task.getOrderId() != null || task.getAcceptanceId() != null;
+        if (linkedToOrder
+                && (!order.getId().equals(task.getOrderId())
+                || !acceptance.getId().equals(task.getAcceptanceId()))) {
+            throw new BizException(ErrorCode.SUBMISSION_NOT_ALLOWED,
+                    "该任务不属于当前订单，请从工作台重新生成");
+        }
         if (task.getStatus() != TaskStatus.SUCCESS
                 || task.getResultUrl() == null
                 || task.getResultUrl().isBlank()) {
@@ -215,9 +222,10 @@ public class SubmissionService {
     }
 
     private MediaType mediaTypeOf(TaskType taskType) {
-        if (taskType == TaskType.TEXT_TO_IMAGE) return MediaType.IMAGE;
-        if (taskType == TaskType.IMAGE_TO_VIDEO) return MediaType.VIDEO;
-        throw new BizException(ErrorCode.SUBMISSION_MEDIA_INVALID);
+        if (taskType == null) {
+            throw new BizException(ErrorCode.SUBMISSION_MEDIA_INVALID);
+        }
+        return taskType.mediaType();
     }
 
     private MarketOrder getOrder(Long orderId) {

@@ -22,6 +22,9 @@ public record CreationRequest(
         String negativePrompt,
 
         /** 参考图 / 首帧图地址，图生视频必填 */
-        String refImageUrl
+        String refImageUrl,
+
+        /** 关联的接单订单 ID；工作台生成时必填。 */
+        Long orderId
 ) {
 }

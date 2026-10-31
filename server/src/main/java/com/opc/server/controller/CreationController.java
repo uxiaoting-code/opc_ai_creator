@@ -7,6 +7,9 @@ import com.opc.server.entity.enums.TaskType;
 import com.opc.server.harness.HarnessService;
 import com.opc.server.security.UserContext;
 import jakarta.validation.Valid;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,6 +48,26 @@ public class CreationController {
         return createTask(request, TaskType.IMAGE_TO_VIDEO);
     }
 
+    /** 文本转音频：Mock 或配置化 TTS Provider。 */
+    @PostMapping("/text-to-audio")
+    public Result<TaskResponse> textToAudio(@Valid @RequestBody AudioCreationRequest request) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("voiceCode", request.voiceCode());
+        params.put("language", request.language());
+        params.put("speed", request.speed());
+        params.put("format", request.format() == null ? "WAV" : request.format());
+        AiTask task = harnessService.createTask(
+                UserContext.require(),
+                TaskType.TEXT_TO_AUDIO,
+                request.skillId(),
+                request.prompt(),
+                null,
+                null,
+                request.orderId(),
+                params);
+        return Result.success(TaskResponse.from(task), "音频任务已提交，正在排队");
+    }
+
     private Result<TaskResponse> createTask(CreationRequest request, TaskType type) {
         AiTask task = harnessService.createTask(
                 UserContext.require(),
@@ -52,7 +75,9 @@ public class CreationController {
                 request.skillId(),
                 request.prompt(),
                 request.negativePrompt(),
-                request.refImageUrl());
+                request.refImageUrl(),
+                request.orderId(),
+                Map.of());
 
         return Result.success(TaskResponse.from(task), "任务已提交，正在排队");
     }

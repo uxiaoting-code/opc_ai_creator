@@ -44,6 +44,9 @@ public class HarnessProperties {
      */
     private int creditsPerVideoTask = 15;
 
+    /** 每个文本转音频任务消耗的算力点。 */
+    private int creditsPerAudioTask = 8;
+
     /** 生成超时（秒）。超时视为任务失败，可重试。 */
     private long taskTimeoutSeconds = 300;
 
@@ -111,6 +114,14 @@ public class HarnessProperties {
         this.creditsPerVideoTask = creditsPerVideoTask;
     }
 
+    public int getCreditsPerAudioTask() {
+        return creditsPerAudioTask;
+    }
+
+    public void setCreditsPerAudioTask(int creditsPerAudioTask) {
+        this.creditsPerAudioTask = creditsPerAudioTask;
+    }
+
     /**
      * 按任务类型取算力点单价。
      *
@@ -119,7 +130,14 @@ public class HarnessProperties {
      * 类型为 null 时按文生图计价（便宜的那档），宁可少扣也不要误扣。
      */
     public int creditsFor(TaskType type) {
-        return type == TaskType.IMAGE_TO_VIDEO ? creditsPerVideoTask : creditsPerTask;
+        if (type == null || type == TaskType.TEXT_TO_IMAGE) {
+            return creditsPerTask;
+        }
+        return switch (type) {
+            case IMAGE_TO_VIDEO -> creditsPerVideoTask;
+            case TEXT_TO_AUDIO -> creditsPerAudioTask;
+            case TEXT_TO_IMAGE -> creditsPerTask;
+        };
     }
 
     public long getTaskTimeoutSeconds() {

@@ -42,7 +42,7 @@ public class SkillTypeConverter implements AttributeConverter<SkillType, String>
         SkillType type = SkillType.fromValue(dbData);
         if (type == null) {
             log.warn("t_skill.type 出现无法识别的值「{}」，已按 null 处理（该行会被列表接口跳过）。"
-                            + "合法取值：TEXT_TO_IMAGE / IMAGE_TO_VIDEO",
+                            + "合法取值：TEXT_TO_IMAGE / IMAGE_TO_VIDEO / TEXT_TO_AUDIO",
                     dbData);
         }
         return type;

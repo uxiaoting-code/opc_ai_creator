@@ -105,7 +105,9 @@ CREATE TABLE IF NOT EXISTS `t_ai_task` (
   `id`               BIGINT        NOT NULL AUTO_INCREMENT COMMENT '任务ID',
   `task_no`          VARCHAR(64)   NOT NULL                COMMENT '任务编号（UUID），对外暴露用',
   `user_id`          BIGINT        NOT NULL                COMMENT '所属用户',
-  `type`             VARCHAR(20)   NOT NULL                COMMENT '任务类型：TEXT_TO_IMAGE / IMAGE_TO_VIDEO',
+  `order_id`         BIGINT                 DEFAULT NULL   COMMENT '关联接单订单ID（M4）',
+  `acceptance_id`    BIGINT                 DEFAULT NULL   COMMENT '关联接单记录ID（M4）',
+  `type`             VARCHAR(20)   NOT NULL                COMMENT '任务类型：TEXT_TO_IMAGE / IMAGE_TO_VIDEO / TEXT_TO_AUDIO',
   `skill_id`         BIGINT                 DEFAULT NULL   COMMENT '使用的Skill线路',
   `prompt`           VARCHAR(2000)          DEFAULT NULL   COMMENT '最终提示词（已拼上线路的风格前缀/后缀）',
   `negative_prompt`  VARCHAR(1000)          DEFAULT NULL   COMMENT '负面提示词',
@@ -135,7 +137,9 @@ CREATE TABLE IF NOT EXISTS `t_ai_task` (
   -- 这个联合索引让扫描走索引而不是全表
   KEY `idx_status_queue` (`status`, `queue_at`),
   KEY `idx_provider_task` (`provider`, `provider_task_id`),
-  KEY `idx_skill` (`skill_id`)
+  KEY `idx_skill` (`skill_id`),
+  KEY `idx_task_order` (`order_id`),
+  KEY `idx_task_acceptance` (`acceptance_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='AI生成任务表';
 
 

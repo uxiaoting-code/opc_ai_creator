@@ -227,7 +227,7 @@ GET /api/skills/{id}
 
 ## 四、创作 `/api/creation`
 
-两个接口的**入参结构完全一样**，只是任务类型不同（由路径决定，body 里**没有 type 字段**）。
+文生图和图生视频入参结构相同；音频使用独立入参。任务类型均由路径决定，body 里**没有 type 字段**。
 
 > **重要**：接口**立即返回一个「排队中」的任务**，不会阻塞等生成完成。
 > 前端拿到 `task.id` 后跳任务详情页轮询进度。
@@ -251,7 +251,8 @@ POST /api/creation/image-to-video
   "skillId": 1,
   "prompt": "雨夜霓虹街道，赛博朋克风格",
   "negativePrompt": "低分辨率、水印",
-  "refImageUrl": null
+  "refImageUrl": null,
+  "orderId": 1001
 }
 ```
 
@@ -261,6 +262,7 @@ POST /api/creation/image-to-video
 | `prompt` | string | 文生图必填 | ≤ 2000 字 |
 | `negativePrompt` | string | ❌ | ≤ 1000 字 |
 | `refImageUrl` | string | **图生视频必填** | 首帧图地址，用素材上传接口拿到的相对路径 |
+| `orderId` | long | 工作台创作必填 | 关联接单订单，服务端校验接单归属和媒体类型 |
 
 **返回 `data`**：`TaskResponse`（见 5.3）
 
@@ -270,6 +272,8 @@ POST /api/creation/image-to-video
   "taskNo": "5a05202a284444ff9afb328db216c0f3",
   "type": "TEXT_TO_IMAGE",
   "typeLabel": "文生图",
+  "orderId": 1001,
+  "acceptanceId": 501,
   "status": "QUEUED",
   "statusLabel": "排队中",
   "progress": 0,
@@ -290,7 +294,28 @@ POST /api/creation/image-to-video
 | `2001` / `2002` | 线路不存在 / 已下线 |
 | `400` | 线路类型与任务不匹配（拿图生视频线路做文生图） |
 
-### 4.3 算力点
+### 4.3 文本转音频
+
+```http
+POST /api/creation/text-to-audio
+```
+
+请求体：
+
+```json
+{
+  "prompt": "欢迎来到花漾美妆直播间",
+  "voiceCode": "warm_female",
+  "language": "zh-CN",
+  "speed": 1.0,
+  "format": "WAV",
+  "orderId": 1003
+}
+```
+
+返回同一个 `TaskResponse`，其中 `type=TEXT_TO_AUDIO`。Mock Provider 会生成可播放 WAV；真实 TTS 由模型配置/HTTP Provider 决定。
+
+### 4.4 算力点
 
 | 项 | 值 |
 |---|---|
@@ -815,6 +840,7 @@ curl -X POST http://localhost:8080/api/prompts/1/favorite \
   存成 PNG。画面上会带 `MOCK 模拟生成 · 非真实模型输出` 水印。
 - **图生视频**：逐帧画动画，用 JCodec 编码成**真的能播的 H.264 MP4**（640×360、15fps、3 秒），
   第一帧另存为 PNG 当封面。
+- **文本转音频**：生成一段可播放的 WAV 演示音轨；真实 TTS 走 HTTP Provider。
 
 **可复现的失败**：提示词里带 `#fail` 时，任务**首次必失败、重试必成功** ——
 用来演示 Harness 的失败重试闭环。
@@ -827,3 +853,4 @@ curl -X POST http://localhost:8080/api/prompts/1/favorite \
 ## 十五、变更记录
 
 - 2026-10-26：新增 Prompt 列表、自定义保存、收藏切换接口（6500-6599 错误码段）。
+- 2026-10-30：M4 新增 /api/creation/text-to-audio；图片/视频/音频任务支持 orderId 绑定接单上下文；TaskResponse 增加 orderId/acceptanceId。

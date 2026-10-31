@@ -1,7 +1,7 @@
-# OPC AI · 用户端业务接口契约（M0 冻结 / M1～M3 已实现）
+# OPC AI · 用户端业务接口契约（M0～M4 已完成）
 
-> 版本：v1.3 · 冻结日期：2026-10-29 · M1～M3 实现日期：2026-10-29～2026-10-30
-> 状态：**M0 契约已冻结；M1 订单、M2 提交审核、M3 钱包/充值/提现接口已实现**
+> 版本：v1.4 · 冻结日期：2026-10-29 · M1～M4 实现日期：2026-10-29～2026-10-30
+> 状态：**M0～M4 全部完成：订单、提交审核、钱包、图片/视频 Harness、文本转音频**
 > 适用范围：Flutter 用户 App 的接单、工作台、提交、审核、钱包、充值、提现。
 > 现有登录、Skill、任务查询、素材等接口仍以 `docs/api.md` 为准；本文只新增用户端业务接口，不重复定义已有接口。
 
@@ -802,7 +802,8 @@ POST /api/creation/text-to-audio
   "voiceCode": "warm_female",
   "language": "zh-CN",
   "speed": 1.0,
-  "format": "MP3"
+  "format": "MP3",
+  "orderId": 1003
 }
 ```
 
@@ -812,7 +813,8 @@ POST /api/creation/text-to-audio
 | `voiceCode` | string | 是 | 后端提供的音色编码 |
 | `language` | string | 是 | `zh-CN/en-US/ja-JP` |
 | `speed` | decimal | 否 | 0.5～2.0，默认 1.0 |
-| `format` | string | 否 | `MP3/WAV`，默认 MP3 |
+| `format` | string | 否 | `MP3/WAV`，默认 MP3；Mock Provider 固定输出 WAV |
+| `orderId` | long | 工作台必填 | 关联接单订单 ID，服务端校验归属和媒体类型 |
 
 返回 `data`：与现有 `TaskResponse` 相同，但：
 
@@ -834,6 +836,34 @@ GET  /api/tasks
 ```
 
 具体字段以 `docs/api.md` §4、§5 为准。
+
+---
+
+### 6.3 M4 快速自测（curl）
+
+```bash
+TOKEN="mock-token-for-scaffold"
+
+# 先接一个音频订单（orderId 换成 OPEN 的音频订单）
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/orders/3/accept"
+
+# 创建文本转音频任务
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"欢迎来到直播间","voiceCode":"warm_female","language":"zh-CN","speed":1.0,"format":"WAV","orderId":3}' \
+  "http://localhost:8080/api/creation/text-to-audio"
+
+# 轮询任务（taskId 换成上一步返回的 id）
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/tasks/1"
+
+# 图片/视频任务请求同样建议带 orderId
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"香水主图","orderId":1}' \
+  "http://localhost:8080/api/creation/text-to-image"
+```
 
 ---
 
@@ -1132,3 +1162,4 @@ M1/M3/M4 实现时至少准备：
 | v1.1 | 2026-10-29 | M1 实现：`t_market_order`、`t_order_acceptance`、订单列表/详情/接单/我的接单/工作台接口，并加入 5501～5508 错误码 |
 | v1.2 | 2026-10-30 | M2 实现：`t_submission`、`t_review_record`、作品提交/我的提交/审核状态/作品结果/后台审核接口，并加入 5601～5607 错误码 |
 | v1.3 | 2026-10-30 | M3 实现：钱包汇总/流水、充值渠道/订单/回调、提现渠道/申请、后台提现状态；审核通过自动钱包入账；加入 5701～5710 错误码 |
+| v1.4 | 2026-10-30 | M4 实现：图片/视频任务绑定订单与接单上下文；新增 TEXT_TO_AUDIO、WAV Mock 音频、音频提交与订单媒体校验；HTTP Provider 支持音色等扩展变量 |

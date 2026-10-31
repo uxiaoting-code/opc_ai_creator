@@ -17,6 +17,9 @@ public record TaskResponse(
         String type,
         String typeLabel,
 
+        Long orderId,
+        Long acceptanceId,
+
         Long skillId,
         String skillName,
         String skillCode,
@@ -58,6 +61,8 @@ public record TaskResponse(
                 task.getTaskNo(),
                 task.getType() == null ? null : task.getType().name(),
                 task.getType() == null ? null : task.getType().getLabel(),
+                task.getOrderId(),
+                task.getAcceptanceId(),
                 task.getSkillId(),
                 task.getSkillName(),
                 task.getSkillCode(),

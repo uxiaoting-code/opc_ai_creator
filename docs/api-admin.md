@@ -287,8 +287,9 @@
 ```
 {{prompt}} {{negativePrompt}} {{modelName}} {{width}} {{height}}
 {{steps}} {{cfgScale}} {{seed}} {{refImageUrl}} {{taskNo}} {{apiKey}}
+{{voiceCode}} {{language}} {{speed}} {{format}}
 ```
-> 这些变量名**就是 `AiTaskRequest` 的字段名**，新增变量必须同步改 `AiTaskRequest` 与 `HttpApiProvider`，不许前端自己造。
+> 前 11 个变量来自 `AiTaskRequest`；音频变量来自任务 `paramsJson.extraParams`。新增变量必须同步改 `HttpApiProvider` 文档，不许前端自己造。
 
 ---
 
@@ -718,6 +719,7 @@ PENDING → CANCELLED
 | 2026-10-28 | v1.7 | P5 知识库落地：KnowledgeBase/KbDocument/KbChunk、文本/文件/URL/API 同步、分段检索、绑定智能体；新增 documents/upload；工具库接入知识库；当前文件解析支持 TXT/MD/CSV/JSON/HTML | 后端线 |
 | 2026-10-28 | v1.8 | P7 运营落地：CreditTransaction 流水、账单/充值/退款/导出、概览/营收趋势/调用占比、算力统计/TOP 用户；建任务与后台加算力自动写流水；API 网关接口定义 + OpenAPI 导出 | 后端线 |
 | 2026-10-30 | v1.9 | M2 用户订单作品审核：`PUT /api/admin/submissions/{id}/review`，审核状态回写 submission/acceptance，并使用 5601～5607 错误码 | 后端线 |
+| 2026-10-30 | v2.1 | M4 音频 Provider 扩展：HTTP 请求模板新增 `{{voiceCode}}` `{{language}}` `{{speed}}` `{{format}}` 变量 | 后端线 |
 | 2026-10-30 | v2.0 | M3 钱包与提现：钱包汇总/流水、充值渠道与回调、提现冻结/退回、PUT /api/admin/withdrawals/{id}/status，审核通过自动入账，使用 5701～5710 错误码 | 后端线 |
 
 > 规则：接口一旦开工，**改字段名 = 改契约**，必须两人同时改代码 + 在这里记一行。

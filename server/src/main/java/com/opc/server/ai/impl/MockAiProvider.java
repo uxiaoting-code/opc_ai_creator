@@ -22,6 +22,12 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -119,6 +125,9 @@ public class MockAiProvider implements AiProvider {
             // 放在最前面分流，文生图那条链路一个字符都不受影响。
             if (request.taskType() == TaskType.IMAGE_TO_VIDEO) {
                 return renderVideo(request, listener, start);
+            }
+            if (request.taskType() == TaskType.TEXT_TO_AUDIO) {
+                return renderAudio(request, listener, start);
             }
 
             // ---- 1. 分段模拟生成耗时，每段上报一次进度 ----
@@ -278,6 +287,62 @@ public class MockAiProvider implements AiProvider {
         }
     }
 
+    /**
+     * Mock 音频生成：生成一段可播放的 WAV 演示音轨。
+     *
+     * <p>真正的 TTS 由配置化 HttpApiProvider 调用；Mock 只负责验证
+     * 文本→任务→文件→回传 URL→提交审核这条业务链路。
+     */
+    private AiTaskResult renderAudio(AiTaskRequest request,
+                                     ProgressListener listener,
+                                     long start) throws Exception {
+        if (shouldSimulateFailure(request)) {
+            sleepWithProgress(listener);
+            return AiTaskResult.fail(
+                    SIMULATED_FAILURE_MESSAGE, System.currentTimeMillis() - start);
+        }
+
+        long totalDelay = ThreadLocalRandom.current().nextLong(minDelayMs, maxDelayMs + 1);
+        long perStep = Math.max(1, totalDelay / PROGRESS_STEPS);
+        for (int step = 1; step <= PROGRESS_STEPS; step++) {
+            Thread.sleep(perStep);
+            listener.onProgress(step * 100 / PROGRESS_STEPS);
+        }
+
+        final float sampleRate = 16000f;
+        final int durationSeconds = 2;
+        final int sampleCount = (int) (sampleRate * durationSeconds);
+        byte[] pcm = new byte[sampleCount * 2];
+        int seed = Math.abs(request.taskNo().hashCode());
+        for (int i = 0; i < sampleCount; i++) {
+            double t = i / sampleRate;
+            double envelope = Math.min(1.0, t * 8) * Math.min(1.0, (durationSeconds - t) * 3);
+            double base = 180 + (seed % 90);
+            double sample = Math.sin(2 * Math.PI * base * t) * 0.22
+                    + Math.sin(2 * Math.PI * (base * 1.5) * t) * 0.10;
+            int value = (int) (sample * envelope * Short.MAX_VALUE);
+            pcm[i * 2] = (byte) (value & 0xff);
+            pcm[i * 2 + 1] = (byte) ((value >> 8) & 0xff);
+        }
+
+        AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+        ByteArrayOutputStream wavBytes = new ByteArrayOutputStream();
+        try (AudioInputStream audio = new AudioInputStream(
+                new ByteArrayInputStream(pcm), format, sampleCount)) {
+            AudioSystem.write(audio, AudioFileFormat.Type.WAVE, wavBytes);
+        }
+        String url = storage.saveBytes(
+                wavBytes.toByteArray(), "wav", "task_" + request.taskNo());
+        long elapsed = System.currentTimeMillis() - start;
+        String voiceCode = String.valueOf(
+                request.extraParams() == null ? "mock_voice" : request.extraParams().getOrDefault("voiceCode", "mock_voice"));
+        String json = """
+                {"mock":true,"provider":"mock","kind":"audio","voiceCode":"%s","durationSec":%d,"format":"WAV"}"""
+                .formatted(voiceCode, durationSeconds);
+        log.info("Mock 音频生成完成 taskNo={} 耗时={}ms url={}",
+                request.taskNo(), elapsed, url);
+        return AiTaskResult.ok(url, null, json, elapsed);
+    }
     private String buildVideoResultJson(AiTaskRequest request) {
         return """
                 {"mock":true,"provider":"mock","kind":"video","model":"%s","width":%d,"height":%d,"fps":%d,"durationSec":%d}"""

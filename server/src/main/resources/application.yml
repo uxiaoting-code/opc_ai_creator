@@ -82,6 +82,7 @@ opc:
     default-max-retry: 3          # 默认最多重试 3 次
     credits-per-task: 10          # 每个文生图任务扣 10 算力点
     credits-per-video-task: 15    # 每个图生视频任务扣 15 算力点（逐帧生成更贵）
+    credits-per-audio-task: 8     # 每个文本转音频任务扣 8 算力点
     task-timeout-seconds: 300     # 超过 5 分钟没返回判定为失败
 
   # --- 模拟 AI 服务商 ---
