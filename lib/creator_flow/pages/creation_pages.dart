@@ -33,6 +33,7 @@ class CreateImagePage extends StatelessWidget {
         _ChoiceGroup('画面比例', ['1:1', '3:4', '4:3', '9:16']),
         _ChoiceGroup('清晰度', ['标准', '高清', '超清']),
       ],
+      allowOptionalReference: true,
     );
   }
 }
@@ -102,6 +103,7 @@ class _CreationFormPage extends StatefulWidget {
     required this.models,
     required this.choices,
     this.showReference = false,
+    this.allowOptionalReference = false,
     this.audioMode = false,
   });
 
@@ -113,6 +115,7 @@ class _CreationFormPage extends StatefulWidget {
   final List<String> models;
   final List<_ChoiceGroup> choices;
   final bool showReference;
+  final bool allowOptionalReference;
   final bool audioMode;
 
   @override
@@ -228,7 +231,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   }
 
   Future<void> _generate() async {
-    final prompt = _prompt.text.trim();
+    final prompt = _composedPrompt();
     if (prompt.isEmpty) {
       _showError('请先输入创作描述');
       return;
@@ -244,7 +247,10 @@ class _CreationFormPageState extends State<_CreationFormPage> {
       final TaskModel task;
       switch (widget.mode) {
         case CreationMode.image:
-          task = await repository.createTextToImage(prompt: prompt);
+          task = await repository.createTextToImage(
+            prompt: prompt,
+            refImageUrl: _refImageUrl,
+          );
         case CreationMode.video:
           task = await repository.createImageToVideo(
             prompt: prompt,
@@ -297,6 +303,33 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   String get _audioFormat {
     if (widget.choices.length < 3) return 'MP3';
     return _selected[2] == 'WAV' ? 'WAV' : 'MP3';
+  }
+
+  /// 把用户选的风格、比例等选项拼进提示词。
+  ///
+  /// 当前后端 M4 还没有 `options` 字段，所以前端先把选项合并为提示词，
+  /// 保证这些选择至少会真实影响生成结果，而不是只停留在界面上。
+  String _composedPrompt() {
+    final base = _prompt.text.trim();
+    if (widget.mode == CreationMode.audio) return base;
+
+    final parts = <String>[base];
+    for (var i = 0; i < widget.choices.length; i++) {
+      parts.add('${widget.choices[i].label}：${_selected[i]}');
+    }
+    if (widget.showReference && _refImageUrl != null) {
+      parts.add('使用已上传的参考图');
+    }
+    return parts.join('，');
+  }
+
+  void _openMode(CreationMode mode) {
+    final path = switch (mode) {
+      CreationMode.image => '/create/image',
+      CreationMode.video => '/create/video',
+      CreationMode.audio => '/create/audio',
+    };
+    context.go(path, extra: _prompt.text.trim());
   }
 
   void _showError(String message) {
@@ -352,9 +385,12 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                           ],
                         ),
                       ),
-                    if (widget.showReference) ...[
+                    if (widget.showReference || widget.allowOptionalReference) ...[
                       const SizedBox(height: 18),
-                      const FormFieldLabel('参考图', required: true),
+                      FormFieldLabel(
+                        widget.showReference ? '参考图' : '参考图（可选）',
+                        required: widget.showReference,
+                      ),
                       _ReferenceImageCard(
                         active: _refImageUrl != null,
                         busy: _pickingReference,
@@ -376,32 +412,71 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                         alignLabelWithHint: true,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const FormFieldLabel('生成模型'),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _ChoicePill(
-                          label: _model,
-                          onTap: _pickModel,
-                        ),
-                      ],
-                    ),
-                    for (var i = 0; i < widget.choices.length; i++) ...[
+                    if (widget.audioMode) ...[
                       const SizedBox(height: 18),
-                      FormFieldLabel(widget.choices[i].label),
+                      const FormFieldLabel('选择音色'),
+                      _VoiceChips(
+                        voices: widget.models,
+                        selected: _model,
+                        onSelect: (voice) => setState(() => _model = voice),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      const FormFieldLabel('生成模型'),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
                         children: [
                           _ChoicePill(
-                            label: _selected[i],
-                            onTap: () => _pickChoice(i),
+                            label: _model,
+                            onTap: _pickModel,
                           ),
                         ],
                       ),
+                      if (widget.choices.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        FormFieldLabel(widget.choices.first.label),
+                        _ChoiceChips(
+                          values: widget.choices.first.values,
+                          selected: _selected.first,
+                          onSelect: (value) =>
+                              setState(() => _selected.first = value),
+                        ),
+                      ],
+                      for (
+                        var i = 1;
+                        i < widget.choices.length;
+                        i++
+                      ) ...[
+                        const SizedBox(height: 18),
+                        FormFieldLabel(widget.choices[i].label),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _ChoicePill(
+                              label: _selected[i],
+                              onTap: () => _pickChoice(i),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
+                    if (widget.audioMode)
+                      for (var i = 0; i < widget.choices.length; i++) ...[
+                        const SizedBox(height: 18),
+                        FormFieldLabel(widget.choices[i].label),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _ChoicePill(
+                              label: _selected[i],
+                              onTap: () => _pickChoice(i),
+                            ),
+                          ],
+                        ),
+                      ],
                     if (widget.audioMode) ...[
                       const SizedBox(height: 18),
                       const CreatorSectionHeader(
@@ -418,6 +493,10 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                     ],
                   ],
                 ),
+              ),
+              _ModeMiniBar(
+                mode: widget.mode,
+                onSelect: _openMode,
               ),
               CreatorBottomAction(
                 label: _busy
@@ -466,6 +545,58 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   }
 }
 
+class _ModeMiniBar extends StatelessWidget {
+  const _ModeMiniBar({required this.mode, required this.onSelect});
+
+  final CreationMode mode;
+  final ValueChanged<CreationMode> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.82),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.8)),
+        ),
+      ),
+      child: Row(
+        children: [
+          for (final item in CreationMode.values)
+            Expanded(
+              child: InkWell(
+                onTap: () {
+                  if (item != mode) onSelect(item);
+                },
+                borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: item == mode
+                        ? AppColors.sageTint
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                  ),
+                  child: Text(
+                    item.shortLabel,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: item == mode ? AppColors.sage : AppColors.taupe,
+                      fontSize: 12,
+                      fontWeight:
+                          item == mode ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ChoicePill extends StatelessWidget {
   const _ChoicePill({required this.label, required this.onTap});
 
@@ -501,6 +632,124 @@ class _ChoicePill extends StatelessWidget {
               Icons.expand_more_rounded,
               size: 16,
               color: AppColors.sage,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChoiceChips extends StatelessWidget {
+  const _ChoiceChips({
+    required this.values,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<String> values;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final value in values)
+          ChoiceChip(
+            label: Text(value),
+            selected: selected == value,
+            onSelected: (_) => onSelect(value),
+          ),
+      ],
+    );
+  }
+}
+
+class _VoiceChips extends StatelessWidget {
+  const _VoiceChips({
+    required this.voices,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<String> voices;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final voice in voices) ...[
+            _VoiceCard(
+              voice: voice,
+              selected: selected == voice,
+              onTap: () => onSelect(voice),
+            ),
+            if (voice != voices.last) const SizedBox(width: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _VoiceCard extends StatelessWidget {
+  const _VoiceCard({
+    required this.voice,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String voice;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: Container(
+        width: 78,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.sageTint : AppColors.glass,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(
+            color: selected
+                ? AppColors.sage.withValues(alpha: 0.45)
+                : Colors.white.withValues(alpha: 0.8),
+          ),
+        ),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: selected
+                  ? AppColors.sage
+                  : AppColors.sage.withValues(alpha: 0.14),
+              child: Text(
+                voice.characters.first,
+                style: TextStyle(
+                  color: selected ? Colors.white : AppColors.sage,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              voice,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: selected ? AppColors.sage : AppColors.taupe,
+              ),
             ),
           ],
         ),

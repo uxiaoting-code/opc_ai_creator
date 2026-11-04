@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +9,7 @@ import '../../core/config/app_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/media_utils.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/task_repository.dart';
 import '../creator_flow_provider.dart';
@@ -77,6 +79,38 @@ class _ResultPageState extends State<ResultPage> {
     }
   }
 
+  Future<void> _retry() async {
+    final task = _task;
+    if (task == null || !task.canRetry) return;
+    setState(() => _loading = true);
+    try {
+      final fresh = await context.read<TaskRepository>().retryTask(task.id);
+      if (!mounted) return;
+      setState(() {
+        _task = fresh;
+        _loading = false;
+        _error = null;
+      });
+      _schedulePoll();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _copyResultUrl() async {
+    final task = _task;
+    if (task?.resultUrl == null) return;
+    await Clipboard.setData(ClipboardData(text: task!.resultUrl!));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('结果链接已复制')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final flow = context.watch<CreatorFlowProvider>();
@@ -127,6 +161,14 @@ class _ResultPageState extends State<ResultPage> {
               _ResultMeta(task: task),
               const SizedBox(height: 14),
               _ResultViewer(task: task),
+              if (succeeded) ...[
+                const SizedBox(height: 14),
+                _ResultActions(
+                  task: task,
+                  onRetry: task.canRetry ? _retry : null,
+                  onCopy: _copyResultUrl,
+                ),
+              ],
               if (succeeded) ...[
                 const SizedBox(height: 18),
                 const CreatorSectionHeader(title: '试试这些微调'),
@@ -370,6 +412,101 @@ class _ResultViewer extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ResultActions extends StatelessWidget {
+  const _ResultActions({
+    required this.task,
+    required this.onRetry,
+    required this.onCopy,
+  });
+
+  final TaskModel task;
+  final VoidCallback? onRetry;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _ResultAction(
+          icon: Icons.download_rounded,
+          label: '下载',
+          onTap: () async {
+            final url = task.resultUrl;
+            if (url == null) return;
+            final ok = await MediaUtils.saveToLocal(
+              url: AppConfig.resolveAssetUrl(url),
+              filename: 'task_${task.id}',
+              isVideo: task.type == TaskType.imageToVideo,
+            );
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(content: Text(ok ? '已保存' : '下载功能暂未完成')),
+              );
+          },
+        ),
+        _ResultAction(
+          icon: Icons.refresh_rounded,
+          label: '重生',
+          onTap: onRetry,
+        ),
+        _ResultAction(
+          icon: Icons.hd_rounded,
+          label: '高清',
+          onTap: () {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(const SnackBar(content: Text('高清放大暂未接入')));
+          },
+        ),
+        _ResultAction(
+          icon: Icons.photo_filter_rounded,
+          label: '参考',
+          onTap: onCopy,
+        ),
+        _ResultAction(
+          icon: Icons.share_rounded,
+          label: '分享',
+          onTap: onCopy,
+        ),
+      ],
+    );
+  }
+}
+
+class _ResultAction extends StatelessWidget {
+  const _ResultAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            children: [
+              Icon(icon, color: AppColors.sage, size: 20),
+              const SizedBox(height: 5),
+              Text(label, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -170,7 +170,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      expect(find.text('文生图'), findsOneWidget);
+      expect(find.text('文生图'), findsWidgets);
       expect(find.textContaining('预计消耗 12 算力'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

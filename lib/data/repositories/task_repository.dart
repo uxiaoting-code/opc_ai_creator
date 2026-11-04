@@ -35,12 +35,14 @@ class TaskRepository {
     int? skillId,
     required String prompt,
     String? negativePrompt,
+    String? refImageUrl,
   }) {
     return _create(
       ApiEndpoints.textToImage,
       skillId: skillId,
       prompt: prompt,
       negativePrompt: negativePrompt,
+      refImageUrl: refImageUrl,
     );
   }
 
