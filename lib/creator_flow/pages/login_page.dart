@@ -46,7 +46,7 @@ class _CreatorLoginPageState extends State<CreatorLoginPage> {
           );
     if (!mounted) return;
     if (error == null) {
-      context.go('/market');
+      context.go('/course');
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error)));

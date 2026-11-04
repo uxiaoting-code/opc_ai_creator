@@ -101,7 +101,7 @@ void main() {
       expect(find.widgetWithText(FilledButton, '登录'), findsOneWidget);
     });
 
-    testWidgets('演示账号可以登录并进入接单大厅', (tester) async {
+    testWidgets('演示账号可以登录并进入课程中心首页', (tester) async {
       usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp());
       await tester.pumpAndSettle();
@@ -110,17 +110,27 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
+      expect(find.text('课程中心'), findsOneWidget);
+      expect(find.text('课程'), findsOneWidget);
+      expect(find.text('创作'), findsOneWidget);
+      expect(find.text('接单'), findsOneWidget);
+      expect(find.text('我的'), findsOneWidget);
+
+      await tester.tap(find.text('接单'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
       expect(find.text('接单大厅'), findsOneWidget);
       expect(find.text('春季香水商品主图套组'), findsOneWidget);
-      expect(find.text('接单'), findsOneWidget);
-      expect(find.text('工作台'), findsOneWidget);
-      expect(find.text('审核'), findsOneWidget);
-      expect(find.text('我的'), findsOneWidget);
     });
 
     testWidgets('登录后可以查看订单并接单进入工作台', (tester) async {
       usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp(loggedIn: true));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      await tester.tap(find.text('接单'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -143,6 +153,10 @@ void main() {
     testWidgets('工作台能打开文生图页面且小屏幕不溢出', (tester) async {
       usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp(loggedIn: true));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      await tester.tap(find.text('接单'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 

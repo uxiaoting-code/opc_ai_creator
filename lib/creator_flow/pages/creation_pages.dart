@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../widgets/premium/premium_select_sheet.dart';
 import '../creator_flow_provider.dart';
 import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
@@ -129,6 +130,55 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     CreationMode.audio => 8,
   };
 
+  Future<void> _pickModel() async {
+    final selected = await showPremiumSelectSheet<String>(
+      context: context,
+      title: '选择生成模型',
+      options: [
+        for (final model in widget.models)
+          PremiumSelectOption(
+            value: model,
+            title: model,
+            description: model == widget.defaultModel
+                ? '推荐 · 由后台模型配置提供'
+                : 'AI 创作模型',
+            icon: Icons.auto_awesome_rounded,
+            highlighted: model == widget.defaultModel,
+          ),
+      ],
+      selected: _model,
+    );
+    if (selected != null && mounted) setState(() => _model = selected);
+  }
+
+  Future<void> _pickChoice(int index) async {
+    final group = widget.choices[index];
+    final selected = await showPremiumSelectSheet<String>(
+      context: context,
+      title: group.label,
+      options: [
+        for (final value in group.values)
+          PremiumSelectOption(
+            value: value,
+            title: value,
+            icon: switch (group.label) {
+              '画面风格' => Icons.palette_outlined,
+              '画面比例' => Icons.aspect_ratio_rounded,
+              '镜头运动' => Icons.movie_filter_outlined,
+              '视频比例' => Icons.aspect_ratio_rounded,
+              '语言' => Icons.language_rounded,
+              '语速' => Icons.speed_rounded,
+              _ => Icons.tune_rounded,
+            },
+          ),
+      ],
+      selected: _selected[index],
+    );
+    if (selected != null && mounted) {
+      setState(() => _selected[index] = selected);
+    }
+  }
+
   Future<void> _generate() async {
     final flow = context.read<CreatorFlowProvider>();
     if (flow.currentOrder == null) {
@@ -182,7 +232,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     setState(() => _busy = false);
     if (!mounted) return;
     if (ok) {
-      context.push('/submission');
+      context.push('/result');
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('算力不足，请先充值')));
@@ -265,12 +315,10 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        for (final model in widget.models)
-                          ChoiceChip(
-                            label: Text(model),
-                            selected: _model == model,
-                            onSelected: (_) => setState(() => _model = model),
-                          ),
+                        _ChoicePill(
+                          label: _model,
+                          onTap: _pickModel,
+                        ),
                       ],
                     ),
                     for (var i = 0; i < widget.choices.length; i++) ...[
@@ -280,13 +328,10 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          for (final value in widget.choices[i].values)
-                            ChoiceChip(
-                              label: Text(value),
-                              selected: _selected[i] == value,
-                              onSelected: (_) =>
-                                  setState(() => _selected[i] = value),
-                            ),
+                          _ChoicePill(
+                            label: _selected[i],
+                            onTap: () => _pickChoice(i),
+                          ),
                         ],
                       ),
                     ],
@@ -350,6 +395,49 @@ class _CreationFormPageState extends State<_CreationFormPage> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _ChoicePill extends StatelessWidget {
+  const _ChoicePill({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+        decoration: BoxDecoration(
+          color: AppColors.sage.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+          border: Border.all(
+            color: AppColors.sage.withValues(alpha: 0.34),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppColors.sage,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.expand_more_rounded,
+              size: 16,
+              color: AppColors.sage,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

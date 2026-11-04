@@ -13,13 +13,13 @@ class CreatorMainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   static const _items = [
-    _NavItem('接单', Icons.storefront_outlined, Icons.storefront_rounded),
+    _NavItem('课程', Icons.school_outlined, Icons.school_rounded),
     _NavItem(
-      '工作台',
-      Icons.dashboard_customize_outlined,
-      Icons.dashboard_customize_rounded,
+      '创作',
+      Icons.auto_awesome_outlined,
+      Icons.auto_awesome_rounded,
     ),
-    _NavItem('审核', Icons.fact_check_outlined, Icons.fact_check_rounded),
+    _NavItem('接单', Icons.storefront_outlined, Icons.storefront_rounded),
     _NavItem('我的', Icons.person_outline_rounded, Icons.person_rounded),
   ];
 

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import 'pages/course_center_page.dart';
+import 'pages/create_home_page.dart';
 import 'pages/creation_pages.dart';
 import 'pages/login_page.dart';
 import 'pages/main_shell_page.dart';
@@ -10,6 +12,7 @@ import 'pages/order_detail_page.dart';
 import 'pages/order_market_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/recharge_pages.dart';
+import 'pages/result_page.dart';
 import 'pages/review_status_page.dart';
 import 'pages/submission_page.dart';
 import 'pages/submissions_page.dart';
@@ -23,14 +26,14 @@ class CreatorRouter {
   final AuthProvider _auth;
 
   static final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'creator-root');
+  static final _courseKey = GlobalKey<NavigatorState>(
+    debugLabel: 'creator-course',
+  );
+  static final _createKey = GlobalKey<NavigatorState>(
+    debugLabel: 'creator-create',
+  );
   static final _marketKey = GlobalKey<NavigatorState>(
     debugLabel: 'creator-market',
-  );
-  static final _workbenchKey = GlobalKey<NavigatorState>(
-    debugLabel: 'creator-workbench',
-  );
-  static final _submissionsKey = GlobalKey<NavigatorState>(
-    debugLabel: 'creator-submissions',
   );
   static final _profileKey = GlobalKey<NavigatorState>(
     debugLabel: 'creator-profile',
@@ -44,7 +47,7 @@ class CreatorRouter {
       final loggedIn = _auth.isLoggedIn;
       final loggingIn = state.matchedLocation == '/login';
       if (!loggedIn && !loggingIn) return '/login';
-      if (loggedIn && loggingIn) return '/market';
+      if (loggedIn && loggingIn) return '/course';
       return null;
     },
     routes: [
@@ -56,6 +59,38 @@ class CreatorRouter {
         builder: (context, state, navigationShell) =>
             CreatorMainShell(navigationShell: navigationShell),
         branches: [
+          StatefulShellBranch(
+            navigatorKey: _courseKey,
+            routes: [
+              GoRoute(
+                path: '/course',
+                builder: (context, state) => const CourseCenterPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _createKey,
+            routes: [
+              GoRoute(
+                path: '/create',
+                builder: (context, state) => const CreateHomePage(),
+                routes: [
+                  GoRoute(
+                    path: 'image',
+                    builder: (context, state) => const CreateImagePage(),
+                  ),
+                  GoRoute(
+                    path: 'video',
+                    builder: (context, state) => const CreateVideoPage(),
+                  ),
+                  GoRoute(
+                    path: 'audio',
+                    builder: (context, state) => const CreateAudioPage(),
+                  ),
+                ],
+              ),
+            ],
+          ),
           StatefulShellBranch(
             navigatorKey: _marketKey,
             routes: [
@@ -74,32 +109,6 @@ class CreatorRouter {
             ],
           ),
           StatefulShellBranch(
-            navigatorKey: _workbenchKey,
-            routes: [
-              GoRoute(
-                path: '/workbench',
-                builder: (context, state) => const WorkbenchPage(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            navigatorKey: _submissionsKey,
-            routes: [
-              GoRoute(
-                path: '/submissions',
-                builder: (context, state) => const SubmissionsPage(),
-                routes: [
-                  GoRoute(
-                    path: ':submissionId',
-                    builder: (context, state) => WorkDetailPage(
-                      submissionId: state.pathParameters['submissionId']!,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
             navigatorKey: _profileKey,
             routes: [
               GoRoute(
@@ -111,20 +120,28 @@ class CreatorRouter {
         ],
       ),
       GoRoute(
-        path: '/create/image',
-        builder: (context, state) => const CreateImagePage(),
+        path: '/workbench',
+        builder: (context, state) => const WorkbenchPage(),
       ),
       GoRoute(
-        path: '/create/video',
-        builder: (context, state) => const CreateVideoPage(),
-      ),
-      GoRoute(
-        path: '/create/audio',
-        builder: (context, state) => const CreateAudioPage(),
+        path: '/submissions',
+        builder: (context, state) => const SubmissionsPage(),
+        routes: [
+          GoRoute(
+            path: ':submissionId',
+            builder: (context, state) => WorkDetailPage(
+              submissionId: state.pathParameters['submissionId']!,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/submission',
         builder: (context, state) => const SubmissionPage(),
+      ),
+      GoRoute(
+        path: '/result',
+        builder: (context, state) => const ResultPage(),
       ),
       GoRoute(
         path: '/review/:submissionId',
@@ -185,8 +202,8 @@ class _NotFoundPage extends StatelessWidget {
             Text(location, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 18),
             FilledButton(
-              onPressed: () => context.go('/market'),
-              child: const Text('返回接单大厅'),
+              onPressed: () => context.go('/course'),
+              child: const Text('返回首页'),
             ),
           ],
         ),
