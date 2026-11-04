@@ -31,7 +31,7 @@ class _OrderMarketPageState extends State<OrderMarketPage> {
     };
 
     return CreatorScreen(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       child: RefreshIndicator(
         onRefresh: () async =>
             Future<void>.delayed(const Duration(milliseconds: 450)),

@@ -16,7 +16,7 @@ class CourseCenterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return CreatorScreen(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 110),
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
       child: ListView(
         children: [
           Row(

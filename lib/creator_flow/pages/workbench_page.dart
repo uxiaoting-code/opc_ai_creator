@@ -18,7 +18,7 @@ class WorkbenchPage extends StatelessWidget {
 
     if (order == null) {
       return CreatorScreen(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 110),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: ListView(
           children: [
             Text('创作工作台', style: Theme.of(context).textTheme.headlineSmall),
@@ -41,7 +41,7 @@ class WorkbenchPage extends StatelessWidget {
     }
 
     return CreatorScreen(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       child: ListView(
         children: [
           Row(

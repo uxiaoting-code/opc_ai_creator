@@ -19,7 +19,7 @@ class CreatorProfilePage extends StatelessWidget {
     final user = auth.user;
 
     return CreatorScreen(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       child: ListView(
         children: [
           Row(
