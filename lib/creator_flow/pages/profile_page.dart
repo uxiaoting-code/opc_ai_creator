@@ -176,16 +176,16 @@ class CreatorProfilePage extends StatelessWidget {
                 onTap: () => context.go('/market'),
               ),
               _ToolTile(
-                icon: Icons.dashboard_customize_outlined,
-                label: '创作工作台',
-                color: const Color(0xFF7B8EC8),
-                onTap: () => context.go('/workbench'),
+                icon: Icons.auto_awesome_outlined,
+                label: '创作首页',
+                color: AppColors.sage,
+                onTap: () => context.go('/create'),
               ),
               _ToolTile(
-                icon: Icons.fact_check_outlined,
-                label: '审核记录',
+                icon: Icons.school_outlined,
+                label: '课程中心',
                 color: AppColors.gold,
-                onTap: () => context.go('/submissions'),
+                onTap: () => context.go('/course'),
               ),
               _ToolTile(
                 icon: Icons.bolt_rounded,
