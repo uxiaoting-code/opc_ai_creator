@@ -5,6 +5,61 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../widgets/creator_widgets.dart';
 
+const _courses = [
+  _CourseItem(
+    coverIndex: 0,
+    tag: '线下培训',
+    title: 'AI 电商创作训练营',
+    subtitle: '从商品图、短视频到数字人，完整跑通一条接单链路',
+    meta: '上海 · 第 6 期 · 12 月 12 日',
+    progress: 0.0,
+    action: '查看详情',
+    highlights: ['商品主图与提示词', '短视频与数字人', '接单实战与审核'],
+  ),
+  _CourseItem(
+    coverIndex: 1,
+    tag: '线上课程',
+    title: '商品主图：用对提示词，少改十版',
+    subtitle: '风格、光线、场景与比例的高效写法',
+    meta: '12 节 · 林老师',
+    progress: 0.35,
+    action: '继续学习',
+    highlights: ['光与影', '电商构图', '常见改稿问题'],
+  ),
+  _CourseItem(
+    coverIndex: 2,
+    tag: '线上课程',
+    title: '数字人口播：从文案到成片',
+    subtitle: '音色、口型与节奏的完整演示',
+    meta: '8 节 · 周老师',
+    progress: 0.0,
+    action: '开始学习',
+    highlights: ['口播文案', '数字人选择', '成片节奏'],
+  ),
+];
+
+class _CourseItem {
+  const _CourseItem({
+    required this.coverIndex,
+    required this.tag,
+    required this.title,
+    required this.subtitle,
+    required this.meta,
+    required this.progress,
+    required this.action,
+    required this.highlights,
+  });
+
+  final int coverIndex;
+  final String tag;
+  final String title;
+  final String subtitle;
+  final String meta;
+  final double progress;
+  final String action;
+  final List<String> highlights;
+}
+
 /// 原型中的「课程中心」一级 Tab。
 ///
 /// 当前课程数据由本地固定配置提供（真实课程后端尚未落地），
@@ -49,34 +104,19 @@ class CourseCenterPage extends StatelessWidget {
             subtitle: '课程内容当前为原型演示数据',
           ),
           const SizedBox(height: 12),
-          const _CourseCard(
-            coverIndex: 0,
-            tag: '线下培训',
-            title: 'AI 电商创作训练营',
-            subtitle: '从商品图、短视频到数字人，完整跑通一条接单链路',
-            meta: '上海 · 第 6 期 · 12 月 12 日',
-            progress: 0.0,
-            action: '查看详情',
+          _CourseCard(
+            course: _courses[0],
+            onTap: () => _showCourseDetail(context, _courses[0]),
           ),
           const SizedBox(height: 12),
-          const _CourseCard(
-            coverIndex: 1,
-            tag: '线上课程',
-            title: '商品主图：用对提示词，少改十版',
-            subtitle: '风格、光线、场景与比例的高效写法',
-            meta: '12 节 · 林老师',
-            progress: 0.35,
-            action: '继续学习',
+          _CourseCard(
+            course: _courses[1],
+            onTap: () => _showCourseDetail(context, _courses[1]),
           ),
           const SizedBox(height: 12),
-          const _CourseCard(
-            coverIndex: 2,
-            tag: '线上课程',
-            title: '数字人口播：从文案到成片',
-            subtitle: '音色、口型与节奏的完整演示',
-            meta: '8 节 · 周老师',
-            progress: 0.0,
-            action: '开始学习',
+          _CourseCard(
+            course: _courses[2],
+            onTap: () => _showCourseDetail(context, _courses[2]),
           ),
           const SizedBox(height: 18),
           GlassPanel(
@@ -99,6 +139,123 @@ class CourseCenterPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+void _showCourseDetail(BuildContext context, _CourseItem course) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _CourseDetailSheet(course: course),
+  );
+}
+
+class _CourseDetailSheet extends StatelessWidget {
+  const _CourseDetailSheet({required this.course});
+
+  final _CourseItem course;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FractionallySizedBox(
+      heightFactor: 0.72,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.warmBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.taupe.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(course.tag, style: theme.textTheme.bodySmall),
+                        const SizedBox(height: 5),
+                        Text(course.title, style: theme.textTheme.headlineSmall),
+                        const SizedBox(height: 6),
+                        Text(course.meta, style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '关闭',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                children: [
+                  Text(course.subtitle, style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: 18),
+                  Text('课程亮点', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 10),
+                  for (final highlight in course.highlights)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.sage,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              highlight,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '课程内容当前为原型演示数据，报名和考核暂未接入后端。',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.go('/create');
+                },
+                child: const Text('去创作'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -195,23 +352,10 @@ class _CourseBanner extends StatelessWidget {
 }
 
 class _CourseCard extends StatelessWidget {
-  const _CourseCard({
-    required this.coverIndex,
-    required this.tag,
-    required this.title,
-    required this.subtitle,
-    required this.meta,
-    required this.progress,
-    required this.action,
-  });
+  const _CourseCard({required this.course, required this.onTap});
 
-  final int coverIndex;
-  final String tag;
-  final String title;
-  final String subtitle;
-  final String meta;
-  final double progress;
-  final String action;
+  final _CourseItem course;
+  final VoidCallback onTap;
 
   static const _covers = [
     [Color(0xFF7C9A7E), Color(0xFFA9C3A6)],
@@ -222,9 +366,10 @@ class _CourseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cover = _covers[coverIndex % _covers.length];
+    final cover = _covers[course.coverIndex % _covers.length];
     return GlassPanel(
       padding: EdgeInsets.zero,
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -252,7 +397,7 @@ class _CourseCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
                     ),
                     child: Text(
-                      tag,
+                      course.tag,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -276,22 +421,22 @@ class _CourseCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: theme.textTheme.titleMedium),
+                Text(course.title, style: theme.textTheme.titleMedium),
                 const SizedBox(height: 5),
                 Text(
-                  subtitle,
+                  course.subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: 8),
-                Text(meta, style: theme.textTheme.bodySmall),
-                if (progress > 0) ...[
+                Text(course.meta, style: theme.textTheme.bodySmall),
+                if (course.progress > 0) ...[
                   const SizedBox(height: 10),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
                     child: LinearProgressIndicator(
-                      value: progress,
+                      value: course.progress,
                       minHeight: 6,
                       backgroundColor: AppColors.sageTint,
                     ),
@@ -302,8 +447,8 @@ class _CourseCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => context.go('/create'),
-                      child: Text(action),
+                      onPressed: onTap,
+                      child: Text(course.action),
                     ),
                   ],
                 ),

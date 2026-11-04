@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../creator_flow_provider.dart';
 import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
+import '../widgets/prototype_widgets.dart';
 import '../../widgets/premium/premium_mode_switch.dart';
 import '../../widgets/premium/premium_select_sheet.dart';
 
@@ -34,6 +35,50 @@ class _CreateHomePageState extends State<CreateHomePage> {
   static const _models = ['GPT-4o Image', 'DALL·E 3', '通义万相'];
   static const _ratios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
   static const _counts = [1, 2, 4, 6, 9];
+  static const _scenes = [
+    PrototypeScene(
+      icon: Icons.content_cut_rounded,
+      label: 'AI 抠图',
+      mode: CreationMode.image,
+      prompt: '去掉背景，输出透明 PNG',
+    ),
+    PrototypeScene(
+      icon: Icons.shopping_bag_outlined,
+      label: '商品宣传图',
+      mode: CreationMode.image,
+      prompt: '高级商品宣传图，突出产品质感',
+    ),
+    PrototypeScene(
+      icon: Icons.person_pin_circle_outlined,
+      label: '数字人播报',
+      mode: CreationMode.video,
+      prompt: '自然口播，亲和风格',
+    ),
+    PrototypeScene(
+      icon: Icons.image_search_rounded,
+      label: '主图换背景',
+      mode: CreationMode.image,
+      prompt: '替换背景，保持商品主体真实',
+    ),
+    PrototypeScene(
+      icon: Icons.description_outlined,
+      label: '详情页长图',
+      mode: CreationMode.image,
+      prompt: '电商详情页长图，信息清晰',
+    ),
+    PrototypeScene(
+      icon: Icons.record_voice_over_outlined,
+      label: '音频配音',
+      mode: CreationMode.audio,
+      prompt: '商品口播配音，语气自然',
+    ),
+  ];
+  static const _workItems = [
+    PrototypeWorkItem(CreationMode.image, 11),
+    PrototypeWorkItem(CreationMode.video, 17),
+    PrototypeWorkItem(CreationMode.image, 23),
+    PrototypeWorkItem(CreationMode.image, 29),
+  ];
 
   @override
   void dispose() {
@@ -155,7 +200,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
                 ),
                 if (order != null) ...[
                   const SizedBox(height: 16),
-                  _ActiveOrderBanner(
+                  PrototypeOrderBanner(
                     order: order,
                     onTap: () => context.go('/workbench'),
                   ),
@@ -185,7 +230,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
                   subtitle: '常用电商创作场景',
                 ),
                 const SizedBox(height: 12),
-                _SceneStrip(onTapScene: _openScene),
+                PrototypeSceneStrip(scenes: _scenes, onTap: _openScene),
                 const SizedBox(height: 22),
                 CreatorSectionHeader(
                   title: '最近作品',
@@ -195,7 +240,10 @@ class _CreateHomePageState extends State<CreateHomePage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const _RecentWorksGrid(),
+                PrototypeWorksGrid(
+                  items: _workItems,
+                  onTap: () => context.go('/profile'),
+                ),
               ],
             ),
           ),
@@ -212,13 +260,13 @@ class _CreateHomePageState extends State<CreateHomePage> {
     );
   }
 
-  void _openScene(CreationMode mode) {
-    final path = switch (mode) {
+  void _openScene(PrototypeScene scene) {
+    final path = switch (scene.mode) {
       CreationMode.image => '/create/image',
       CreationMode.video => '/create/video',
       CreationMode.audio => '/create/audio',
     };
-    context.push(path);
+    context.push(path, extra: scene.prompt);
   }
 }
 
@@ -395,45 +443,6 @@ class _QuickEntry extends StatelessWidget {
   }
 }
 
-class _ActiveOrderBanner extends StatelessWidget {
-  const _ActiveOrderBanner({required this.order, required this.onTap});
-
-  final MarketOrder order;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return GlassPanel(
-      onTap: onTap,
-      backgroundColor: AppColors.gold.withValues(alpha: 0.1),
-      borderColor: AppColors.gold.withValues(alpha: 0.28),
-      child: Row(
-        children: [
-          const Icon(Icons.timer_rounded, color: AppColors.gold, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('进行中的订单', style: theme.textTheme.bodySmall),
-                const SizedBox(height: 3),
-                Text(
-                  order.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall,
-                ),
-              ],
-            ),
-          ),
-          CreatorTag(label: '继续创作', color: AppColors.gold),
-        ],
-      ),
-    );
-  }
-}
-
 class _CreationHero extends StatelessWidget {
   const _CreationHero({
     required this.mode,
@@ -519,19 +528,35 @@ class _CreationHero extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _ParamPill(
+              PrototypeParamPill(
                 label: '模型',
                 value: model,
                 onTap: onModelTap,
               ),
               if (mode == CreationMode.image) ...[
-                _ParamPill(label: '比例', value: ratio, onTap: onRatioTap),
-                _ParamPill(label: '数量', value: '$count 张', onTap: onCountTap),
+                PrototypeParamPill(
+                  label: '比例',
+                  value: ratio,
+                  onTap: onRatioTap,
+                ),
+                PrototypeParamPill(
+                  label: '数量',
+                  value: '$count 张',
+                  onTap: onCountTap,
+                ),
               ],
               if (mode == CreationMode.video)
-                _ParamPill(label: '时长', value: '5s', onTap: onModelTap),
+                PrototypeParamPill(
+                  label: '时长',
+                  value: '5s',
+                  onTap: onModelTap,
+                ),
               if (mode == CreationMode.audio)
-                _ParamPill(label: '音色', value: '温柔女声', onTap: onModelTap),
+                PrototypeParamPill(
+                  label: '音色',
+                  value: '温柔女声',
+                  onTap: onModelTap,
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -550,49 +575,6 @@ class _CreationHero extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ParamPill extends StatelessWidget {
-  const _ParamPill({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(width: 5),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppColors.charcoal,
-              ),
-            ),
-            const SizedBox(width: 3),
-            const Icon(Icons.expand_more_rounded, size: 16, color: AppColors.taupe),
-          ],
-        ),
       ),
     );
   }
@@ -645,100 +627,3 @@ class _VideoRefSlot extends StatelessWidget {
   }
 }
 
-class _SceneStrip extends StatelessWidget {
-  const _SceneStrip({required this.onTapScene});
-
-  final ValueChanged<CreationMode> onTapScene;
-
-  @override
-  Widget build(BuildContext context) {
-    final scenes = [
-      (Icons.content_cut_rounded, 'AI 抠图', CreationMode.image),
-      (Icons.shopping_bag_outlined, '商品宣传图', CreationMode.image),
-      (Icons.person_pin_circle_outlined, '数字人播报', CreationMode.video),
-      (Icons.image_search_rounded, '主图换背景', CreationMode.image),
-      (Icons.description_outlined, '详情页长图', CreationMode.image),
-      (Icons.record_voice_over_outlined, '音频配音', CreationMode.audio),
-    ];
-    return SizedBox(
-      height: 86,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: scenes.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final scene = scenes[index];
-          return InkWell(
-            onTap: () => onTapScene(scene.$3),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            child: Container(
-              width: 76,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
-                boxShadow: AppColors.shadowSoft,
-              ),
-              child: Column(
-                children: [
-                  Icon(scene.$1, color: AppColors.sage, size: 23),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      scene.$2,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(fontSize: 11),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _RecentWorksGrid extends StatelessWidget {
-  const _RecentWorksGrid();
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      (CreationMode.image, 11),
-      (CreationMode.video, 17),
-      (CreationMode.image, 23),
-      (CreationMode.image, 29),
-    ];
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.86,
-      ),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-          child: ArtworkPreview(
-            mode: item.$1,
-            seed: item.$2,
-            height: 210,
-            showLabel: true,
-            onTap: () => context.go('/profile'),
-          ),
-        );
-      },
-    );
-  }
-}

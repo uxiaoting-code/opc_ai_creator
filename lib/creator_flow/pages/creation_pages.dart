@@ -10,15 +10,18 @@ import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
 
 class CreateImagePage extends StatelessWidget {
-  const CreateImagePage({super.key});
+  const CreateImagePage({super.key, this.initialPrompt});
+
+  final String? initialPrompt;
 
   @override
   Widget build(BuildContext context) {
-    return const _CreationFormPage(
+    return _CreationFormPage(
       mode: CreationMode.image,
       title: '文生图',
       defaultModel: 'GPT-4o Image',
       promptHint: '例如：春季香水瓶，奶油色背景，柔和自然光，高级电商广告质感',
+      initialPrompt: initialPrompt ?? '',
       models: ['GPT-4o Image', 'DALL·E 3', '通义万相'],
       choices: [
         _ChoiceGroup('画面风格', ['高级留白', '自然光', '场景化', '极简']),
@@ -30,15 +33,18 @@ class CreateImagePage extends StatelessWidget {
 }
 
 class CreateVideoPage extends StatelessWidget {
-  const CreateVideoPage({super.key});
+  const CreateVideoPage({super.key, this.initialPrompt});
+
+  final String? initialPrompt;
 
   @override
   Widget build(BuildContext context) {
-    return const _CreationFormPage(
+    return _CreationFormPage(
       mode: CreationMode.video,
       title: '图生视频',
       defaultModel: '可灵 Kling',
       promptHint: '例如：咖啡机缓慢旋转，蒸汽升起，镜头平稳推进，暖色生活场景',
+      initialPrompt: initialPrompt ?? '',
       models: ['可灵 Kling', 'Runway Gen-3', '即梦 Jimeng'],
       choices: [
         _ChoiceGroup('镜头运动', ['平稳推进', '环绕展示', '拉近特写', '固定镜头']),
@@ -51,15 +57,18 @@ class CreateVideoPage extends StatelessWidget {
 }
 
 class CreateAudioPage extends StatelessWidget {
-  const CreateAudioPage({super.key});
+  const CreateAudioPage({super.key, this.initialPrompt});
+
+  final String? initialPrompt;
 
   @override
   Widget build(BuildContext context) {
-    return const _CreationFormPage(
+    return _CreationFormPage(
       mode: CreationMode.audio,
       title: '生成音频',
       defaultModel: '温柔女声',
       promptHint: '输入需要配音的商品文案，例如：欢迎来到花漾美妆直播间……',
+      initialPrompt: initialPrompt ?? '',
       models: ['温柔女声', '磁性男声', '活力主播', '多语言女声'],
       choices: [
         _ChoiceGroup('语言', ['中文', 'English', '日本語']),
@@ -84,6 +93,7 @@ class _CreationFormPage extends StatefulWidget {
     required this.title,
     required this.defaultModel,
     required this.promptHint,
+    this.initialPrompt = '',
     required this.models,
     required this.choices,
     this.showReference = false,
@@ -94,6 +104,7 @@ class _CreationFormPage extends StatefulWidget {
   final String title;
   final String defaultModel;
   final String promptHint;
+  final String initialPrompt;
   final List<String> models;
   final List<_ChoiceGroup> choices;
   final bool showReference;
@@ -113,7 +124,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   @override
   void initState() {
     super.initState();
-    _prompt = TextEditingController();
+    _prompt = TextEditingController(text: widget.initialPrompt);
     _model = widget.defaultModel;
     _selected = [for (final group in widget.choices) group.values.first];
   }

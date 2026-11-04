@@ -77,15 +77,21 @@ class CreatorRouter {
                 routes: [
                   GoRoute(
                     path: 'image',
-                    builder: (context, state) => const CreateImagePage(),
+                    builder: (context, state) => CreateImagePage(
+                      initialPrompt: state.extra is String ? state.extra as String : null,
+                    ),
                   ),
                   GoRoute(
                     path: 'video',
-                    builder: (context, state) => const CreateVideoPage(),
+                    builder: (context, state) => CreateVideoPage(
+                      initialPrompt: state.extra is String ? state.extra as String : null,
+                    ),
                   ),
                   GoRoute(
                     path: 'audio',
-                    builder: (context, state) => const CreateAudioPage(),
+                    builder: (context, state) => CreateAudioPage(
+                      initialPrompt: state.extra is String ? state.extra as String : null,
+                    ),
                   ),
                 ],
               ),
