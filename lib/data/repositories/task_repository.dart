@@ -64,6 +64,39 @@ class TaskRepository {
     );
   }
 
+  /// 提交文本转音频任务。
+  ///
+  /// 后端用 Mock 或配置化 TTS Provider 生成 WAV/MP3，返回的任务与图片/视频
+  /// 任务共用同一套状态轮询。
+  Future<TaskModel> createTextToAudio({
+    int? skillId,
+    required String prompt,
+    required String voiceCode,
+    required String language,
+    double speed = 1.0,
+    String format = 'MP3',
+    int? orderId,
+  }) async {
+    final json = await _api.post<Map<String, dynamic>>(
+      ApiEndpoints.textToAudio,
+      body: {
+        'skillId': ?skillId,
+        'prompt': prompt,
+        'voiceCode': voiceCode,
+        'language': language,
+        'speed': speed,
+        'format': format,
+        'orderId': ?orderId,
+      },
+      parser: (data) => Map<String, dynamic>.from(data as Map),
+    );
+
+    if (json == null) {
+      throw const ApiException(message: '服务端未返回音频任务，请稍后重试');
+    }
+    return TaskModel.fromJson(json);
+  }
+
   /// 两个创作接口的请求体结构完全一样，差异只在路径，
   /// 所以共用这一个实现。
   ///

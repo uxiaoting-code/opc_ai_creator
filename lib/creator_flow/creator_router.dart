@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../data/models/task_model.dart';
 import 'pages/course_center_page.dart';
 import 'pages/create_home_page.dart';
 import 'pages/creation_pages.dart';
@@ -147,7 +148,9 @@ class CreatorRouter {
       ),
       GoRoute(
         path: '/result',
-        builder: (context, state) => const ResultPage(),
+        builder: (context, state) => ResultPage(
+          initialTask: state.extra is TaskModel ? state.extra as TaskModel : null,
+        ),
       ),
       GoRoute(
         path: '/review/:submissionId',

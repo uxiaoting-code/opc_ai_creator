@@ -1,122 +1,247 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/config/app_config.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../data/models/task_model.dart';
+import '../../data/repositories/task_repository.dart';
 import '../creator_flow_provider.dart';
-import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
 
 /// 原型中的「生成结果」页。
 ///
-/// 生成成功后的第一站：展示结果摘要、模型与耗时、操作栏，
-/// 以及把作品提交到当前订单的主按钮。
-class ResultPage extends StatelessWidget {
-  const ResultPage({super.key});
+/// 进入页面时带一个刚创建的 [TaskModel]，随后每 3 秒轮询一次任务状态，
+/// 直到后端标记 `finished`，成功后展示真实 `resultUrl`。
+class ResultPage extends StatefulWidget {
+  const ResultPage({super.key, this.initialTask});
+
+  final TaskModel? initialTask;
+
+  @override
+  State<ResultPage> createState() => _ResultPageState();
+}
+
+class _ResultPageState extends State<ResultPage> {
+  TaskModel? _task;
+  Timer? _timer;
+  String? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _task = widget.initialTask;
+    _loading = _task == null;
+    if (_task != null) {
+      _schedulePoll();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _schedulePoll() {
+    _timer?.cancel();
+    _timer = Timer(AppConfig.taskPollInterval, _poll);
+  }
+
+  Future<void> _poll() async {
+    final task = _task;
+    if (task == null || !mounted) return;
+    try {
+      final fresh = await context.read<TaskRepository>().fetchDetail(task.id);
+      if (!mounted) return;
+      setState(() {
+        _task = fresh;
+        _loading = false;
+        _error = null;
+      });
+      if (!fresh.finished) {
+        _schedulePoll();
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
+      _schedulePoll();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final flow = context.watch<CreatorFlowProvider>();
-    final draft = flow.draft;
     final order = flow.currentOrder;
+    final task = _task;
 
     return CreatorScreen(
       title: '生成结果',
       onBack: () => context.pop(),
       padding: EdgeInsets.zero,
-      child: draft == null
-          ? _EmptyResult(
-              onBack: () => context.go('/create'),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    children: [
-                      if (order != null) _OrderContextBar(order: order),
-                      _PromptSummary(draft: draft),
-                      const SizedBox(height: 12),
-                      _ResultMeta(draft: draft),
-                      const SizedBox(height: 14),
-                      _ResultViewer(draft: draft),
-                      const SizedBox(height: 18),
-                      const CreatorSectionHeader(title: '试试这些微调'),
-                      const SizedBox(height: 10),
-                      _RefineRow(mode: draft.mode),
-                    ],
-                  ),
-                ),
-                CreatorBottomAction(
-                  label: order == null ? '完成' : '提交到订单',
-                  icon: order == null
-                      ? Icons.check_rounded
-                      : Icons.task_alt_rounded,
-                  caption: order == null
-                      ? '本次生成未绑定接单订单'
-                      : '完成后提交至 ${order.brand} · ${order.title}',
-                  onPressed: () {
-                    if (order == null) {
-                      context.go('/create');
-                    } else {
-                      context.push('/submission');
-                    }
-                  },
-                ),
+      child: _buildBody(context, task, order),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    TaskModel? task,
+    dynamic order,
+  ) {
+    if (_loading && task == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (task == null) {
+      return EmptyPanel(
+        icon: Icons.image_not_supported_outlined,
+        title: '还没有生成结果',
+        subtitle: '请先选择一个创作模式并完成一次生成。',
+        actionLabel: '返回创作首页',
+        onAction: () => context.go('/create'),
+      );
+    }
+
+    final succeeded = task.status == TaskStatus.success && task.hasResult;
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              _TaskStatusBanner(task: task),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                _ErrorBanner(message: _error!),
               ],
-            ),
+              const SizedBox(height: 12),
+              _PromptSummary(prompt: task.prompt),
+              const SizedBox(height: 12),
+              _ResultMeta(task: task),
+              const SizedBox(height: 14),
+              _ResultViewer(task: task),
+              if (succeeded) ...[
+                const SizedBox(height: 18),
+                const CreatorSectionHeader(title: '试试这些微调'),
+                const SizedBox(height: 10),
+                _RefineRow(task: task),
+              ],
+            ],
+          ),
+        ),
+        CreatorBottomAction(
+          label: task.finished
+              ? (order != null ? '提交到订单' : '完成')
+              : '生成中…',
+          icon: task.finished
+              ? Icons.task_alt_rounded
+              : Icons.hourglass_top_rounded,
+          caption: task.displayStatusLabel,
+          onPressed: task.finished
+              ? () {
+                  if (order != null) {
+                    context.push('/submission');
+                  } else {
+                    context.go('/create');
+                  }
+                }
+              : null,
+        ),
+      ],
     );
   }
 }
 
-class _OrderContextBar extends StatelessWidget {
-  const _OrderContextBar({required this.order});
+class _TaskStatusBanner extends StatelessWidget {
+  const _TaskStatusBanner({required this.task});
 
-  final MarketOrder order;
+  final TaskModel task;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: GlassPanel(
-        backgroundColor: AppColors.sage.withValues(alpha: 0.08),
-        borderColor: AppColors.sage.withValues(alpha: 0.2),
-        child: Row(
-          children: [
-            CreationModeIcon(mode: order.mode, size: 42),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '任务：${order.brand} · ${order.mode.shortLabel}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    order.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                ],
-              ),
+    final isRunning = task.status.isActive;
+    final color = switch (task.status) {
+      TaskStatus.success => AppColors.sage,
+      TaskStatus.failed => AppColors.statusFailed,
+      TaskStatus.canceled => AppColors.taupe,
+      _ => AppColors.gold,
+    };
+    return GlassPanel(
+      backgroundColor: color.withValues(alpha: 0.08),
+      borderColor: color.withValues(alpha: 0.22),
+      child: Row(
+        children: [
+          Icon(
+            switch (task.status) {
+              TaskStatus.success => Icons.check_circle_rounded,
+              TaskStatus.failed => Icons.cancel_rounded,
+              TaskStatus.canceled => Icons.remove_circle_outline_rounded,
+              _ => Icons.schedule_rounded,
+            },
+            color: color,
+            size: 28,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(task.displayStatusLabel, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 3),
+                Text(
+                  isRunning ? '任务正在后台生成，页面会自动刷新' : '任务已完成',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.taupe),
-          ],
-        ),
+          ),
+          if (isRunning)
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.2),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassPanel(
+      backgroundColor: AppColors.statusFailed.withValues(alpha: 0.07),
+      borderColor: AppColors.statusFailed.withValues(alpha: 0.2),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, color: AppColors.statusFailed),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(message, style: Theme.of(context).textTheme.bodySmall),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _PromptSummary extends StatelessWidget {
-  const _PromptSummary({required this.draft});
+  const _PromptSummary({required this.prompt});
 
-  final GeneratedDraft draft;
+  final String? prompt;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +253,7 @@ class _PromptSummary extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              draft.prompt.isEmpty ? '（未填写创作描述）' : draft.prompt,
+              prompt?.isNotEmpty == true ? prompt! : '（未填写创作描述）',
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall,
@@ -141,152 +266,164 @@ class _PromptSummary extends StatelessWidget {
 }
 
 class _ResultMeta extends StatelessWidget {
-  const _ResultMeta({required this.draft});
+  const _ResultMeta({required this.task});
 
-  final GeneratedDraft draft;
+  final TaskModel task;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       children: [
         Expanded(
           child: CreatorMetric(
             label: '模型',
-            value: draft.model,
+            value: task.skillName ?? task.provider ?? task.typeLabel ?? '—',
             icon: Icons.auto_awesome_rounded,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: CreatorMetric(
-            label: '实际消耗',
-            value: '${_cost(draft.mode)} 算力',
-            icon: Icons.bolt_rounded,
+            label: '任务号',
+            value: task.taskNo,
+            icon: Icons.tag_rounded,
             accent: AppColors.gold,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: CreatorMetric(
-            label: '生成耗时',
-            value: '3.2s',
+            label: '耗时',
+            value: task.durationLabel ?? '生成中',
             icon: Icons.timer_outlined,
-            accent: theme.colorScheme.primary,
           ),
         ),
       ],
     );
   }
-
-  int _cost(CreationMode mode) => switch (mode) {
-    CreationMode.image => 12,
-    CreationMode.video => 48,
-    CreationMode.audio => 8,
-  };
 }
 
-class _ResultViewer extends StatefulWidget {
-  const _ResultViewer({required this.draft});
+class _ResultViewer extends StatelessWidget {
+  const _ResultViewer({required this.task});
 
-  final GeneratedDraft draft;
-
-  @override
-  State<_ResultViewer> createState() => _ResultViewerState();
-}
-
-class _ResultViewerState extends State<_ResultViewer> {
-  int _index = 0;
+  final TaskModel task;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ArtworkPreview(
-          mode: widget.draft.mode,
-          seed: widget.draft.artworkSeed + _index,
-          height: 320,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(4, (index) {
-            final selected = index == _index;
-            return GestureDetector(
-              onTap: () => setState(() => _index = index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: selected ? 22 : 8,
-                height: 8,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                decoration: BoxDecoration(
-                  color: selected ? AppColors.sage : AppColors.divider,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                ),
-              ),
+    final url = task.displayImageUrl;
+    if (task.status == TaskStatus.success && url != null) {
+      if (task.type == TaskType.textToAudio) {
+        return _AudioResult(url: url);
+      }
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
+        child: Image.network(
+          AppConfig.resolveAssetUrl(url),
+          height: 340,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              height: 340,
+              alignment: Alignment.center,
+              color: AppColors.sageTint,
+              child: const CircularProgressIndicator(),
             );
-          }),
-        ),
-        const SizedBox(height: 14),
-        const _ResultActions(),
-      ],
-    );
-  }
-}
-
-class _ResultActions extends StatelessWidget {
-  const _ResultActions();
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = [
-      (Icons.download_rounded, '下载'),
-      (Icons.refresh_rounded, '重生'),
-      (Icons.hd_rounded, '高清'),
-      (Icons.photo_filter_rounded, '参考'),
-      (Icons.share_rounded, '分享'),
-    ];
-    return Row(
-      children: [
-        for (final action in actions)
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(content: Text('${action.$2}：演示功能，接入真实结果后开放')),
-                  );
-              },
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  children: [
-                    Icon(action.$1, color: AppColors.sage, size: 20),
-                    const SizedBox(height: 5),
-                    Text(
-                      action.$2,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
+          },
+          errorBuilder: (context, error, stack) => Container(
+            height: 340,
+            alignment: Alignment.center,
+            color: AppColors.sageTint,
+            child: const Icon(
+              Icons.broken_image_outlined,
+              size: 48,
+              color: AppColors.taupe,
             ),
           ),
-      ],
+        ),
+      );
+    }
+
+    return Container(
+      height: 320,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.sageTint,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (task.status.isActive)
+            const CircularProgressIndicator()
+          else
+            Icon(
+              task.status == TaskStatus.failed
+                  ? Icons.error_outline_rounded
+                  : Icons.hourglass_empty_rounded,
+              size: 48,
+              color: AppColors.taupe,
+            ),
+          const SizedBox(height: 14),
+          Text(
+            task.errorMsg ?? '结果生成后会显示在这里',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AudioResult extends StatelessWidget {
+  const _AudioResult({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: AppColors.goldGradient,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 52),
+          const SizedBox(height: 12),
+          Text(
+            '音频已生成',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            url,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _RefineRow extends StatelessWidget {
-  const _RefineRow({required this.mode});
+  const _RefineRow({required this.task});
 
-  final CreationMode mode;
+  final TaskModel task;
 
   @override
   Widget build(BuildContext context) {
-    final chips = mode == CreationMode.image
+    final chips = task.type == TaskType.textToImage
         ? ['换成暖光', '加模特', '换背景色', '生成视频']
         : ['更慢一点', '换背景', '加字幕', '重新生成'];
     return Wrap(
@@ -303,23 +440,6 @@ class _RefineRow extends StatelessWidget {
             },
           ),
       ],
-    );
-  }
-}
-
-class _EmptyResult extends StatelessWidget {
-  const _EmptyResult({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyPanel(
-      icon: Icons.image_not_supported_outlined,
-      title: '还没有生成结果',
-      subtitle: '请先选择一个创作模式并完成一次生成。',
-      actionLabel: '返回创作首页',
-      onAction: onBack,
     );
   }
 }

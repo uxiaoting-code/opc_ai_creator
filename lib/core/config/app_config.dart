@@ -206,6 +206,7 @@ class ApiEndpoints {
   // --- 创作 ---
   static const String textToImage = '/creation/text-to-image';
   static const String imageToVideo = '/creation/image-to-video';
+  static const String textToAudio = '/creation/text-to-audio';
 
   // --- 素材库 ---
   static const String materials = '/materials';

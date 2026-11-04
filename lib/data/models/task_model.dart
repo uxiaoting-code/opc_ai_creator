@@ -43,7 +43,8 @@ enum TaskStatus {
 /// 任务类型，对应后端 `t_ai_task.type`。
 enum TaskType {
   textToImage('TEXT_TO_IMAGE', '文生图'),
-  imageToVideo('IMAGE_TO_VIDEO', '图生视频');
+  imageToVideo('IMAGE_TO_VIDEO', '图生视频'),
+  textToAudio('TEXT_TO_AUDIO', '文本转音频');
 
   const TaskType(this.value, this.label);
 

@@ -4,6 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/utils/media_utils.dart';
+import '../../data/models/task_model.dart';
+import '../../data/repositories/material_repository.dart';
+import '../../data/repositories/task_repository.dart';
 import '../../widgets/premium/premium_select_sheet.dart';
 import '../creator_flow_provider.dart';
 import '../models/creator_models.dart';
@@ -119,7 +124,8 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   late String _model;
   late final List<String> _selected;
   bool _busy = false;
-  bool _hasReference = true;
+  bool _pickingReference = false;
+  String? _refImageUrl;
 
   @override
   void initState() {
@@ -190,64 +196,114 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     }
   }
 
-  Future<void> _generate() async {
-    final flow = context.read<CreatorFlowProvider>();
-    if (flow.currentOrder == null) {
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('尚未接单'),
-          content: const Text('请先从接单大厅选择任务，再进入工作台创作。'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                context.go('/market');
-              },
-              child: const Text('去接单'),
-            ),
-          ],
-        ),
+  Future<void> _pickReference() async {
+    final materialRepository = context.read<MaterialRepository>();
+    final file = await MediaUtils.pickImageFromGallery();
+    if (file == null) {
+      if (MediaUtils.lastErrorMessage != null) {
+        _showError(MediaUtils.lastErrorMessage!);
+      }
+      return;
+    }
+
+    final bytes = await MediaUtils.readBytes(file);
+    if (bytes == null) {
+      _showError(MediaUtils.lastErrorMessage ?? '读取图片失败');
+      return;
+    }
+
+    setState(() => _pickingReference = true);
+    try {
+      final url = await materialRepository.uploadImage(
+        bytes: bytes,
+        filename: MediaUtils.fileNameOf(file),
       );
+      if (!mounted) return;
+      setState(() => _refImageUrl = url);
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _pickingReference = false);
+    }
+  }
+
+  Future<void> _generate() async {
+    final prompt = _prompt.text.trim();
+    if (prompt.isEmpty) {
+      _showError('请先输入创作描述');
       return;
     }
-    if (_prompt.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('请先输入创作描述')));
-      return;
-    }
-    if (widget.showReference && !_hasReference) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('视频生成需要先添加一张参考图')));
+    if (widget.showReference && _refImageUrl == null) {
+      _showError('视频生成需要先上传一张参考图');
       return;
     }
 
     setState(() => _busy = true);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    final options = <String, String>{
-      for (var i = 0; i < widget.choices.length; i++)
-        widget.choices[i].label: _selected[i],
-      if (widget.showReference) '参考图': _hasReference ? '商品示例图' : '未添加',
-    };
-    final ok = flow.createDraft(
-      mode: widget.mode,
-      prompt: _prompt.text.trim(),
-      model: _model,
-      options: options,
-    );
-    setState(() => _busy = false);
-    if (!mounted) return;
-    if (ok) {
-      context.push('/result');
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('算力不足，请先充值')));
+    try {
+      final repository = context.read<TaskRepository>();
+      final TaskModel task;
+      switch (widget.mode) {
+        case CreationMode.image:
+          task = await repository.createTextToImage(prompt: prompt);
+        case CreationMode.video:
+          task = await repository.createImageToVideo(
+            prompt: prompt,
+            refImageUrl: _refImageUrl!,
+          );
+        case CreationMode.audio:
+          task = await repository.createTextToAudio(
+            prompt: prompt,
+            voiceCode: _voiceCode,
+            language: _languageCode,
+            speed: _audioSpeed,
+            format: _audioFormat,
+          );
+      }
+      if (!mounted) return;
+      context.push('/result', extra: task);
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
+  }
+
+  String get _voiceCode => switch (_model) {
+    '温柔女声' => 'warm_female',
+    '磁性男声' => 'deep_male',
+    '活力主播' => 'lively_host',
+    '多语言女声' => 'multilingual_female',
+    _ => 'warm_female',
+  };
+
+  String get _languageCode {
+    if (widget.choices.isEmpty) return 'zh-CN';
+    return switch (_selected[0]) {
+      'English' => 'en-US',
+      '日本語' => 'ja-JP',
+      _ => 'zh-CN',
+    };
+  }
+
+  double get _audioSpeed {
+    if (widget.choices.length < 2) return 1.0;
+    return switch (_selected[1]) {
+      '慢速' => 0.75,
+      '快速' => 1.25,
+      _ => 1.0,
+    };
+  }
+
+  String get _audioFormat {
+    if (widget.choices.length < 3) return 'MP3';
+    return _selected[2] == 'WAV' ? 'WAV' : 'MP3';
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -300,9 +356,9 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                       const SizedBox(height: 18),
                       const FormFieldLabel('参考图', required: true),
                       _ReferenceImageCard(
-                        active: _hasReference,
-                        onTap: () =>
-                            setState(() => _hasReference = !_hasReference),
+                        active: _refImageUrl != null,
+                        busy: _pickingReference,
+                        onTap: _pickReference,
                       ),
                     ],
                     const SizedBox(height: 18),
@@ -454,15 +510,20 @@ class _ChoicePill extends StatelessWidget {
 }
 
 class _ReferenceImageCard extends StatelessWidget {
-  const _ReferenceImageCard({required this.active, required this.onTap});
+  const _ReferenceImageCard({
+    required this.active,
+    required this.busy,
+    required this.onTap,
+  });
 
   final bool active;
+  final bool busy;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: busy ? null : onTap,
       child: Container(
         height: 120,
         decoration: BoxDecoration(
@@ -476,34 +537,38 @@ class _ReferenceImageCard extends StatelessWidget {
                 : AppColors.divider,
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              active
-                  ? Icons.check_circle_rounded
-                  : Icons.add_photo_alternate_outlined,
-              color: active ? AppColors.sage : AppColors.taupe,
-              size: 32,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  active ? '商品示例图已添加' : '点击添加参考图',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  active ? '再次点击可移除' : '支持 JPG / PNG',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ],
-        ),
+        child: busy
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    active
+                        ? Icons.check_circle_rounded
+                        : Icons.add_photo_alternate_outlined,
+                    color: active ? AppColors.sage : AppColors.taupe,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        active ? '参考图已上传' : '点击上传参考图',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        active ? '可重新上传替换' : '支持 JPG / PNG，最大 10MB',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
       ),
     );
   }
