@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/network/api_client.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
 import '../../providers/auth_provider.dart';
-import '../creator_flow_provider.dart';
-import '../models/creator_models.dart';
+import '../data/creator_order_repository.dart';
+import '../models/creator_order.dart';
 import '../widgets/creator_widgets.dart';
 
 class OrderMarketPage extends StatefulWidget {
@@ -17,24 +18,66 @@ class OrderMarketPage extends StatefulWidget {
 }
 
 class _OrderMarketPageState extends State<OrderMarketPage> {
+  late final CreatorOrderRepository _repository;
+  final List<CreatorOrder> _orders = [];
   int _filter = 0;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _repository = CreatorOrderRepository(context.read<ApiClient>());
+    if (_orders.isEmpty && !_loading) {
+      _load();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final page = await _repository.fetchAvailable(pageSize: 50);
+      if (!mounted) return;
+      setState(() {
+        _orders
+          ..clear()
+          ..addAll(page.list);
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  List<CreatorOrder> get _visible {
+    return switch (_filter) {
+      1 => _orders.where((o) => o.mediaType == OrderMediaType.image).toList(),
+      2 => _orders.where((o) => o.mediaType == OrderMediaType.video).toList(),
+      3 => _orders.where((o) => o.mediaType == OrderMediaType.audio).toList(),
+      _ => _orders,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
-    final flow = context.watch<CreatorFlowProvider>();
     final auth = context.watch<AuthProvider>();
-    final filtered = switch (_filter) {
-      1 => flow.orders.where((o) => o.mode == CreationMode.image).toList(),
-      2 => flow.orders.where((o) => o.mode == CreationMode.video).toList(),
-      3 => flow.orders.where((o) => o.mode == CreationMode.audio).toList(),
-      _ => flow.orders,
-    };
+    final visible = _visible;
 
     return CreatorScreen(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       child: RefreshIndicator(
-        onRefresh: () async =>
-            Future<void>.delayed(const Duration(milliseconds: 450)),
+        onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -69,70 +112,9 @@ class _OrderMarketPageState extends State<OrderMarketPage> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.bolt_rounded,
-                        size: 16,
-                        color: AppColors.gold,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${flow.credits.toStringAsFixed(0)} 算力',
-                        style: const TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
-            const SizedBox(height: 22),
-            CreatorHeroCard(
-              eyebrow: 'CREATOR MARKET',
-              title: '接一个订单，\\n开始今天的创作。',
-              subtitle: '图片、视频、音频三类订单持续更新，按你的创作能力自由选择。',
-              trailing: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${flow.orders.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    '可接订单',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (flow.currentOrder != null) ...[
-              const SizedBox(height: 16),
-              _ActiveOrderCard(
-                order: flow.currentOrder!,
-                onTap: () => context.go('/workbench'),
-              ),
-            ],
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             CreatorSectionHeader(
               title: '接单大厅',
               subtitle: '选择一个适合你的真实创作需求',
@@ -148,15 +130,28 @@ class _OrderMarketPageState extends State<OrderMarketPage> {
               onChanged: (index) => setState(() => _filter = index),
             ),
             const SizedBox(height: 14),
-            if (filtered.isEmpty)
+            if (_loading && visible.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null && visible.isEmpty)
+              EmptyPanel(
+                icon: Icons.error_outline_rounded,
+                title: '订单加载失败',
+                subtitle: _error!,
+                actionLabel: '重新加载',
+                onAction: _load,
+              )
+            else if (visible.isEmpty)
               const EmptyPanel(
                 icon: Icons.inbox_outlined,
                 title: '暂无符合条件的订单',
                 subtitle: '切换分类看看其他创作需求。',
               )
             else
-              for (final order in filtered) ...[
-                OrderCard(
+              for (final order in visible) ...[
+                _ApiOrderCard(
                   order: order,
                   onTap: () => context.push('/market/${order.id}'),
                 ),
@@ -169,44 +164,97 @@ class _OrderMarketPageState extends State<OrderMarketPage> {
   }
 }
 
-class _ActiveOrderCard extends StatelessWidget {
-  const _ActiveOrderCard({required this.order, required this.onTap});
+class _ApiOrderCard extends StatelessWidget {
+  const _ApiOrderCard({required this.order, required this.onTap});
 
-  final MarketOrder order;
+  final CreatorOrder order;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return GlassPanel(
       onTap: onTap,
-      backgroundColor: AppColors.sage.withValues(alpha: 0.08),
-      borderColor: AppColors.sage.withValues(alpha: 0.24),
-      child: Row(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.play_circle_fill_rounded,
-            color: AppColors.sage,
-            size: 30,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('进行中的订单', style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 4),
-                Text(
-                  order.title,
-                  style: Theme.of(context).textTheme.titleSmall,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MediaIcon(type: order.mediaType),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(order.title, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${order.brandName} · ${order.mediaType.label} · 剩余 ${order.tasksLeft} 个名额',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Text(
+                '¥${order.rewardYuan.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: AppColors.sage,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-          const CreatorTag(label: '继续创作', color: AppColors.sage),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.sage),
+          const SizedBox(height: 12),
+          Text(
+            order.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(height: 1.55),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              CreatorTag(label: order.status.label, color: AppColors.sage),
+              const Spacer(),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 13,
+                color: AppColors.taupe,
+              ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _MediaIcon extends StatelessWidget {
+  const _MediaIcon({required this.type});
+
+  final OrderMediaType type;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color) = switch (type) {
+      OrderMediaType.image => (Icons.image_outlined, AppColors.sage),
+      OrderMediaType.video => (Icons.movie_filter_outlined, AppColors.gold),
+      OrderMediaType.audio => (
+        Icons.graphic_eq_rounded,
+        AppColors.primaryDark,
+      ),
+    };
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Icon(icon, color: color, size: 21),
     );
   }
 }

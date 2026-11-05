@@ -208,6 +208,11 @@ class ApiEndpoints {
   static const String imageToVideo = '/creation/image-to-video';
   static const String textToAudio = '/creation/text-to-audio';
 
+  // --- 接单市场 ---
+  static const String ordersAvailable = '/orders/available';
+  static String orderDetail(int id) => '/orders/$id';
+  static String orderAccept(int id) => '/orders/$id/accept';
+
   // --- 素材库 ---
   static const String materials = '/materials';
   static String materialDetail(int id) => '/materials/$id';

@@ -15,9 +15,10 @@ import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
 
 class CreateImagePage extends StatelessWidget {
-  const CreateImagePage({super.key, this.initialPrompt});
+  const CreateImagePage({super.key, this.initialPrompt, this.orderId});
 
   final String? initialPrompt;
+  final int? orderId;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +28,7 @@ class CreateImagePage extends StatelessWidget {
       defaultModel: 'GPT-4o Image',
       promptHint: '例如：春季香水瓶，奶油色背景，柔和自然光，高级电商广告质感',
       initialPrompt: initialPrompt ?? '',
+      orderId: orderId,
       models: ['GPT-4o Image', 'DALL·E 3', '通义万相'],
       choices: [
         _ChoiceGroup('画面风格', ['高级留白', '自然光', '场景化', '极简']),
@@ -39,9 +41,10 @@ class CreateImagePage extends StatelessWidget {
 }
 
 class CreateVideoPage extends StatelessWidget {
-  const CreateVideoPage({super.key, this.initialPrompt});
+  const CreateVideoPage({super.key, this.initialPrompt, this.orderId});
 
   final String? initialPrompt;
+  final int? orderId;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +54,7 @@ class CreateVideoPage extends StatelessWidget {
       defaultModel: '可灵 Kling',
       promptHint: '例如：咖啡机缓慢旋转，蒸汽升起，镜头平稳推进，暖色生活场景',
       initialPrompt: initialPrompt ?? '',
+      orderId: orderId,
       models: ['可灵 Kling', 'Runway Gen-3', '即梦 Jimeng'],
       choices: [
         _ChoiceGroup('镜头运动', ['平稳推进', '环绕展示', '拉近特写', '固定镜头']),
@@ -63,9 +67,10 @@ class CreateVideoPage extends StatelessWidget {
 }
 
 class CreateAudioPage extends StatelessWidget {
-  const CreateAudioPage({super.key, this.initialPrompt});
+  const CreateAudioPage({super.key, this.initialPrompt, this.orderId});
 
   final String? initialPrompt;
+  final int? orderId;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +80,7 @@ class CreateAudioPage extends StatelessWidget {
       defaultModel: '温柔女声',
       promptHint: '输入需要配音的商品文案，例如：欢迎来到花漾美妆直播间……',
       initialPrompt: initialPrompt ?? '',
+      orderId: orderId,
       models: ['温柔女声', '磁性男声', '活力主播', '多语言女声'],
       choices: [
         _ChoiceGroup('语言', ['中文', 'English', '日本語']),
@@ -100,6 +106,7 @@ class _CreationFormPage extends StatefulWidget {
     required this.defaultModel,
     required this.promptHint,
     this.initialPrompt = '',
+    this.orderId,
     required this.models,
     required this.choices,
     this.showReference = false,
@@ -112,6 +119,7 @@ class _CreationFormPage extends StatefulWidget {
   final String defaultModel;
   final String promptHint;
   final String initialPrompt;
+  final int? orderId;
   final List<String> models;
   final List<_ChoiceGroup> choices;
   final bool showReference;
@@ -250,11 +258,13 @@ class _CreationFormPageState extends State<_CreationFormPage> {
           task = await repository.createTextToImage(
             prompt: prompt,
             refImageUrl: _refImageUrl,
+            orderId: widget.orderId,
           );
         case CreationMode.video:
           task = await repository.createImageToVideo(
             prompt: prompt,
             refImageUrl: _refImageUrl!,
+            orderId: widget.orderId,
           );
         case CreationMode.audio:
           task = await repository.createTextToAudio(
@@ -263,6 +273,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
             language: _languageCode,
             speed: _audioSpeed,
             format: _audioFormat,
+            orderId: widget.orderId,
           );
       }
       if (!mounted) return;

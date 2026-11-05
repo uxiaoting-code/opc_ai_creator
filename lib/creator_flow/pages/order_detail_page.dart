@@ -2,185 +2,259 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/network/api_client.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
-import '../creator_flow_provider.dart';
-import '../models/creator_models.dart';
+import '../data/creator_order_repository.dart';
+import '../models/creator_order.dart';
 import '../widgets/creator_widgets.dart';
 
-class OrderDetailPage extends StatelessWidget {
+class OrderDetailPage extends StatefulWidget {
   const OrderDetailPage({super.key, required this.orderId});
 
   final String orderId;
 
   @override
-  Widget build(BuildContext context) {
-    final flow = context.watch<CreatorFlowProvider>();
-    final order = flow.orderById(orderId);
-    if (order == null) {
-      return CreatorScreen(
-        title: '订单详情',
-        onBack: () => context.pop(),
-        child: const EmptyPanel(
-          icon: Icons.search_off_rounded,
-          title: '订单不存在',
-          subtitle: '该订单可能已经下架。',
-        ),
-      );
+  State<OrderDetailPage> createState() => _OrderDetailPageState();
+}
+
+class _OrderDetailPageState extends State<OrderDetailPage> {
+  late final CreatorOrderRepository _repository;
+  CreatorOrderDetail? _detail;
+  bool _loading = true;
+  bool _accepting = false;
+  String? _error;
+
+  int? get _id => int.tryParse(widget.orderId);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _repository = CreatorOrderRepository(context.read<ApiClient>());
+    if (_detail == null && _error == null && !_loading) {
+      _load();
     }
+  }
 
-    final isCurrent = flow.currentOrder?.id == order.id;
-    final canAccept = order.status == MarketOrderStatus.open || isCurrent;
-    final title = isCurrent ? '进入工作台' : '立即接单';
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
 
+  Future<void> _load() async {
+    final id = _id;
+    if (id == null) {
+      setState(() {
+        _error = '订单 ID 不合法';
+        _loading = false;
+      });
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final detail = await _repository.fetchDetail(id);
+      if (!mounted) return;
+      setState(() => _detail = detail);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _acceptAndCreate(CreatorOrder order) async {
+    setState(() => _accepting = true);
+    try {
+      await _repository.accept(order.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('接单成功，进入创作')));
+      _openCreation(order);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _accepting = false);
+    }
+  }
+
+  void _openCreation(CreatorOrder order) {
+    final path = switch (order.mediaType) {
+      OrderMediaType.image => '/create/image',
+      OrderMediaType.video => '/create/video',
+      OrderMediaType.audio => '/create/audio',
+    };
+    context.go(path, extra: CreatorCreationArgs(orderId: order.id));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = _detail;
     return CreatorScreen(
       title: '订单详情',
       onBack: () => context.pop(),
       padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              children: [
-                CreatorHeroCard(
-                  eyebrow: '${order.brand} · ${order.mode.shortLabel}',
-                  title: order.title,
-                  subtitle: order.description,
-                  trailing: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '¥${order.reward.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        '订单报酬',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
+      child: _buildBody(detail),
+    );
+  }
+
+  Widget _buildBody(CreatorOrderDetail? detail) {
+    if (_loading && detail == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (detail == null || _error != null) {
+      return EmptyPanel(
+        icon: Icons.search_off_rounded,
+        title: '订单加载失败',
+        subtitle: _error ?? '该订单可能已经下架。',
+        actionLabel: '重新加载',
+        onAction: _load,
+      );
+    }
+
+    final order = detail.order;
+    final accepted = detail.myAcceptance != null;
+    final canAccept = detail.canAccept;
+    final buttonLabel = accepted
+        ? '继续创作'
+        : (canAccept ? '立即接单' : '当前不可接单');
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              CreatorHeroCard(
+                eyebrow: '${order.brandName} · ${order.mediaType.label}',
+                title: order.title,
+                subtitle: order.description,
+                trailing: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: CreatorMetric(
-                        label: '截止时间',
-                        value: order.deadline.replaceFirst('剩余 ', ''),
-                        icon: Icons.schedule_rounded,
-                        accent: AppColors.gold,
+                    Text(
+                      '¥${order.rewardYuan.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CreatorMetric(
-                        label: '剩余名额',
-                        value: '${order.tasksLeft} 个',
-                        icon: Icons.groups_2_outlined,
+                    Text(
+                      '订单报酬',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontSize: 10,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                CreatorSectionHeader(title: '订单要求'),
-                const SizedBox(height: 10),
-                GlassPanel(
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < order.requirements.length; i++) ...[
-                        Row(
-                          children: [
-                            Container(
-                              width: 22,
-                              height: 22,
-                              alignment: Alignment.center,
-                              decoration: const BoxDecoration(
-                                color: AppColors.sageTint,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '${i + 1}',
-                                style: const TextStyle(
-                                  color: AppColors.sage,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: CreatorMetric(
+                      label: '截止时间',
+                      value: _deadlineLabel(order.deadlineAt),
+                      icon: Icons.schedule_rounded,
+                      accent: AppColors.gold,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: CreatorMetric(
+                      label: '剩余名额',
+                      value: '${order.tasksLeft} 个',
+                      icon: Icons.groups_2_outlined,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const CreatorSectionHeader(title: '订单要求'),
+              const SizedBox(height: 10),
+              GlassPanel(
+                child: Column(
+                  children: [
+                    for (var i = 0; i < order.requirements.length; i++) ...[
+                      Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: AppColors.sageTint,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                color: AppColors.sage,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                order.requirements[i],
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (i != order.requirements.length - 1)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 10),
-                            child: Divider(),
                           ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                CreatorSectionHeader(
-                  title: '创作工作台',
-                  subtitle: '接单后进入工作台完成作品并提交审核',
-                ),
-                const SizedBox(height: 10),
-                GlassPanel(
-                  child: Row(
-                    children: [
-                      CreationModeIcon(mode: order.mode, size: 49),
-                      const SizedBox(width: 13),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              order.mode.label,
-                              style: Theme.of(context).textTheme.titleSmall,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              order.requirements[i],
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '本次生成预计消耗 ${order.creditCost} 算力',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      CreatorTag(label: '工作台已就绪', color: AppColors.sage),
+                      if (i != order.requirements.length - 1)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          child: Divider(),
+                        ),
                     ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          CreatorBottomAction(
-            label: title,
-            icon: isCurrent
-                ? Icons.dashboard_customize_rounded
-                : Icons.shopping_bag_outlined,
-            caption: canAccept ? '接单后可随时回到工作台继续创作' : '该订单当前不可接取',
-            onPressed: canAccept
-                ? () {
-                    if (!isCurrent) flow.acceptOrder(order.id);
-                    context.go('/workbench');
+        ),
+        CreatorBottomAction(
+          label: _accepting ? '接单中…' : buttonLabel,
+          icon: accepted
+              ? Icons.auto_awesome_rounded
+              : Icons.shopping_bag_outlined,
+          caption: accepted
+              ? '已接单，可进入创作并提交作品'
+              : (canAccept ? '接单后直接进入对应创作页' : detail.unavailableReason),
+          onPressed: _accepting || !canAccept && !accepted
+              ? null
+              : () {
+                  if (accepted) {
+                    _openCreation(order);
+                  } else {
+                    _acceptAndCreate(order);
                   }
-                : null,
-          ),
-        ],
-      ),
+                },
+        ),
+      ],
     );
+  }
+
+  String _deadlineLabel(DateTime? time) {
+    if (time == null) return '—';
+    final now = DateTime.now();
+    final diff = time.difference(now);
+    if (diff.isNegative) return '已截止';
+    final hours = diff.inHours;
+    if (hours < 24) return '${diff.inHours + 1} 小时内';
+    return '${diff.inDays + 1} 天';
   }
 }

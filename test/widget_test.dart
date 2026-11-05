@@ -121,10 +121,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       expect(find.text('接单大厅'), findsOneWidget);
-      expect(find.text('春季香水商品主图套组'), findsOneWidget);
     });
 
-    testWidgets('登录后可以查看订单并接单进入工作台', (tester) async {
+    testWidgets('登录后可以进入接单大厅', (tester) async {
       usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp(loggedIn: true));
       await tester.pump();
@@ -134,39 +133,20 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      await tester.tap(find.text('春季香水商品主图套组').first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-      expect(find.text('订单要求'), findsOneWidget);
-      expect(find.text('立即接单'), findsOneWidget);
-
-      await tester.tap(find.text('立即接单'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-
-      expect(find.text('创作工作台'), findsOneWidget);
-      expect(find.text('图片生成'), findsOneWidget);
-      expect(find.text('视频生成'), findsOneWidget);
-      expect(find.text('音频生成'), findsOneWidget);
+      expect(find.text('接单大厅'), findsOneWidget);
     });
 
-    testWidgets('工作台能打开文生图页面且小屏幕不溢出', (tester) async {
+    testWidgets('创作首页可以打开文生图页面且小屏幕不溢出', (tester) async {
       usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp(loggedIn: true));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      await tester.tap(find.text('接单'));
+      await tester.tap(find.text('创作'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      await tester.tap(find.text('春季香水商品主图套组').first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.tap(find.text('立即接单'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.tap(find.text('图片生成'));
+      await tester.tap(find.text('✦  开始生成').first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 

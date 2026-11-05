@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -81,50 +82,60 @@ class PrototypeSceneStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 86,
-      child: ListView.separated(
-        primary: false,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        clipBehavior: Clip.none,
-        itemCount: scenes.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final scene = scenes[index];
-          return InkWell(
-            onTap: () => onTap(scene),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            child: Container(
-              width: 76,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
-                boxShadow: AppColors.shadowSoft,
-              ),
-              child: Column(
-                children: [
-                  Icon(scene.icon, color: AppColors.sage, size: 23),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      scene.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+          PointerDeviceKind.stylus,
+        },
+      ),
+      child: SizedBox(
+        height: 86,
+        child: ListView.separated(
+          primary: false,
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          clipBehavior: Clip.none,
+          itemCount: scenes.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            final scene = scenes[index];
+            return InkWell(
+              onTap: () => onTap(scene),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              child: Container(
+                width: 76,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
+                  boxShadow: AppColors.shadowSoft,
+                ),
+                child: Column(
+                  children: [
+                    Icon(scene.icon, color: AppColors.sage, size: 23),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        scene.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

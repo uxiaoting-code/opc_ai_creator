@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../data/models/task_model.dart';
+import 'models/creator_order.dart';
 import 'pages/course_center_page.dart';
 import 'pages/create_home_page.dart';
 import 'pages/creator_works_page.dart';
@@ -21,6 +22,12 @@ import 'pages/submissions_page.dart';
 import 'pages/work_detail_page.dart';
 import 'pages/workbench_page.dart';
 import 'pages/withdraw_pages.dart';
+
+CreatorCreationArgs _creationArgs(Object? extra) {
+  if (extra is CreatorCreationArgs) return extra;
+  if (extra is String) return CreatorCreationArgs(prompt: extra);
+  return const CreatorCreationArgs();
+}
 
 class CreatorRouter {
   CreatorRouter(this._auth);
@@ -79,21 +86,33 @@ class CreatorRouter {
                 routes: [
                   GoRoute(
                     path: 'image',
-                    builder: (context, state) => CreateImagePage(
-                      initialPrompt: state.extra is String ? state.extra as String : null,
-                    ),
+                    builder: (context, state) {
+                      final args = _creationArgs(state.extra);
+                      return CreateImagePage(
+                        initialPrompt: args.prompt,
+                        orderId: args.orderId,
+                      );
+                    },
                   ),
                   GoRoute(
                     path: 'video',
-                    builder: (context, state) => CreateVideoPage(
-                      initialPrompt: state.extra is String ? state.extra as String : null,
-                    ),
+                    builder: (context, state) {
+                      final args = _creationArgs(state.extra);
+                      return CreateVideoPage(
+                        initialPrompt: args.prompt,
+                        orderId: args.orderId,
+                      );
+                    },
                   ),
                   GoRoute(
                     path: 'audio',
-                    builder: (context, state) => CreateAudioPage(
-                      initialPrompt: state.extra is String ? state.extra as String : null,
-                    ),
+                    builder: (context, state) {
+                      final args = _creationArgs(state.extra);
+                      return CreateAudioPage(
+                        initialPrompt: args.prompt,
+                        orderId: args.orderId,
+                      );
+                    },
                   ),
                 ],
               ),

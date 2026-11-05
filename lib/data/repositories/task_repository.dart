@@ -36,6 +36,7 @@ class TaskRepository {
     required String prompt,
     String? negativePrompt,
     String? refImageUrl,
+    int? orderId,
   }) {
     return _create(
       ApiEndpoints.textToImage,
@@ -43,6 +44,7 @@ class TaskRepository {
       prompt: prompt,
       negativePrompt: negativePrompt,
       refImageUrl: refImageUrl,
+      orderId: orderId,
     );
   }
 
@@ -56,6 +58,7 @@ class TaskRepository {
     required String prompt,
     String? negativePrompt,
     required String refImageUrl,
+    int? orderId,
   }) {
     return _create(
       ApiEndpoints.imageToVideo,
@@ -63,6 +66,7 @@ class TaskRepository {
       prompt: prompt,
       negativePrompt: negativePrompt,
       refImageUrl: refImageUrl,
+      orderId: orderId,
     );
   }
 
@@ -110,6 +114,7 @@ class TaskRepository {
     required String prompt,
     String? negativePrompt,
     String? refImageUrl,
+    int? orderId,
   }) async {
     final json = await _api.post<Map<String, dynamic>>(
       path,
@@ -118,6 +123,7 @@ class TaskRepository {
         'prompt': prompt,
         'negativePrompt': ?negativePrompt,
         'refImageUrl': ?refImageUrl,
+        'orderId': ?orderId,
       },
       parser: (data) => Map<String, dynamic>.from(data as Map),
     );
