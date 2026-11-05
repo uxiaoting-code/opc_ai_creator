@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -38,6 +39,9 @@ public class OrderService {
     private static final Set<AcceptanceStatus> ACTIVE_STATUSES = EnumSet.of(
             AcceptanceStatus.ACCEPTED,
             AcceptanceStatus.SUBMITTED,
+            AcceptanceStatus.REJECTED);
+    private static final Set<AcceptanceStatus> RELEASABLE_STATUSES = EnumSet.of(
+            AcceptanceStatus.ACCEPTED,
             AcceptanceStatus.REJECTED);
 
     private final MarketOrderRepository marketOrderRepository;
@@ -97,16 +101,18 @@ public class OrderService {
      */
     @Transactional
     public AcceptOrderResponse acceptOrder(Long userId, Long orderId) {
+        LocalDateTime now = LocalDateTime.now();
+        cancelExpiredActiveAcceptances(userId, now);
+
         if (acceptanceRepository.existsByOrderIdAndUserId(orderId, userId)) {
             throw new BizException(ErrorCode.ORDER_ALREADY_ACCEPTED);
         }
-        if (acceptanceRepository.existsByUserIdAndStatusIn(userId, ACTIVE_STATUSES)) {
+        if (hasBlockingActiveAcceptance(userId, now)) {
             throw new BizException(ErrorCode.ORDER_ACTIVE_EXISTS);
         }
 
         MarketOrder order = marketOrderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new BizException(ErrorCode.ORDER_NOT_FOUND));
-        LocalDateTime now = LocalDateTime.now();
         validateForAccept(order, now);
 
         // 锁内再次检查，防止两个并发请求在加锁前都通过预检查。
@@ -185,9 +191,6 @@ public class OrderService {
             MarketOrder order,
             OrderAcceptance acceptance,
             LocalDateTime now) {
-        if (acceptance != null) {
-            return "你已经接过该订单";
-        }
         if (order.getStatus() != MarketOrderStatus.OPEN) {
             return "当前订单不可接取";
         }
@@ -197,10 +200,43 @@ public class OrderService {
         if (order.isFull()) {
             return "该订单名额已满";
         }
-        if (acceptanceRepository.existsByUserIdAndStatusIn(userId, ACTIVE_STATUSES)) {
+        if (acceptance != null) {
+            return "你已经接过该订单";
+        }
+        if (hasBlockingActiveAcceptance(userId, now)) {
             return "你已有进行中的接单，请先完成或放弃";
         }
         return null;
+    }
+
+    private void cancelExpiredActiveAcceptances(Long userId, LocalDateTime now) {
+        List<OrderAcceptance> active = acceptanceRepository.findByUserIdAndStatusIn(
+                userId, RELEASABLE_STATUSES);
+        boolean changed = false;
+        for (OrderAcceptance acceptance : active) {
+            MarketOrder order = marketOrderRepository.findById(acceptance.getOrderId()).orElse(null);
+            if (order == null || order.isExpired(now)
+                    || order.getStatus() == MarketOrderStatus.CLOSED) {
+                acceptance.setStatus(AcceptanceStatus.CANCELLED);
+                changed = true;
+            }
+        }
+        if (changed) {
+            acceptanceRepository.saveAll(active);
+        }
+    }
+
+    private boolean hasBlockingActiveAcceptance(Long userId, LocalDateTime now) {
+        List<OrderAcceptance> active = acceptanceRepository.findByUserIdAndStatusIn(
+                userId, ACTIVE_STATUSES);
+        for (OrderAcceptance acceptance : active) {
+            MarketOrder order = marketOrderRepository.findById(acceptance.getOrderId()).orElse(null);
+            if (order != null && !order.isExpired(now)
+                    && order.getStatus() != MarketOrderStatus.CLOSED) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private MarketOrder getOrder(Long orderId) {

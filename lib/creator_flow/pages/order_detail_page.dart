@@ -130,7 +130,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     final canAccept = detail.canAccept;
     final buttonLabel = accepted
         ? '继续创作'
-        : (canAccept ? '立即接单' : '当前不可接单');
+        : (canAccept ? '立即接单' : '暂不可接');
 
     return Column(
       children: [
@@ -184,6 +184,28 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   ),
                 ],
               ),
+              if (!accepted && !canAccept && detail.unavailableReason != null) ...[
+                const SizedBox(height: 14),
+                GlassPanel(
+                  backgroundColor: AppColors.gold.withValues(alpha: 0.08),
+                  borderColor: AppColors.gold.withValues(alpha: 0.22),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.gold,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          detail.unavailableReason!,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               const CreatorSectionHeader(title: '订单要求'),
               const SizedBox(height: 10),

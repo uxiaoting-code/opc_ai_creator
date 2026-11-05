@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -18,6 +19,10 @@ public interface OrderAcceptanceRepository extends JpaRepository<OrderAcceptance
     boolean existsByOrderIdAndUserId(Long orderId, Long userId);
 
     boolean existsByUserIdAndStatusIn(Long userId, Collection<AcceptanceStatus> statuses);
+
+    List<OrderAcceptance> findByUserIdAndStatusIn(
+            Long userId,
+            Collection<AcceptanceStatus> statuses);
 
     Page<OrderAcceptance> findByUserIdAndStatusOrderByCreatedAtDesc(
             Long userId, AcceptanceStatus status, Pageable pageable);

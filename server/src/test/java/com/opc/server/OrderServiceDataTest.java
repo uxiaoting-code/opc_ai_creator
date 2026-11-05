@@ -105,6 +105,46 @@ class OrderServiceDataTest {
     }
 
     @Test
+    void expiredAcceptanceDoesNotBlockNewOrder() {
+        MarketOrder expired = saveOrder(
+                "MO-T-010", MediaType.IMAGE, 5, 0, LocalDateTime.now().plusHours(2));
+        MarketOrder next = saveOrder(
+                "MO-T-011", MediaType.VIDEO, 5, 0, LocalDateTime.now().plusHours(2));
+        orderService.acceptOrder(1L, expired.getId());
+
+        expired.setDeadlineAt(LocalDateTime.now().minusMinutes(1));
+        marketOrderRepository.save(expired);
+
+        var result = orderService.acceptOrder(1L, next.getId());
+
+        assertThat(result.acceptance().status()).isEqualTo(AcceptanceStatus.ACCEPTED);
+        assertThat(acceptanceRepository.findByOrderIdAndUserId(expired.getId(), 1L)
+                .orElseThrow()
+                .getStatus())
+                .isEqualTo(AcceptanceStatus.CANCELLED);
+    }
+
+    @Test
+    void expiredSubmittedAcceptanceDoesNotBlockNewOrder() {
+        MarketOrder expired = saveOrder(
+                "MO-T-012", MediaType.IMAGE, 5, 0, LocalDateTime.now().plusHours(2));
+        MarketOrder next = saveOrder(
+                "MO-T-013", MediaType.VIDEO, 5, 0, LocalDateTime.now().plusHours(2));
+        orderService.acceptOrder(1L, expired.getId());
+
+        var acceptance = acceptanceRepository.findByOrderIdAndUserId(expired.getId(), 1L)
+                .orElseThrow();
+        acceptance.setStatus(AcceptanceStatus.SUBMITTED);
+        acceptanceRepository.save(acceptance);
+        expired.setDeadlineAt(LocalDateTime.now().minusMinutes(1));
+        marketOrderRepository.save(expired);
+
+        var result = orderService.acceptOrder(1L, next.getId());
+
+        assertThat(result.acceptance().status()).isEqualTo(AcceptanceStatus.ACCEPTED);
+    }
+
+    @Test
     void rejectsExpiredOrder() {
         MarketOrder order = saveOrder("MO-T-007", MediaType.IMAGE, 5, 0, LocalDateTime.now().minusMinutes(1));
 
