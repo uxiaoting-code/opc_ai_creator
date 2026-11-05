@@ -84,7 +84,10 @@ class PrototypeSceneStrip extends StatelessWidget {
     return SizedBox(
       height: 86,
       child: ListView.separated(
+        primary: false,
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        clipBehavior: Clip.none,
         itemCount: scenes.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {

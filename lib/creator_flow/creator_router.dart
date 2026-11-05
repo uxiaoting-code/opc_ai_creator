@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../data/models/task_model.dart';
 import 'pages/course_center_page.dart';
 import 'pages/create_home_page.dart';
+import 'pages/creator_works_page.dart';
 import 'pages/creation_pages.dart';
 import 'pages/login_page.dart';
 import 'pages/main_shell_page.dart';
@@ -151,6 +152,10 @@ class CreatorRouter {
         builder: (context, state) => ResultPage(
           initialTask: state.extra is TaskModel ? state.extra as TaskModel : null,
         ),
+      ),
+      GoRoute(
+        path: '/works',
+        builder: (context, state) => const CreatorWorksPage(),
       ),
       GoRoute(
         path: '/review/:submissionId',

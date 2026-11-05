@@ -72,6 +72,18 @@ class _CreateHomePageState extends State<CreateHomePage> {
       mode: CreationMode.audio,
       prompt: '商品口播配音，语气自然',
     ),
+    PrototypeScene(
+      icon: Icons.accessibility_new_rounded,
+      label: '模特上身',
+      mode: CreationMode.image,
+      prompt: '虚拟模特上身展示，保持服装版型真实',
+    ),
+    PrototypeScene(
+      icon: Icons.translate_rounded,
+      label: '跨境翻译图',
+      mode: CreationMode.image,
+      prompt: '跨境电商主图本地化，翻译商品卖点',
+    ),
   ];
   static const _workItems = [
     PrototypeWorkItem(CreationMode.image, 11),
@@ -196,7 +208,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
                   onCourse: () => context.go('/course'),
                   onMarket: () => context.go('/market'),
                   onProfile: () => context.go('/profile'),
-                  onWorks: () => context.go('/profile'),
+                  onWorks: () => context.push('/works'),
                 ),
                 if (order != null) ...[
                   const SizedBox(height: 16),
@@ -227,7 +239,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
                 const SizedBox(height: 22),
                 const CreatorSectionHeader(
                   title: '创作工具',
-                  subtitle: '常用电商创作场景',
+                  subtitle: '左右滑动查看更多电商场景',
                 ),
                 const SizedBox(height: 12),
                 PrototypeSceneStrip(scenes: _scenes, onTap: _openScene),
@@ -235,14 +247,14 @@ class _CreateHomePageState extends State<CreateHomePage> {
                 CreatorSectionHeader(
                   title: '最近作品',
                   action: TextButton(
-                    onPressed: () => context.go('/profile'),
+                    onPressed: () => context.push('/works'),
                     child: const Text('全部 ›'),
                   ),
                 ),
                 const SizedBox(height: 12),
                 PrototypeWorksGrid(
                   items: _workItems,
-                  onTap: () => context.go('/profile'),
+                  onTap: () => context.push('/works'),
                 ),
               ],
             ),
