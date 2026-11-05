@@ -12,7 +12,6 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/media_utils.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/task_repository.dart';
-import '../creator_flow_provider.dart';
 import '../widgets/creator_widgets.dart';
 
 /// 原型中的「生成结果」页。
@@ -113,23 +112,17 @@ class _ResultPageState extends State<ResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    final flow = context.watch<CreatorFlowProvider>();
-    final order = flow.currentOrder;
     final task = _task;
 
     return CreatorScreen(
       title: '生成结果',
       onBack: () => context.pop(),
       padding: EdgeInsets.zero,
-      child: _buildBody(context, task, order),
+      child: _buildBody(context, task),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    TaskModel? task,
-    dynamic order,
-  ) {
+  Widget _buildBody(BuildContext context, TaskModel? task) {
     if (_loading && task == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -180,7 +173,7 @@ class _ResultPageState extends State<ResultPage> {
         ),
         CreatorBottomAction(
           label: task.finished
-              ? (order != null ? '提交到订单' : '完成')
+              ? (task.orderId != null ? '提交到订单' : '完成')
               : '生成中…',
           icon: task.finished
               ? Icons.task_alt_rounded
@@ -188,8 +181,8 @@ class _ResultPageState extends State<ResultPage> {
           caption: task.displayStatusLabel,
           onPressed: task.finished
               ? () {
-                  if (order != null) {
-                    context.push('/submission');
+                  if (task.orderId != null) {
+                    context.push('/submission', extra: task);
                   } else {
                     context.go('/create');
                   }

@@ -80,6 +80,8 @@ class TaskModel {
     required this.type,
     required this.status,
     this.typeLabel,
+    this.orderId,
+    this.acceptanceId,
     this.skillId,
     this.skillName,
     this.skillCode,
@@ -113,6 +115,8 @@ class TaskModel {
 
   /// 类型中文名（后端给）
   final String? typeLabel;
+  final int? orderId;
+  final int? acceptanceId;
 
   /// 使用的 Skill 线路
   final int? skillId;
@@ -202,6 +206,8 @@ class TaskModel {
       taskNo: json['taskNo'] as String? ?? '',
       type: TaskType.fromValue(json['type'] as String?),
       typeLabel: json['typeLabel'] as String?,
+      orderId: (json['orderId'] as num?)?.toInt(),
+      acceptanceId: (json['acceptanceId'] as num?)?.toInt(),
       skillId: (json['skillId'] as num?)?.toInt(),
       skillName: json['skillName'] as String?,
       skillCode: json['skillCode'] as String?,
@@ -233,6 +239,8 @@ class TaskModel {
         'taskNo': taskNo,
         'type': type.value,
         'typeLabel': typeLabel,
+        'orderId': orderId,
+        'acceptanceId': acceptanceId,
         'skillId': skillId,
         'skillName': skillName,
         'skillCode': skillCode,

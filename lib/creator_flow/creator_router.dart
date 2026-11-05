@@ -164,7 +164,9 @@ class CreatorRouter {
       ),
       GoRoute(
         path: '/submission',
-        builder: (context, state) => const SubmissionPage(),
+        builder: (context, state) => SubmissionPage(
+          initialTask: state.extra is TaskModel ? state.extra as TaskModel : null,
+        ),
       ),
       GoRoute(
         path: '/result',

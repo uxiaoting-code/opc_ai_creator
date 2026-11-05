@@ -213,6 +213,11 @@ class ApiEndpoints {
   static String orderDetail(int id) => '/orders/$id';
   static String orderAccept(int id) => '/orders/$id/accept';
 
+  // --- 作品提交与审核 ---
+  static const String submissions = '/submissions';
+  static String submissionDetail(int id) => '/submissions/$id';
+  static String submissionResult(int id) => '/submissions/$id/result';
+
   // --- 素材库 ---
   static const String materials = '/materials';
   static String materialDetail(int id) => '/materials/$id';

@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/config/app_config.dart';
+import '../../core/network/api_client.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
-import '../creator_flow_provider.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../data/models/task_model.dart';
+import '../data/creator_submission_repository.dart';
+import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
 
 class SubmissionPage extends StatefulWidget {
-  const SubmissionPage({super.key});
+  const SubmissionPage({super.key, this.initialTask});
+
+  final TaskModel? initialTask;
 
   @override
   State<SubmissionPage> createState() => _SubmissionPageState();
@@ -23,9 +31,13 @@ class _SubmissionPageState extends State<SubmissionPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_initialized) return;
-    final flow = context.read<CreatorFlowProvider>();
-    final order = flow.currentOrder;
-    _title.text = order == null ? '' : '${order.title} · 最终稿';
+    final task = widget.initialTask;
+    if (task != null) {
+      final prompt = (task.prompt ?? '').trim();
+      _title.text = prompt.isEmpty
+          ? '作品 ${task.taskNo}'
+          : (prompt.length > 24 ? '${prompt.substring(0, 24)}…' : prompt);
+    }
     _initialized = true;
   }
 
@@ -37,28 +49,39 @@ class _SubmissionPageState extends State<SubmissionPage> {
   }
 
   Future<void> _submit() async {
-    setState(() => _submitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    final item = context.read<CreatorFlowProvider>().submitDraft(
-      title: _title.text,
-      note: _note.text,
-    );
-    setState(() => _submitting = false);
-    if (!mounted) return;
-    if (item == null) {
+    final task = widget.initialTask;
+    if (task == null || task.orderId == null) return;
+    if (_title.text.trim().isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('作品草稿已失效，请重新生成')));
+          .showSnackBar(const SnackBar(content: Text('请填写作品标题')));
       return;
     }
-    context.go('/review/${item.id}');
+
+    setState(() => _submitting = true);
+    try {
+      final submission = await CreatorSubmissionRepository(
+        context.read<ApiClient>(),
+      ).submit(
+        orderId: task.orderId!,
+        taskId: task.id,
+        title: _title.text.trim(),
+        note: _note.text.trim(),
+      );
+      if (!mounted) return;
+      context.go('/review/${submission.id}');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final flow = context.watch<CreatorFlowProvider>();
-    final draft = flow.draft;
-    if (draft == null) {
+    final task = widget.initialTask;
+    if (task == null || task.orderId == null || task.status != TaskStatus.success) {
       return CreatorScreen(
         title: '提交作品',
         onBack: () => context.pop(),
@@ -68,9 +91,9 @@ class _SubmissionPageState extends State<SubmissionPage> {
             EmptyPanel(
               icon: Icons.drafts_outlined,
               title: '没有待提交的作品',
-              subtitle: '请先在工作台生成一份作品。',
-              actionLabel: '返回工作台',
-              onAction: () => context.go('/workbench'),
+              subtitle: '请先生成一条成功且绑定订单的任务。',
+              actionLabel: '返回创作',
+              onAction: () => context.go('/create'),
             ),
             const Spacer(),
           ],
@@ -88,26 +111,21 @@ class _SubmissionPageState extends State<SubmissionPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               children: [
-                ArtworkPreview(
-                  mode: draft.mode,
-                  seed: draft.artworkSeed,
-                  height: 250,
-                ),
+                _TaskResultPreview(task: task),
                 const SizedBox(height: 18),
                 GlassPanel(
                   backgroundColor: AppColors.sage.withValues(alpha: 0.07),
                   borderColor: AppColors.sage.withValues(alpha: 0.18),
                   child: Row(
                     children: [
-                      CreatorTag(
-                        label: draft.mode.shortLabel,
-                        color: AppColors.sage,
-                      ),
+                      CreatorTag(label: task.type.label, color: AppColors.sage),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          flow.currentOrder?.title ?? '创作订单',
-                          style: Theme.of(context).textTheme.titleSmall,
+                          '订单 #${task.orderId} · ${task.taskNo}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
                       const CreatorTag(label: '待提交', color: AppColors.gold),
@@ -131,18 +149,24 @@ class _SubmissionPageState extends State<SubmissionPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const CreatorSectionHeader(title: '生成参数'),
+                const CreatorSectionHeader(title: '生成信息'),
                 const SizedBox(height: 10),
                 GlassPanel(
                   child: Column(
                     children: [
-                      _InfoRow(label: '生成模型', value: draft.model),
+                      _InfoRow(label: '任务号', value: task.taskNo),
                       const SizedBox(height: 12),
-                      _InfoRow(label: '创作描述', value: draft.prompt, maxLines: 3),
-                      for (final entry in draft.options.entries) ...[
-                        const SizedBox(height: 12),
-                        _InfoRow(label: entry.key, value: entry.value),
-                      ],
+                      _InfoRow(
+                        label: '创作描述',
+                        value: task.prompt ?? '—',
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 12),
+                      _InfoRow(
+                        label: '生成结果',
+                        value: task.resultUrl ?? '—',
+                        maxLines: 2,
+                      ),
                     ],
                   ),
                 ),
@@ -157,10 +181,48 @@ class _SubmissionPageState extends State<SubmissionPage> {
           CreatorBottomAction(
             label: _submitting ? '正在提交…' : '提交给订单方审核',
             icon: Icons.cloud_upload_outlined,
-            caption: '提交后可在「审核」中查看进度',
+            caption: '提交后可在审核记录中查看进度',
             onPressed: _submitting ? null : _submit,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TaskResultPreview extends StatelessWidget {
+  const _TaskResultPreview({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = task.resultThumb ?? task.resultUrl;
+    if (raw == null || raw.isEmpty || task.type == TaskType.textToAudio) {
+      return ArtworkPreview(
+        mode: switch (task.type) {
+          TaskType.imageToVideo => CreationMode.video,
+          TaskType.textToAudio => CreationMode.audio,
+          TaskType.textToImage => CreationMode.image,
+        },
+        seed: task.id,
+        height: 250,
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
+      child: Image.network(
+        AppConfig.resolveAssetUrl(raw),
+        height: 250,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => ArtworkPreview(
+          mode: task.type == TaskType.imageToVideo
+              ? CreationMode.video
+              : CreationMode.image,
+          seed: task.id,
+          height: 250,
+        ),
       ),
     );
   }
