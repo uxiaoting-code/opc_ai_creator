@@ -6,6 +6,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../data/creator_order_repository.dart';
+import '../creator_flow_provider.dart';
 import '../models/creator_order.dart';
 import '../widgets/creator_widgets.dart';
 
@@ -58,6 +59,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     try {
       final detail = await _repository.fetchDetail(id);
       if (!mounted) return;
+      if (detail.myAcceptance != null) {
+        context.read<CreatorFlowProvider>().setAcceptedApiOrder(detail.order);
+      }
       setState(() => _detail = detail);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -72,6 +76,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     try {
       await _repository.accept(order.id);
       if (!mounted) return;
+      context.read<CreatorFlowProvider>().setAcceptedApiOrder(order);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(content: Text('接单成功，进入创作')));

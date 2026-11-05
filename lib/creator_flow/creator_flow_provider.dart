@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'models/creator_order.dart';
 import 'models/creator_models.dart';
 
 /// 用户端接单、创作、审核和钱包的演示状态。
@@ -19,6 +20,7 @@ class CreatorFlowProvider extends ChangeNotifier {
   final List<WalletEntry> _walletEntries = [];
 
   String? _acceptedOrderId;
+  MarketOrder? _externalActiveOrder;
   GeneratedDraft? _draft;
   double _credits = 1286;
   double _withdrawable = 368;
@@ -33,6 +35,7 @@ class CreatorFlowProvider extends ChangeNotifier {
   double get withdrawable => _withdrawable;
 
   MarketOrder? get currentOrder {
+    if (_externalActiveOrder != null) return _externalActiveOrder;
     final id = _acceptedOrderId;
     if (id == null) return null;
     return _orderById(id);
@@ -56,8 +59,35 @@ class CreatorFlowProvider extends ChangeNotifier {
   void acceptOrder(String id) {
     final order = _orderById(id);
     if (order == null) return;
+    _externalActiveOrder = null;
     _acceptedOrderId = id;
     _replaceOrder(order.copyWith(status: MarketOrderStatus.accepted));
+    _draft = null;
+    notifyListeners();
+  }
+
+  /// 把真实后端接单结果同步到创作流程状态。
+  void setAcceptedApiOrder(CreatorOrder order) {
+    _externalActiveOrder = MarketOrder(
+      id: 'api-${order.id}',
+      title: order.title,
+      brand: order.brandName,
+      description: order.description,
+      mode: switch (order.mediaType) {
+        OrderMediaType.image => CreationMode.image,
+        OrderMediaType.video => CreationMode.video,
+        OrderMediaType.audio => CreationMode.audio,
+      },
+      reward: order.rewardYuan,
+      creditCost: order.creditCost,
+      deadline: order.deadlineAt == null
+          ? '订单进行中'
+          : '截止 ${order.deadlineAt}',
+      tasksLeft: order.tasksLeft,
+      requirements: order.requirements,
+      status: MarketOrderStatus.accepted,
+    );
+    _acceptedOrderId = null;
     _draft = null;
     notifyListeners();
   }
@@ -198,6 +228,7 @@ class CreatorFlowProvider extends ChangeNotifier {
   }
 
   void clearCurrentOrder() {
+    _externalActiveOrder = null;
     _acceptedOrderId = null;
     _draft = null;
     notifyListeners();

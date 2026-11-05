@@ -259,13 +259,10 @@ class _CreateHomePageState extends State<CreateHomePage> {
               ],
             ),
           ),
-          CreatorBottomAction(
-            label: _buttonText,
-            icon: Icons.auto_awesome_rounded,
-            caption: '预计消耗 $_cost 算力 · 当前余额 ${flow.credits.toStringAsFixed(0)}',
-            onPressed: flow.credits >= _cost ? _generate : null,
-            secondaryLabel: '接一个订单，先按需求创作',
-            onSecondary: () => context.go('/market'),
+          _CreateHomeDock(
+            order: order,
+            onOpenMarket: () => context.go('/market'),
+            onContinueOrder: () => context.go('/workbench'),
           ),
         ],
       ),
@@ -279,6 +276,103 @@ class _CreateHomePageState extends State<CreateHomePage> {
       CreationMode.audio => '/create/audio',
     };
     context.push(path, extra: scene.prompt);
+  }
+}
+
+class _CreateHomeDock extends StatelessWidget {
+  const _CreateHomeDock({
+    required this.order,
+    required this.onOpenMarket,
+    required this.onContinueOrder,
+  });
+
+  final MarketOrder? order;
+  final VoidCallback onOpenMarket;
+  final VoidCallback onContinueOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = order;
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.88),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 18,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: (active == null ? AppColors.gold : AppColors.sage)
+                    .withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(
+                active == null
+                    ? Icons.storefront_outlined
+                    : Icons.timer_outlined,
+                color: active == null ? AppColors.gold : AppColors.sage,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    active == null ? '还没有接单' : '当前订单',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    active == null ? '可以直接创作，也可以先接需求' : active.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: AppColors.charcoal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 36,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  minimumSize: const Size(0, 36),
+                  backgroundColor:
+                      active == null ? AppColors.gold : AppColors.sage,
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: active == null ? onOpenMarket : onContinueOrder,
+                child: Text(active == null ? '去接单' : '继续'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
