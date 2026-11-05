@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../providers/auth_provider.dart';
 import '../data/creator_order_repository.dart';
 import '../models/creator_order.dart';
@@ -173,6 +174,9 @@ class _ApiOrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final quota = order.tasksTotal == 0
+        ? 0.0
+        : (order.tasksTaken / order.tasksTotal).clamp(0.0, 1.0);
     return GlassPanel(
       onTap: onTap,
       padding: const EdgeInsets.all(16),
@@ -191,7 +195,7 @@ class _ApiOrderCard extends StatelessWidget {
                     Text(order.title, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 5),
                     Text(
-                      '${order.brandName} · ${order.mediaType.label} · 剩余 ${order.tasksLeft} 个名额',
+                      '${order.brandName} · ${order.mediaType.label} · ${_deadlineLabel(order.deadlineAt)}',
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -214,9 +218,34 @@ class _ApiOrderCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(height: 1.55),
           ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text('已接 ${order.tasksTaken}/${order.tasksTotal}', style: theme.textTheme.bodySmall),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                  child: LinearProgressIndicator(
+                    value: quota,
+                    minHeight: 6,
+                    backgroundColor: AppColors.sageTint,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text('剩 ${order.tasksLeft}', style: theme.textTheme.bodySmall),
+            ],
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
+              CreatorTag(
+                label: '${order.creditCost} 算力',
+                color: AppColors.gold,
+                icon: Icons.bolt_rounded,
+              ),
+              const SizedBox(width: 8),
               CreatorTag(label: order.status.label, color: AppColors.sage),
               const Spacer(),
               const Icon(
@@ -229,6 +258,14 @@ class _ApiOrderCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _deadlineLabel(DateTime? time) {
+    if (time == null) return '长期';
+    final diff = time.difference(DateTime.now());
+    if (diff.isNegative) return '已截止';
+    if (diff.inHours < 24) return '${diff.inHours + 1} 小时后截止';
+    return '${diff.inDays + 1} 天后截止';
   }
 }
 
