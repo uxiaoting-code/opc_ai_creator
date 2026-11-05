@@ -33,11 +33,6 @@ public class MarketOrderSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (marketOrderRepository.count() > 0) {
-            log.info("接单市场已有数据，跳过初始化");
-            return;
-        }
-
         LocalDateTime now = LocalDateTime.now();
         List<MarketOrder> orders = List.of(
                 order("MO202610290001", "春季香水商品主图套组", "花漾美妆",
@@ -63,11 +58,29 @@ public class MarketOrderSeeder implements ApplicationRunner {
                 order("MO202610290006", "食品礼盒多语言配音", "东瀛优品",
                         "生成日语和中文两版礼盒介绍音频，语气温柔，适合短视频。",
                         MediaType.AUDIO, 5600L, 8, now.plusDays(4), 30, 10,
-                        List.of("中日双语", "女声", "30 秒内", "可下载 MP3"))
+                        List.of("中日双语", "女声", "30 秒内", "可下载 MP3")),
+                order("MO202611050001", "夏日女装模特上身图", "MUSE 女装",
+                        "生成 4 张夏季女装模特上身图，突出面料垂感和自然光氛围。",
+                        MediaType.IMAGE, 8800L, 12, now.plusHours(40), 30, 8,
+                        List.of("3:4 比例", "模特上身", "自然光", "提交 JPG")),
+                order("MO202611050002", "家居香薰短视频", "森屿家居",
+                        "生成一段 15 秒香薰产品氛围视频，镜头缓慢推进，突出烟雾和暖光。",
+                        MediaType.VIDEO, 13800L, 48, now.plusHours(30), 20, 5,
+                        List.of("9:16 竖屏", "15 秒左右", "镜头平稳", "暖色氛围")),
+                order("MO202611050003", "咖啡礼盒中文男声口播", "山野咖啡",
+                        "生成一段中文男声商品口播，介绍礼盒卖点和节日送礼场景。",
+                        MediaType.AUDIO, 7200L, 8, now.plusDays(3), 25, 6,
+                        List.of("中文男声", "约 30 秒", "语气沉稳", "可下载 MP3"))
         );
 
-        marketOrderRepository.saveAll(orders);
-        log.info("已初始化 {} 个接单市场订单", orders.size());
+        int inserted = 0;
+        for (MarketOrder order : orders) {
+            if (marketOrderRepository.findByOrderNo(order.getOrderNo()).isEmpty()) {
+                marketOrderRepository.save(order);
+                inserted++;
+            }
+        }
+        log.info("接单市场初始化完成：新增 {} 条，现有订单保持不变", inserted);
     }
 
     private MarketOrder order(String orderNo,
