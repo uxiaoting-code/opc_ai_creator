@@ -3,6 +3,7 @@ package com.opc.server.controller;
 import com.opc.server.common.PageResult;
 import com.opc.server.common.Result;
 import com.opc.server.dto.AcceptOrderResponse;
+import com.opc.server.dto.CurrentWorkContextResponse;
 import com.opc.server.dto.MarketOrderResponse;
 import com.opc.server.dto.OrderAcceptanceResponse;
 import com.opc.server.dto.OrderDetailResponse;
@@ -45,6 +46,11 @@ public class OrderController {
             @RequestParam(defaultValue = "10") int pageSize) {
         return Result.success(orderService.listMyAcceptances(
                 UserContext.require(), status, page, pageSize));
+    }
+
+    @GetMapping("/my/current")
+    public Result<CurrentWorkContextResponse> currentWork() {
+        return Result.success(orderService.getCurrentWork(UserContext.require()));
     }
 
     @GetMapping("/{id}")

@@ -21,6 +21,7 @@ class CreatorFlowProvider extends ChangeNotifier {
 
   String? _acceptedOrderId;
   MarketOrder? _externalActiveOrder;
+  CreatorWorkContext? _workContext;
   GeneratedDraft? _draft;
   double _credits = 1286;
   double _withdrawable = 368;
@@ -33,6 +34,7 @@ class CreatorFlowProvider extends ChangeNotifier {
   GeneratedDraft? get draft => _draft;
   double get credits => _credits;
   double get withdrawable => _withdrawable;
+  CreatorWorkContext? get workContext => _workContext;
 
   MarketOrder? get currentOrder {
     if (_externalActiveOrder != null) return _externalActiveOrder;
@@ -67,8 +69,29 @@ class CreatorFlowProvider extends ChangeNotifier {
   }
 
   /// 把真实后端接单结果同步到创作流程状态。
-  void setAcceptedApiOrder(CreatorOrder order) {
-    _externalActiveOrder = MarketOrder(
+  void setAcceptedApiOrder(
+    CreatorOrder order, {
+    String? acceptanceStatus,
+  }) {
+    _externalActiveOrder = _fromApiOrder(order, acceptanceStatus);
+    _acceptedOrderId = null;
+    _draft = null;
+    notifyListeners();
+  }
+
+  void applyWorkContext(CreatorWorkContext context) {
+    _workContext = context;
+    final order = context.order;
+    _externalActiveOrder = order == null
+        ? null
+        : _fromApiOrder(order, context.acceptanceStatus);
+    _acceptedOrderId = null;
+    _draft = null;
+    notifyListeners();
+  }
+
+  MarketOrder _fromApiOrder(CreatorOrder order, String? acceptanceStatus) {
+    return MarketOrder(
       id: 'api-${order.id}',
       title: order.title,
       brand: order.brandName,
@@ -85,11 +108,13 @@ class CreatorFlowProvider extends ChangeNotifier {
           : '截止 ${order.deadlineAt}',
       tasksLeft: order.tasksLeft,
       requirements: order.requirements,
-      status: MarketOrderStatus.accepted,
+      status: switch (acceptanceStatus) {
+        'SUBMITTED' => MarketOrderStatus.submitted,
+        'REJECTED' => MarketOrderStatus.rejected,
+        'APPROVED' => MarketOrderStatus.approved,
+        _ => MarketOrderStatus.accepted,
+      },
     );
-    _acceptedOrderId = null;
-    _draft = null;
-    notifyListeners();
   }
 
   bool createDraft({
@@ -228,6 +253,7 @@ class CreatorFlowProvider extends ChangeNotifier {
   }
 
   void clearCurrentOrder() {
+    _workContext = null;
     _externalActiveOrder = null;
     _acceptedOrderId = null;
     _draft = null;

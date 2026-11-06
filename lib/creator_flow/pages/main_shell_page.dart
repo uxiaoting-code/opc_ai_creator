@@ -3,15 +3,25 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../creator_flow_provider.dart';
+import '../data/creator_order_repository.dart';
 
-class CreatorMainShell extends StatelessWidget {
+class CreatorMainShell extends StatefulWidget {
   const CreatorMainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
+  @override
+  State<CreatorMainShell> createState() => _CreatorMainShellState();
+}
+
+class _CreatorMainShellState extends State<CreatorMainShell>
+    with WidgetsBindingObserver {
   static const _items = [
     _NavItem('课程', Icons.school_outlined, Icons.school_rounded),
     _NavItem(
@@ -24,7 +34,39 @@ class CreatorMainShell extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshContext());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshContext();
+  }
+
+  Future<void> _refreshContext() async {
+    if (!mounted) return;
+    try {
+      final context = await CreatorOrderRepository(
+        this.context.read<ApiClient>(),
+      ).fetchCurrentWork();
+      if (!mounted) return;
+      this.context.read<CreatorFlowProvider>().applyWorkContext(context);
+    } catch (_) {
+      // 网络失败时保留现有状态；页面仍会各自展示错误提示。
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final navigationShell = widget.navigationShell;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: navigationShell,

@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../creator_flow_provider.dart';
 import '../models/creator_models.dart';
+import '../models/creator_order.dart';
 import '../widgets/creator_widgets.dart';
 
 class WorkbenchPage extends StatelessWidget {
@@ -15,6 +16,7 @@ class WorkbenchPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final flow = context.watch<CreatorFlowProvider>();
     final order = flow.currentOrder;
+    final work = flow.workContext;
 
     if (order == null) {
       return CreatorScreen(
@@ -66,6 +68,29 @@ class WorkbenchPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
+          if (work?.action == CreatorWorkAction.viewReview) ...[
+            GlassPanel(
+              backgroundColor: AppColors.gold.withValues(alpha: 0.08),
+              borderColor: AppColors.gold.withValues(alpha: 0.22),
+              child: Row(
+                children: [
+                  const Icon(Icons.fact_check_outlined, color: AppColors.gold),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      work?.reason ?? '作品已提交，等待审核',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/submissions'),
+                    child: const Text('查看审核'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           GlassPanel(
             backgroundColor: AppColors.sage.withValues(alpha: 0.08),
             borderColor: AppColors.sage.withValues(alpha: 0.2),
@@ -131,26 +156,33 @@ class WorkbenchPage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          const CreatorSectionHeader(
-            title: '选择创作工具',
-            subtitle: '三种工具共享当前订单上下文，提交后会直接进入审核状态',
-          ),
-          const SizedBox(height: 12),
-          for (final mode in CreationMode.values) ...[
-            _CreationToolCard(
-              mode: mode,
-              recommended: mode == order.mode,
-              onTap: () {
-                final path = switch (mode) {
-                  CreationMode.image => '/create/image',
-                  CreationMode.video => '/create/video',
-                  CreationMode.audio => '/create/audio',
-                };
-                context.push(path);
-              },
+          if (work?.canGenerate ?? true) ...[
+            const SizedBox(height: 24),
+            const CreatorSectionHeader(
+              title: '选择创作工具',
+              subtitle: '三种工具共享当前订单上下文，提交后会直接进入审核状态',
             ),
             const SizedBox(height: 12),
+            for (final mode in CreationMode.values) ...[
+              _CreationToolCard(
+                mode: mode,
+                recommended: mode == order.mode,
+                onTap: () {
+                  final path = switch (mode) {
+                    CreationMode.image => '/create/image',
+                    CreationMode.video => '/create/video',
+                    CreationMode.audio => '/create/audio',
+                  };
+                  context.push(
+                    path,
+                    extra: CreatorCreationArgs(orderId: order.id.startsWith('api-')
+                        ? int.tryParse(order.id.substring(4))
+                        : null),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
           ],
           const SizedBox(height: 8),
           CreatorSectionHeader(
@@ -176,7 +208,7 @@ class WorkbenchPage extends StatelessWidget {
                 const SizedBox(height: 12),
                 _HintRow(
                   icon: Icons.fact_check_outlined,
-                  text: '审核状态在底部「审核」Tab 中随时查看',
+                  text: '审核状态可在「我的 → 作品与审核」中查看',
                 ),
               ],
             ),

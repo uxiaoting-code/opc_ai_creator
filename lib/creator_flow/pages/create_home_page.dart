@@ -8,6 +8,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../providers/auth_provider.dart';
 import '../creator_flow_provider.dart';
 import '../models/creator_models.dart';
+import '../models/creator_order.dart';
 import '../widgets/creator_widgets.dart';
 import '../widgets/prototype_widgets.dart';
 import '../../widgets/premium/premium_mode_switch.dart';
@@ -189,6 +190,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
     final auth = context.watch<AuthProvider>();
     final flow = context.watch<CreatorFlowProvider>();
     final order = flow.currentOrder;
+    final work = flow.workContext;
 
     return CreatorScreen(
       padding: EdgeInsets.zero,
@@ -214,7 +216,9 @@ class _CreateHomePageState extends State<CreateHomePage> {
                   const SizedBox(height: 16),
                   PrototypeOrderBanner(
                     order: order,
-                    onTap: () => context.go('/workbench'),
+                    onTap: () => work?.action == CreatorWorkAction.viewReview
+                        ? context.go('/submissions')
+                        : context.go('/workbench'),
                   ),
                 ],
                 const SizedBox(height: 16),
@@ -261,8 +265,11 @@ class _CreateHomePageState extends State<CreateHomePage> {
           ),
           _CreateHomeDock(
             order: order,
+            action: work?.action,
+            reason: work?.reason,
             onOpenMarket: () => context.go('/market'),
             onContinueOrder: () => context.go('/workbench'),
+            onViewReview: () => context.go('/submissions'),
           ),
         ],
       ),
@@ -282,18 +289,52 @@ class _CreateHomePageState extends State<CreateHomePage> {
 class _CreateHomeDock extends StatelessWidget {
   const _CreateHomeDock({
     required this.order,
+    required this.action,
+    required this.reason,
     required this.onOpenMarket,
     required this.onContinueOrder,
+    required this.onViewReview,
   });
 
   final MarketOrder? order;
+  final CreatorWorkAction? action;
+  final String? reason;
   final VoidCallback onOpenMarket;
   final VoidCallback onContinueOrder;
+  final VoidCallback onViewReview;
 
   @override
   Widget build(BuildContext context) {
     final active = order;
     final theme = Theme.of(context);
+    final waitingReview = action == CreatorWorkAction.viewReview;
+    final unavailable = reason != null && !waitingReview;
+    final label = active == null
+        ? '还没有接单'
+        : waitingReview
+        ? '作品审核中'
+        : unavailable
+        ? '当前订单暂不可继续'
+        : '当前订单';
+    final subtitle = active == null
+        ? '可以直接创作，也可以先接需求'
+        : waitingReview
+        ? '${active.title} · 不再占用新接单资格'
+        : unavailable
+        ? reason!
+        : active.title;
+    final buttonText = active == null
+        ? '去接单'
+        : waitingReview
+        ? '查看审核'
+        : unavailable
+        ? '查看记录'
+        : '继续';
+    final onPressed = active == null
+        ? onOpenMarket
+        : waitingReview || unavailable
+        ? onViewReview
+        : onContinueOrder;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       decoration: BoxDecoration(
@@ -317,15 +358,21 @@ class _CreateHomeDock extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: (active == null ? AppColors.gold : AppColors.sage)
+                color: (active == null || waitingReview
+                        ? AppColors.gold
+                        : AppColors.sage)
                     .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(
                 active == null
                     ? Icons.storefront_outlined
+                    : waitingReview
+                    ? Icons.fact_check_outlined
                     : Icons.timer_outlined,
-                color: active == null ? AppColors.gold : AppColors.sage,
+                color: active == null || waitingReview
+                    ? AppColors.gold
+                    : AppColors.sage,
                 size: 18,
               ),
             ),
@@ -336,12 +383,12 @@ class _CreateHomeDock extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    active == null ? '还没有接单' : '当前订单',
+                    label,
                     style: theme.textTheme.bodySmall,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    active == null ? '可以直接创作，也可以先接需求' : active.title,
+                    subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelLarge?.copyWith(
@@ -359,14 +406,16 @@ class _CreateHomeDock extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   minimumSize: const Size(0, 36),
                   backgroundColor:
-                      active == null ? AppColors.gold : AppColors.sage,
+                      active == null || waitingReview
+                      ? AppColors.gold
+                      : AppColors.sage,
                   textStyle: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                onPressed: active == null ? onOpenMarket : onContinueOrder,
-                child: Text(active == null ? '去接单' : '继续'),
+                onPressed: onPressed,
+                child: Text(buttonText),
               ),
             ),
           ],

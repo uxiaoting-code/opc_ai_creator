@@ -60,7 +60,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       final detail = await _repository.fetchDetail(id);
       if (!mounted) return;
       if (detail.myAcceptance != null) {
-        context.read<CreatorFlowProvider>().setAcceptedApiOrder(detail.order);
+        context.read<CreatorFlowProvider>().setAcceptedApiOrder(
+              detail.order,
+              acceptanceStatus:
+                  detail.myAcceptance?['status'] as String?,
+            );
       }
       setState(() => _detail = detail);
     } on ApiException catch (e) {
@@ -76,7 +80,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     try {
       await _repository.accept(order.id);
       if (!mounted) return;
-      context.read<CreatorFlowProvider>().setAcceptedApiOrder(order);
+      context.read<CreatorFlowProvider>().setAcceptedApiOrder(
+            order,
+            acceptanceStatus: 'ACCEPTED',
+          );
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(content: Text('接单成功，进入创作')));
@@ -126,11 +133,17 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     }
 
     final order = detail.order;
-    final accepted = detail.myAcceptance != null;
+    final acceptanceStatus = detail.myAcceptance?['status'] as String?;
+    final accepted = acceptanceStatus != null;
     final canAccept = detail.canAccept;
-    final buttonLabel = accepted
-        ? '继续创作'
-        : (canAccept ? '立即接单' : '暂不可接');
+    final buttonLabel = switch (acceptanceStatus) {
+      'ACCEPTED' => '继续创作',
+      'REJECTED' => '修改后重新提交',
+      'SUBMITTED' => '查看审核进度',
+      'APPROVED' => '查看审核结果',
+      'CANCELLED' => '接单已取消',
+      _ => canAccept ? '立即接单' : '暂不可接',
+    };
 
     return Column(
       children: [
@@ -258,13 +271,25 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           icon: accepted
               ? Icons.auto_awesome_rounded
               : Icons.shopping_bag_outlined,
-          caption: accepted
-              ? '已接单，可进入创作并提交作品'
-              : (canAccept ? '接单后直接进入对应创作页' : detail.unavailableReason),
-          onPressed: _accepting || !canAccept && !accepted
+          caption: switch (acceptanceStatus) {
+            'ACCEPTED' => '已接单，可继续生成并提交作品',
+            'REJECTED' => '作品被驳回，可重新生成后提交',
+            'SUBMITTED' => '作品已提交，等待订单方审核',
+            'APPROVED' => '订单已完成，可查看审核结果',
+            'CANCELLED' => '该接单已取消',
+            _ => canAccept ? '接单后直接进入对应创作页' : detail.unavailableReason,
+          },
+          onPressed: _accepting ||
+                  acceptanceStatus == 'CANCELLED' ||
+                  (!canAccept && !accepted)
               ? null
               : () {
-                  if (accepted) {
+                  if (acceptanceStatus == 'SUBMITTED' ||
+                      acceptanceStatus == 'APPROVED') {
+                    context.push('/submissions');
+                  } else if (acceptanceStatus == 'CANCELLED') {
+                    return;
+                  } else if (accepted) {
                     _openCreation(order);
                   } else {
                     _acceptAndCreate(order);

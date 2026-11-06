@@ -24,6 +24,8 @@ public interface OrderAcceptanceRepository extends JpaRepository<OrderAcceptance
             Long userId,
             Collection<AcceptanceStatus> statuses);
 
+    List<OrderAcceptance> findByUserIdOrderByCreatedAtDesc(Long userId);
+
     Page<OrderAcceptance> findByUserIdAndStatusOrderByCreatedAtDesc(
             Long userId, AcceptanceStatus status, Pageable pageable);
 

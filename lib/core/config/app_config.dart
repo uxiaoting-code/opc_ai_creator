@@ -210,6 +210,7 @@ class ApiEndpoints {
 
   // --- 接单市场 ---
   static const String ordersAvailable = '/orders/available';
+  static const String ordersCurrentWork = '/orders/my/current';
   static String orderDetail(int id) => '/orders/$id';
   static String orderAccept(int id) => '/orders/$id/accept';
 

@@ -4,6 +4,7 @@ import com.opc.server.common.BizException;
 import com.opc.server.common.ErrorCode;
 import com.opc.server.common.PageResult;
 import com.opc.server.dto.AcceptOrderResponse;
+import com.opc.server.dto.CurrentWorkContextResponse;
 import com.opc.server.dto.MarketOrderResponse;
 import com.opc.server.dto.OrderAcceptanceResponse;
 import com.opc.server.dto.OrderDetailResponse;
@@ -36,9 +37,8 @@ public class OrderService {
 
     private static final int MAX_PAGE_SIZE = 50;
     private static final DateTimeFormatter NO_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final Set<AcceptanceStatus> ACTIVE_STATUSES = EnumSet.of(
+    private static final Set<AcceptanceStatus> BLOCKING_STATUSES = EnumSet.of(
             AcceptanceStatus.ACCEPTED,
-            AcceptanceStatus.SUBMITTED,
             AcceptanceStatus.REJECTED);
     private static final Set<AcceptanceStatus> RELEASABLE_STATUSES = EnumSet.of(
             AcceptanceStatus.ACCEPTED,
@@ -93,6 +93,72 @@ public class OrderService {
                 ? acceptanceRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 : acceptanceRepository.findByUserIdAndStatusOrderByCreatedAtDesc(userId, status, pageable);
         return PageResult.from(pageResult, OrderAcceptanceResponse::from);
+    }
+
+    @Transactional
+    public CurrentWorkContextResponse getCurrentWork(Long userId) {
+        LocalDateTime now = LocalDateTime.now();
+        cancelExpiredActiveAcceptances(userId, now);
+        List<OrderAcceptance> acceptances =
+                acceptanceRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        OrderAcceptance selected = acceptances.stream()
+                .filter(item -> item.getStatus() == AcceptanceStatus.ACCEPTED
+                        || item.getStatus() == AcceptanceStatus.REJECTED)
+                .findFirst()
+                .orElseGet(() -> acceptances.stream()
+                        .filter(item -> item.getStatus() == AcceptanceStatus.SUBMITTED)
+                        .findFirst()
+                        .orElse(null));
+
+        boolean canAcceptNew = !hasBlockingActiveAcceptance(userId, now);
+        if (selected == null) {
+            return new CurrentWorkContextResponse(
+                    false, null, null, null, "NONE",
+                    false, false, canAcceptNew, null);
+        }
+
+        MarketOrder order = marketOrderRepository.findById(selected.getOrderId())
+                .orElse(null);
+        if (order == null) {
+            return new CurrentWorkContextResponse(
+                    false, null, null, null, "NONE",
+                    false, false, canAcceptNew, "关联订单不存在");
+        }
+
+        SubmissionSummaryResponse latest = submissionRepository
+                .findTopByOrderIdAndUserIdOrderBySubmittedAtDesc(order.getId(), userId)
+                .map(SubmissionSummaryResponse::from)
+                .orElse(null);
+
+        boolean expired = order.isExpired(now);
+        boolean closed = order.getStatus() == MarketOrderStatus.CLOSED;
+        boolean canGenerate = !expired && !closed
+                && (selected.getStatus() == AcceptanceStatus.ACCEPTED
+                || selected.getStatus() == AcceptanceStatus.REJECTED);
+        boolean canSubmit = canGenerate;
+        String action;
+        String reason = null;
+        if (selected.getStatus() == AcceptanceStatus.ACCEPTED) {
+            action = canGenerate ? "CONTINUE_CREATE" : "NONE";
+            if (!canGenerate) reason = expired ? "订单已过截止时间" : "订单已关闭";
+        } else if (selected.getStatus() == AcceptanceStatus.REJECTED) {
+            action = canGenerate ? "RESUBMIT" : "NONE";
+            if (!canGenerate) reason = expired ? "订单已过截止时间" : "订单已关闭";
+        } else {
+            action = "VIEW_REVIEW";
+            reason = "作品已提交，等待审核";
+        }
+        return new CurrentWorkContextResponse(
+                true,
+                MarketOrderResponse.from(order, selected.getStatus()),
+                OrderAcceptanceResponse.from(selected),
+                latest,
+                action,
+                canGenerate,
+                canSubmit,
+                canAcceptNew,
+                reason);
     }
     /**
      * 接单。
@@ -228,7 +294,7 @@ public class OrderService {
 
     private boolean hasBlockingActiveAcceptance(Long userId, LocalDateTime now) {
         List<OrderAcceptance> active = acceptanceRepository.findByUserIdAndStatusIn(
-                userId, ACTIVE_STATUSES);
+                userId, BLOCKING_STATUSES);
         for (OrderAcceptance acceptance : active) {
             MarketOrder order = marketOrderRepository.findById(acceptance.getOrderId()).orElse(null);
             if (order != null && !order.isExpired(now)

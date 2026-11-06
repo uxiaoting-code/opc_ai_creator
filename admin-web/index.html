@@ -39,6 +39,7 @@
       <button class="anv" data-pg="mcp"><i>🔌</i>MCP 接入</button>
       <button class="anv" data-pg="kb"><i>📚</i>知识库</button>
       <button class="anv" data-pg="materials"><i>🖼</i>素材库</button>
+      <button class="anv" data-pg="submissions"><i>✅</i>作品审核</button>
       <button class="anv" data-pg="gateway"><i>🌐</i>API 网关</button>
     </nav>
     <div class="adm-side-foot"><span class="dot-ok"></span>服务运行正常 · 3 节点</div>
@@ -468,6 +469,51 @@
         <div class="pager"><span>页面骨架已就绪 · 接口接入后支持限流与 OpenAPI 导出</span></div>
       </div>
     </section>
+
+    <!-- ===== 作品审核 ===== -->
+    <section class="page hidden" id="pg-submissions">
+      <div class="toolbar">
+        <select class="tb-select" id="submission-status">
+          <option value="PENDING">待审核</option>
+          <option value="">全部状态</option>
+          <option value="APPROVED">已通过</option>
+          <option value="REJECTED">已驳回</option>
+        </select>
+        <select class="tb-select" id="submission-media">
+          <option value="">全部类型</option>
+          <option value="IMAGE">图片</option>
+          <option value="VIDEO">视频</option>
+          <option value="AUDIO">音频</option>
+        </select>
+        <span class="tb-spacer"></span>
+        <button class="btn ghost" id="submission-refresh" type="button">刷新</button>
+      </div>
+      <div class="panel flat">
+        <table class="tbl" id="submission-table">
+          <thead><tr><th>提交号</th><th>作品</th><th>订单</th><th>类型</th><th>提交时间</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody><tr><td colspan="7" class="empty-cell">正在加载作品…</td></tr></tbody>
+        </table>
+        <div class="pager"><span id="submission-count">共 0 条</span><div class="pg-btns" id="submission-pager"></div></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ===== 作品审核详情 ===== -->
+<div class="mask hidden" id="modal-submission-review">
+  <div class="dlg wide">
+    <div class="dlg-head">
+      <strong id="submission-dialog-title">作品审核</strong>
+      <button class="dlg-x" data-close="modal-submission-review">✕</button>
+    </div>
+    <div id="submission-dialog-content" style="padding:4px 0 16px;">正在加载…</div>
+    <label class="f-label">审核意见</label>
+    <textarea class="f-textarea" id="submission-review-comment" maxlength="1000" placeholder="填写审核意见（驳回时建议必填）"></textarea>
+    <div class="dlg-foot">
+      <button class="btn ghost" data-close="modal-submission-review">取消</button>
+      <button class="btn ghost" id="submission-reject" type="button">驳回</button>
+      <button class="btn teal" id="submission-approve" type="button">通过</button>
+    </div>
   </div>
 </div>
 
@@ -764,6 +810,7 @@
 <script src="js/pages/mcp.js"></script>
 <script src="js/pages/kb.js"></script>
 <script src="js/pages/materials.js"></script>
+<script src="js/pages/submissions.js"></script>
 <script src="js/pages/gateway.js"></script>
 </body>
 </html>

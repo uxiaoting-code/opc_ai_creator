@@ -595,6 +595,10 @@ C 端已有「上传 / 我的 / 删除」，这里只做**后台视角的增强*
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
+| GET | `/api/admin/submissions?status=PENDING&mediaType=IMAGE&page=1&pageSize=20` | 分页查询作品审核列表 |
+| GET | `/api/admin/submissions/pending-count` | 待审核作品数量 |
+| GET | `/api/admin/submissions/{id}` | 作品审核详情 |
+| GET | `/api/admin/submissions/{id}/result` | 提交记录及任务结果预览 |
 | PUT | `/api/admin/submissions/{id}/review` | 审核用户提交的作品 |
 
 请求体：

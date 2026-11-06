@@ -41,4 +41,17 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             @Param("status") ReviewStatus status,
             @Param("mediaType") MediaType mediaType,
             Pageable pageable);
+
+    @Query("""
+            select s from Submission s
+             where (:status is null or s.status = :status)
+               and (:mediaType is null or s.mediaType = :mediaType)
+             order by s.submittedAt desc, s.id desc
+            """)
+    Page<Submission> findAdmin(
+            @Param("status") ReviewStatus status,
+            @Param("mediaType") MediaType mediaType,
+            Pageable pageable);
+
+    long countByStatus(ReviewStatus status);
 }

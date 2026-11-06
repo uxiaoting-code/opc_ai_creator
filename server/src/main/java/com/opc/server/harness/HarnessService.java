@@ -169,6 +169,9 @@ public class HarnessService {
             if (order.getStatus() == MarketOrderStatus.CLOSED) {
                 throw new BizException(ErrorCode.ORDER_STATUS_ILLEGAL, "订单已关闭");
             }
+            if (order.isExpired(LocalDateTime.now())) {
+                throw new BizException(ErrorCode.ORDER_DEADLINE_PASSED);
+            }
             if (order.getMediaType() != type.mediaType()) {
                 throw new BizException(ErrorCode.SUBMISSION_MEDIA_INVALID);
             }

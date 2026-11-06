@@ -380,11 +380,43 @@ POST /api/orders/{orderId}/accept
 
 - 只有 `OPEN` 可接；
 - 同一用户同一订单只能接一次；
-- 演示版限制同一用户同时只能有 1 个进行中的接单；
+- 同一用户同时只能有 1 个 `ACCEPTED/REJECTED` 接单；`SUBMITTED` 等待审核但不阻塞新接单；
 - 接单成功后新增 `AcceptanceStatus=ACCEPTED` 的接单记录，订单 `tasksTaken+1`；仍有名额时订单继续保持 `OPEN`；
 - 接单和名额扣减必须使用事务和乐观锁。
 
 失败码：`5501/5502/5503/5504/5507/5508`。
+
+### 3.3.1 当前工作上下文
+
+```http
+GET /api/orders/my/current
+```
+
+返回 `data`：
+
+```json
+{
+  "hasActiveWork": true,
+  "order": {},
+  "acceptance": {},
+  "latestSubmission": {},
+  "action": "VIEW_REVIEW",
+  "canGenerate": false,
+  "canSubmit": false,
+  "canAcceptNew": true,
+  "reason": "作品已提交，等待审核"
+}
+```
+
+`action` 取值：
+
+- `CONTINUE_CREATE`：继续创作；
+- `RESUBMIT`：驳回后重新提交；
+- `VIEW_REVIEW`：查看审核进度；
+- `VIEW_RESULT`：查看已完成结果；
+- `NONE`：没有可执行动作。
+
+Flutter 登录恢复、刷新和进入创作/工作台时调用该接口，不得使用前端内存状态猜测当前订单。
 
 ### 3.4 我的接单列表
 

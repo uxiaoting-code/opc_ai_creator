@@ -18,6 +18,7 @@
     mcp: 'MCP 接入',
     kb: '知识库',
     materials: '素材库',
+    submissions: '作品审核',
     gateway: 'API 网关',
   };
 

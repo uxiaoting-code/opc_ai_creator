@@ -182,6 +182,12 @@ class CreatorProfilePage extends StatelessWidget {
                 onTap: () => context.go('/create'),
               ),
               _ToolTile(
+                icon: Icons.fact_check_outlined,
+                label: '作品与审核',
+                color: AppColors.gold,
+                onTap: () => context.push('/submissions'),
+              ),
+              _ToolTile(
                 icon: Icons.school_outlined,
                 label: '课程中心',
                 color: AppColors.gold,

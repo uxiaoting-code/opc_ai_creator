@@ -150,3 +150,77 @@ class CreatorCreationArgs {
   final String prompt;
   final int? orderId;
 }
+
+/// 后端返回的当前工作动作。
+enum CreatorWorkAction {
+  continueCreate('CONTINUE_CREATE'),
+  resubmit('RESUBMIT'),
+  viewReview('VIEW_REVIEW'),
+  viewResult('VIEW_RESULT'),
+  none('NONE');
+
+  const CreatorWorkAction(this.value);
+
+  final String value;
+
+  static CreatorWorkAction fromValue(String? value) {
+    return CreatorWorkAction.values.firstWhere(
+      (action) => action.value == value,
+      orElse: () => CreatorWorkAction.none,
+    );
+  }
+}
+
+/// 当前用户工作上下文，对应 `/api/orders/my/current`。
+@immutable
+class CreatorWorkContext {
+  const CreatorWorkContext({
+    required this.hasActiveWork,
+    required this.action,
+    required this.canGenerate,
+    required this.canSubmit,
+    required this.canAcceptNew,
+    this.order,
+    this.acceptance,
+    this.latestSubmission,
+    this.reason,
+  });
+
+  final bool hasActiveWork;
+  final CreatorOrder? order;
+  final Map<String, dynamic>? acceptance;
+  final Map<String, dynamic>? latestSubmission;
+  final CreatorWorkAction action;
+  final bool canGenerate;
+  final bool canSubmit;
+  final bool canAcceptNew;
+  final String? reason;
+
+  String? get acceptanceStatus => acceptance?['status'] as String?;
+
+  int? get latestSubmissionId =>
+      (latestSubmission?['id'] as num?)?.toInt();
+
+  factory CreatorWorkContext.fromJson(Map<String, dynamic> json) {
+    final orderJson = json['order'];
+    final acceptanceJson = json['acceptance'];
+    final submissionJson = json['latestSubmission'];
+    return CreatorWorkContext(
+      hasActiveWork: json['hasActiveWork'] as bool? ?? false,
+      order: orderJson is Map
+          ? CreatorOrder.fromJson(Map<String, dynamic>.from(orderJson))
+          : null,
+      acceptance: acceptanceJson is Map
+          ? Map<String, dynamic>.from(acceptanceJson)
+          : null,
+      latestSubmission: submissionJson is Map
+          ? Map<String, dynamic>.from(submissionJson)
+          : null,
+      action: CreatorWorkAction.fromValue(json['action'] as String?),
+      canGenerate: json['canGenerate'] as bool? ?? false,
+      canSubmit: json['canSubmit'] as bool? ?? false,
+      canAcceptNew: json['canAcceptNew'] as bool? ?? true,
+      reason: json['reason'] as String?,
+    );
+  }
+}

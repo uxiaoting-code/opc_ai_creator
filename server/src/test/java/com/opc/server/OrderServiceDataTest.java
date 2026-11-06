@@ -145,6 +145,27 @@ class OrderServiceDataTest {
     }
 
     @Test
+    void submittedOrderDoesNotBlockNewOrder() {
+        MarketOrder submitted = saveOrder(
+                "MO-T-014", MediaType.IMAGE, 5, 0, LocalDateTime.now().plusHours(2));
+        MarketOrder next = saveOrder(
+                "MO-T-015", MediaType.VIDEO, 5, 0, LocalDateTime.now().plusHours(2));
+        orderService.acceptOrder(1L, submitted.getId());
+
+        var acceptance = acceptanceRepository.findByOrderIdAndUserId(submitted.getId(), 1L)
+                .orElseThrow();
+        acceptance.setStatus(AcceptanceStatus.SUBMITTED);
+        acceptanceRepository.save(acceptance);
+
+        var context = orderService.getCurrentWork(1L);
+        assertThat(context.action()).isEqualTo("VIEW_REVIEW");
+        assertThat(context.canAcceptNew()).isTrue();
+
+        var result = orderService.acceptOrder(1L, next.getId());
+        assertThat(result.acceptance().status()).isEqualTo(AcceptanceStatus.ACCEPTED);
+    }
+
+    @Test
     void rejectsExpiredOrder() {
         MarketOrder order = saveOrder("MO-T-007", MediaType.IMAGE, 5, 0, LocalDateTime.now().minusMinutes(1));
 

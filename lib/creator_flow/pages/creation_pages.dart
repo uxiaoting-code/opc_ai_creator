@@ -239,6 +239,14 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   }
 
   Future<void> _generate() async {
+    final flow = context.read<CreatorFlowProvider>();
+    final work = flow.workContext;
+    final activeOrderId = widget.orderId ??
+        (work?.canGenerate == true ? work?.order?.id : null);
+    if (work?.hasActiveWork == true && work?.canGenerate == false) {
+      _showError(work?.reason ?? '当前订单不可继续生成');
+      return;
+    }
     final prompt = _composedPrompt();
     if (prompt.isEmpty) {
       _showError('请先输入创作描述');
@@ -258,13 +266,13 @@ class _CreationFormPageState extends State<_CreationFormPage> {
           task = await repository.createTextToImage(
             prompt: prompt,
             refImageUrl: _refImageUrl,
-            orderId: widget.orderId,
+            orderId: activeOrderId,
           );
         case CreationMode.video:
           task = await repository.createImageToVideo(
             prompt: prompt,
             refImageUrl: _refImageUrl!,
-            orderId: widget.orderId,
+            orderId: activeOrderId,
           );
         case CreationMode.audio:
           task = await repository.createTextToAudio(
@@ -273,7 +281,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
             language: _languageCode,
             speed: _audioSpeed,
             format: _audioFormat,
-            orderId: widget.orderId,
+            orderId: activeOrderId,
           );
       }
       if (!mounted) return;

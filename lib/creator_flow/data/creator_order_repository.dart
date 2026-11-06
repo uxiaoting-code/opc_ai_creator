@@ -53,6 +53,17 @@ class CreatorOrderRepository {
     return CreatorOrderDetail.fromJson(raw);
   }
 
+  Future<CreatorWorkContext> fetchCurrentWork() async {
+    final raw = await _api.get<Map<String, dynamic>>(
+      ApiEndpoints.ordersCurrentWork,
+      parser: (data) => Map<String, dynamic>.from(data as Map),
+    );
+    if (raw == null) {
+      throw const ApiException(message: '当前工作上下文为空');
+    }
+    return CreatorWorkContext.fromJson(raw);
+  }
+
   Future<AcceptedOrderResult> accept(int orderId) async {
     final raw = await _api.post<Map<String, dynamic>>(
       ApiEndpoints.orderAccept(orderId),

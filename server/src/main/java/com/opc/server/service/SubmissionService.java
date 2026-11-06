@@ -77,6 +77,9 @@ public class SubmissionService {
         if (order.getStatus() == MarketOrderStatus.CLOSED) {
             throw new BizException(ErrorCode.SUBMISSION_NOT_ALLOWED);
         }
+        if (order.isExpired(LocalDateTime.now())) {
+            throw new BizException(ErrorCode.ORDER_DEADLINE_PASSED);
+        }
 
         OrderAcceptance acceptance = acceptanceRepository
                 .findByOrderIdAndUserId(request.orderId(), userId)
@@ -155,8 +158,34 @@ public class SubmissionService {
     }
 
     @Transactional(readOnly = true)
+    public PageResult<SubmissionResponse> listAdmin(
+            ReviewStatus status,
+            MediaType mediaType,
+            int page,
+            int pageSize) {
+        Pageable pageable = pageRequest(page, pageSize);
+        Page<Submission> pageResult = submissionRepository.findAdmin(
+                status, mediaType, pageable);
+        Map<Long, MarketOrder> orders = loadOrders(pageResult.getContent());
+        return PageResult.from(pageResult, submission ->
+                SubmissionResponse.from(submission, orders.get(submission.getOrderId())));
+    }
+
+    @Transactional(readOnly = true)
+    public long pendingCount() {
+        return submissionRepository.countByStatus(ReviewStatus.PENDING);
+    }
+
+    @Transactional(readOnly = true)
     public SubmissionResponse getDetail(Long userId, Long submissionId) {
         Submission submission = submissionRepository.findByIdAndUserId(submissionId, userId)
+                .orElseThrow(() -> new BizException(ErrorCode.SUBMISSION_NOT_FOUND));
+        return SubmissionResponse.from(submission, getOrder(submission.getOrderId()));
+    }
+
+    @Transactional(readOnly = true)
+    public SubmissionResponse getAdminDetail(Long submissionId) {
+        Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BizException(ErrorCode.SUBMISSION_NOT_FOUND));
         return SubmissionResponse.from(submission, getOrder(submission.getOrderId()));
     }
@@ -167,6 +196,17 @@ public class SubmissionService {
                 .orElseThrow(() -> new BizException(ErrorCode.SUBMISSION_NOT_FOUND));
         AiTask task = taskRepository.findByIdAndUserIdAndDeletedFalse(
                         submission.getTaskId(), userId)
+                .orElseThrow(() -> new BizException(ErrorCode.TASK_NOT_FOUND));
+        return new SubmissionResultResponse(
+                SubmissionResponse.from(submission, getOrder(submission.getOrderId())),
+                TaskResponse.from(task));
+    }
+
+    @Transactional(readOnly = true)
+    public SubmissionResultResponse getAdminResult(Long submissionId) {
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new BizException(ErrorCode.SUBMISSION_NOT_FOUND));
+        AiTask task = taskRepository.findById(submission.getTaskId())
                 .orElseThrow(() -> new BizException(ErrorCode.TASK_NOT_FOUND));
         return new SubmissionResultResponse(
                 SubmissionResponse.from(submission, getOrder(submission.getOrderId())),
