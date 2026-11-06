@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../data/models/work_model.dart';
 import '../models/creator_models.dart';
 import 'creator_widgets.dart';
 
@@ -142,13 +144,6 @@ class PrototypeSceneStrip extends StatelessWidget {
 }
 
 /// 首页「最近作品」两列网格。
-class PrototypeWorkItem {
-  const PrototypeWorkItem(this.mode, this.seed);
-
-  final CreationMode mode;
-  final int seed;
-}
-
 class PrototypeWorksGrid extends StatelessWidget {
   const PrototypeWorksGrid({
     super.key,
@@ -156,8 +151,8 @@ class PrototypeWorksGrid extends StatelessWidget {
     required this.onTap,
   });
 
-  final List<PrototypeWorkItem> items;
-  final VoidCallback onTap;
+  final List<WorkModel> items;
+  final ValueChanged<WorkModel> onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -173,14 +168,91 @@ class PrototypeWorksGrid extends StatelessWidget {
       ),
       itemBuilder: (context, index) {
         final item = items[index];
-        return ClipRRect(
+        final rawUrl = item.coverUrl?.isNotEmpty == true
+            ? item.coverUrl!
+            : item.resourceUrl;
+        final url = AppConfig.resolveAssetUrl(rawUrl);
+        final fallback = ArtworkPreview(
+          mode: item.isVideo ? CreationMode.video : CreationMode.image,
+          seed: item.id,
+          height: 210,
+          showLabel: false,
+        );
+        return InkWell(
+          onTap: () => onTap(item),
           borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
-          child: ArtworkPreview(
-            mode: item.mode,
-            seed: item.seed,
-            height: 210,
-            showLabel: true,
-            onTap: onTap,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusCard),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (url.isEmpty)
+                  fallback
+                else
+                  Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => fallback,
+                  ),
+                Positioned(
+                  left: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.24),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusPill,
+                      ),
+                    ),
+                    child: Text(
+                      item.type.label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                if (item.isVideo)
+                  const Center(
+                    child: Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(10, 24, 10, 10),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0xB3000000)],
+                      ),
+                    ),
+                    child: Text(
+                      item.displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

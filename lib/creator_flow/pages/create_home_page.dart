@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/work_provider.dart';
 import '../creator_flow_provider.dart';
 import '../models/creator_models.dart';
 import '../models/creator_order.dart';
@@ -32,6 +33,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
   String _ratio = '1:1';
   int _count = 4;
   bool _videoHasRef = false;
+  bool _worksRequested = false;
 
   static const _models = ['GPT-4o Image', 'DALL·E 3', '通义万相'];
   static const _ratios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
@@ -86,12 +88,15 @@ class _CreateHomePageState extends State<CreateHomePage> {
       prompt: '跨境电商主图本地化，翻译商品卖点',
     ),
   ];
-  static const _workItems = [
-    PrototypeWorkItem(CreationMode.image, 11),
-    PrototypeWorkItem(CreationMode.video, 17),
-    PrototypeWorkItem(CreationMode.image, 23),
-    PrototypeWorkItem(CreationMode.image, 29),
-  ];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_worksRequested) return;
+    _worksRequested = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<WorkProvider>().loadIfNeeded();
+    });
+  }
 
   @override
   void dispose() {
@@ -189,6 +194,8 @@ class _CreateHomePageState extends State<CreateHomePage> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final flow = context.watch<CreatorFlowProvider>();
+    final worksProvider = context.watch<WorkProvider>();
+    final recentWorks = worksProvider.recentWorks.take(4).toList();
     final order = flow.currentOrder;
     final work = flow.workContext;
 
@@ -256,10 +263,29 @@ class _CreateHomePageState extends State<CreateHomePage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                PrototypeWorksGrid(
-                  items: _workItems,
-                  onTap: () => context.push('/works'),
-                ),
+                if (worksProvider.isLoading && recentWorks.isEmpty)
+                  const GlassPanel(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (worksProvider.error != null && recentWorks.isEmpty)
+                  EmptyPanel(
+                    icon: Icons.cloud_off_outlined,
+                    title: '最近作品加载失败',
+                    subtitle: worksProvider.error!,
+                    actionLabel: '重新加载',
+                    onAction: worksProvider.refresh,
+                  )
+                else if (recentWorks.isEmpty)
+                  const EmptyPanel(
+                    icon: Icons.image_outlined,
+                    title: '还没有作品',
+                    subtitle: '完成一次生成后，最近作品会出现在这里。',
+                  )
+                else
+                  PrototypeWorksGrid(
+                    items: recentWorks,
+                    onTap: (_) => context.push('/works'),
+                  ),
               ],
             ),
           ),
