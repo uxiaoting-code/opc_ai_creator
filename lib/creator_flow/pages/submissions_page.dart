@@ -57,6 +57,14 @@ class _SubmissionsPageState extends State<SubmissionsPage> {
     }
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/profile');
+    }
+  }
+
   List<CreatorSubmission> get _visible {
     return switch (_filter) {
       1 => _items
@@ -83,7 +91,9 @@ class _SubmissionsPageState extends State<SubmissionsPage> {
         .length;
 
     return CreatorScreen(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      title: '作品审核',
+      onBack: _goBack,
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -92,19 +102,9 @@ class _SubmissionsPageState extends State<SubmissionsPage> {
             Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '作品审核',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '查看图片、视频和音频的审核进度',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                  child: Text(
+                    '查看图片、视频和音频的审核进度',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
                 CreatorTag(

@@ -67,20 +67,28 @@ class _ReviewStatusPageState extends State<ReviewStatusPage> {
     }
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/submissions');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = _item;
     if (_loading && item == null) {
       return CreatorScreen(
         title: '审核状态',
-        onBack: () => context.pop(),
+        onBack: _goBack,
         child: const Center(child: CircularProgressIndicator()),
       );
     }
     if (item == null) {
       return CreatorScreen(
         title: '审核状态',
-        onBack: () => context.pop(),
+        onBack: _goBack,
         child: EmptyPanel(
           icon: Icons.search_off_rounded,
           title: '找不到提交记录',
@@ -93,7 +101,7 @@ class _ReviewStatusPageState extends State<ReviewStatusPage> {
 
     return CreatorScreen(
       title: '审核状态',
-      onBack: () => context.pop(),
+      onBack: _goBack,
       padding: EdgeInsets.zero,
       child: RefreshIndicator(
         onRefresh: _load,

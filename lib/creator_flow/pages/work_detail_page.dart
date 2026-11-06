@@ -65,12 +65,20 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
     }
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/submissions');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = _item;
     return CreatorScreen(
       title: '作品详情',
-      onBack: () => context.pop(),
+      onBack: _goBack,
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: _loading && item == null
           ? const Center(child: CircularProgressIndicator())
