@@ -68,13 +68,15 @@ public class OrderService {
         return PageResult.from(orders, order -> MarketOrderResponse.from(order, null));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public OrderDetailResponse getDetail(Long userId, Long orderId) {
+        LocalDateTime now = LocalDateTime.now();
+        cancelExpiredActiveAcceptances(userId, now);
         MarketOrder order = getOrder(orderId);
         OrderAcceptance acceptance = acceptanceRepository
                 .findByOrderIdAndUserId(orderId, userId)
                 .orElse(null);
-        String unavailableReason = acceptUnavailableReason(userId, order, acceptance, LocalDateTime.now());
+        String unavailableReason = acceptUnavailableReason(userId, order, acceptance, now);
         return new OrderDetailResponse(
                 MarketOrderResponse.from(order, acceptance == null ? null : acceptance.getStatus()),
                 acceptance == null ? null : OrderAcceptanceResponse.from(acceptance),
@@ -82,12 +84,13 @@ public class OrderService {
                 unavailableReason);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PageResult<OrderAcceptanceResponse> listMyAcceptances(
             Long userId,
             AcceptanceStatus status,
             int page,
             int pageSize) {
+        cancelExpiredActiveAcceptances(userId, LocalDateTime.now());
         Pageable pageable = pageRequest(page, pageSize);
         Page<OrderAcceptance> pageResult = status == null
                 ? acceptanceRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
@@ -204,8 +207,10 @@ public class OrderService {
     }
 
     /** 工作台上下文。只有已接该订单的用户可以访问。 */
-    @Transactional(readOnly = true)
+    @Transactional
     public WorkbenchContextResponse getWorkbench(Long userId, Long orderId) {
+        LocalDateTime now = LocalDateTime.now();
+        cancelExpiredActiveAcceptances(userId, now);
         MarketOrder order = getOrder(orderId);
         OrderAcceptance acceptance = acceptanceRepository
                 .findByOrderIdAndUserId(orderId, userId)
@@ -214,12 +219,18 @@ public class OrderService {
     }
 
     private WorkbenchContextResponse buildWorkbench(MarketOrder order, OrderAcceptance acceptance) {
-        boolean canGenerate = acceptance.getStatus() == AcceptanceStatus.ACCEPTED
-                || acceptance.getStatus() == AcceptanceStatus.REJECTED;
+        LocalDateTime now = LocalDateTime.now();
+        boolean canGenerate = !order.isExpired(now)
+                && order.getStatus() != MarketOrderStatus.CLOSED
+                && (acceptance.getStatus() == AcceptanceStatus.ACCEPTED
+                || acceptance.getStatus() == AcceptanceStatus.REJECTED);
         String reason = null;
         if (order.getStatus() == MarketOrderStatus.CLOSED) {
             canGenerate = false;
             reason = "订单已关闭";
+        } else if (order.isExpired(now)) {
+            canGenerate = false;
+            reason = "订单已过截止时间";
         } else if (acceptance.getStatus() == AcceptanceStatus.SUBMITTED) {
             reason = "作品已提交，等待审核";
         } else if (acceptance.getStatus() == AcceptanceStatus.APPROVED) {

@@ -1,7 +1,7 @@
-# OPC AI · 用户端业务接口契约（M0～M4 已完成）
+# OPC AI · 用户端业务接口契约（M0～M5 已完成）
 
-> 版本：v1.4 · 冻结日期：2026-10-29 · M1～M4 实现日期：2026-10-29～2026-10-30
-> 状态：**M0～M4 全部完成：订单、提交审核、钱包、图片/视频 Harness、文本转音频**
+> 版本：v1.5 · 冻结日期：2026-10-29 · M1～M5 实现日期：2026-10-29～2026-11-07
+> 状态：**M0～M5 全部完成：订单、提交审核、钱包、图片/视频 Harness、文本转音频、个人中心统一统计**
 > 适用范围：Flutter 用户 App 的接单、工作台、提交、审核、钱包、充值、提现。
 > 现有登录、Skill、任务查询、素材等接口仍以 `docs/api.md` 为准；本文只新增用户端业务接口，不重复定义已有接口。
 
@@ -321,6 +321,34 @@ PENDING → CANCELLED
   "processedAt": null
 }
 ```
+
+### 2.10 `ProfileStatsResponse`
+
+个人中心统一统计响应。金额字段仍为整数分，算力字段仍为整数点。
+
+```json
+{
+  "credits": 10000,
+  "withdrawableFen": 36800,
+  "frozenFen": 0,
+  "totalIncomeFen": 68000,
+  "totalWithdrawnFen": 12000,
+  "pendingReviewCount": 1,
+  "approvedReviewCount": 3,
+  "rejectedReviewCount": 0,
+  "taskStats": {
+    "QUEUED": 0,
+    "RUNNING": 1,
+    "SUCCESS": 8,
+    "FAILED": 0,
+    "CANCELED": 0
+  }
+}
+```
+
+- `credits`、钱包四项和 `/api/wallet/summary` 使用同一后端数据源。
+- `pendingReviewCount`、`approvedReviewCount`、`rejectedReviewCount` 只统计当前登录用户的提交记录。
+- `taskStats` 固定返回全部任务状态，没有记录时值为 `0`。
 
 ---
 
@@ -774,10 +802,50 @@ M3 实现；Flutter 用户端只读自己的提现状态。
 
 ---
 
-### 5.11 M3 快速自测（curl）
+### 5.11 个人中心统一统计
+
+```http
+GET /api/profile/stats
+Authorization: Bearer <token>
+```
+
+用途：个人中心一次读取算力、钱包、审核数量和任务状态，避免前端自行拼接多个接口或继续使用演示数据。
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "credits": 10000,
+    "withdrawableFen": 36800,
+    "frozenFen": 0,
+    "totalIncomeFen": 68000,
+    "totalWithdrawnFen": 12000,
+    "pendingReviewCount": 1,
+    "approvedReviewCount": 3,
+    "rejectedReviewCount": 0,
+    "taskStats": {
+      "QUEUED": 0,
+      "RUNNING": 1,
+      "SUCCESS": 8,
+      "FAILED": 0,
+      "CANCELED": 0
+    }
+  },
+  "timestamp": 1794047756123
+}
+```
+
+### 5.12 M3 快速自测（curl）
 
 ```bash
 TOKEN="mock-token-for-scaffold"
+
+# 个人中心统一统计
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/profile/stats"
 
 # 钱包汇总
 curl -H "Authorization: Bearer $TOKEN" \
@@ -1195,3 +1263,4 @@ M1/M3/M4 实现时至少准备：
 | v1.2 | 2026-10-30 | M2 实现：`t_submission`、`t_review_record`、作品提交/我的提交/审核状态/作品结果/后台审核接口，并加入 5601～5607 错误码 |
 | v1.3 | 2026-10-30 | M3 实现：钱包汇总/流水、充值渠道/订单/回调、提现渠道/申请、后台提现状态；审核通过自动钱包入账；加入 5701～5710 错误码 |
 | v1.4 | 2026-10-30 | M4 实现：图片/视频任务绑定订单与接单上下文；新增 TEXT_TO_AUDIO、WAV Mock 音频、音频提交与订单媒体校验；HTTP Provider 支持音色等扩展变量 |
+| v1.5 | 2026-11-07 | M5 收尾：新增 `GET /api/profile/stats`，统一个人中心算力、钱包、审核数量和任务状态；补齐工作台/订单详情/我的接单的过期状态清理与演示订单 deadline 刷新口径 |

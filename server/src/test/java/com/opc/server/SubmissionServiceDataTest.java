@@ -151,6 +151,28 @@ class SubmissionServiceDataTest {
     }
 
     @Test
+    void repeatedReviewDoesNotCreditTwice() {
+        MarketOrder order = saveOrder("MO-S-010", MediaType.IMAGE);
+        saveAcceptance(order.getId(), 1L, AcceptanceStatus.ACCEPTED);
+        AiTask task = saveTask("TASK-S-010", 1L, TaskType.TEXT_TO_IMAGE, TaskStatus.SUCCESS);
+        Submission created = submissionRepository.findById(
+                submissionService.submit(1L, new SubmissionCreateRequest(
+                        order.getId(), task.getId(), "重复审核作品", null)).id()).orElseThrow();
+
+        submissionService.review(
+                2L, created.getId(), new ReviewRequest(ReviewStatus.APPROVED, "通过"));
+
+        assertThatThrownBy(() -> submissionService.review(
+                2L, created.getId(), new ReviewRequest(ReviewStatus.APPROVED, "再次通过")))
+                .isInstanceOf(BizException.class)
+                .extracting(ex -> ((BizException) ex).getErrorCode())
+                .isEqualTo(ErrorCode.REVIEW_ALREADY_FINALIZED);
+        assertThat(walletAccountRepository.findByUserId(1L).orElseThrow().getWithdrawableFen())
+                .isEqualTo(6800L);
+        assertThat(reviewRecordRepository.count()).isEqualTo(1);
+    }
+
+    @Test
     void rejectedSubmissionAllowsNextVersion() {
         MarketOrder order = saveOrder("MO-S-006", MediaType.IMAGE);
         saveAcceptance(order.getId(), 1L, AcceptanceStatus.ACCEPTED);

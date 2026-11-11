@@ -1,8 +1,8 @@
 # 用户端 v2 · 接单创作业务闭环
 
-> 实现日期：2026-10-29
+> 实现日期：2026-10-29 · 最后核对：2026-11-07
 > 入口：`lib/app.dart` → `lib/creator_flow/creator_router.dart`
-> 目标：替换旧 13 页演示导航，交付老师要求的接单创作基础业务闭环。
+> 当前口径：文档保留 v2 页面历史；实际路由、四 Tab 和接口状态以 `docs/SCHEDULE.md` §A～§H 及 `lib/creator_flow/` 代码为准。
 
 ---
 
@@ -30,7 +30,7 @@
 底部一级导航为：
 
 ```text
-接单 | 工作台 | 审核 | 我的
+课程 | 创作 | 接单 | 我的
 ```
 
 ---
@@ -77,27 +77,20 @@
 
 ## 3. 当前数据层说明
 
-当前业务状态由：
+早期演示版本由 `CreatorFlowProvider` 维护；当前主链路订单、生成、提交和审核已通过 `creator_order_repository.dart`、`creator_submission_repository.dart` 调用真实后端。仍在收尾的是钱包、充值、提现和个人中心统一统计。
+
+真实接口适配层：
 
 ```text
-lib/creator_flow/creator_flow_provider.dart
+lib/creator_flow/data/creator_order_repository.dart
+lib/creator_flow/data/creator_submission_repository.dart
 ```
 
-统一维护，包括：
+订单列表、接单上下文、提交记录、审核状态和 AI 任务已使用真实接口；钱包与个人统计正在按 F8 迁移。
 
-- 订单列表与订单状态
-- 接单上下文
-- 生成草稿
-- 提交记录
-- 审核状态
-- 算力余额
-- 可提现余额
-- 钱包流水
-- 充值 / 提现操作
+当前主流程使用真实接口；不要再用演示数据伪装订单、审核或 AI 生成成功。钱包和个人统计按 F8 逐步切换到 `/api/wallet/**` 与 `/api/profile/stats`。
 
-这一层是页面和未来 repository / API 之间的边界。现在使用内存演示数据和模拟生成结果，保证不启动后端也能把整条流程演示完。
-
-后续接后端时，页面不需要重写，只需要把 Provider 内部方法替换为真实接口调用：
+当前接口适配清单：
 
 | 能力 | M0 冻结接口（以 `docs/api-user.md` 为准） |
 |---|---|
@@ -108,14 +101,14 @@ lib/creator_flow/creator_flow_provider.dart
 | 工作台上下文 | `GET /api/orders/{id}/workbench` |
 | 文生图 | `POST /api/creation/text-to-image`（已存在） |
 | 图生视频 | `POST /api/creation/image-to-video`（已存在） |
-| 生成音频 | `POST /api/creation/text-to-audio`（待后端新增） |
+| 生成音频 | `POST /api/creation/text-to-audio`（已完成） |
 | 作品提交 | `POST /api/submissions` |
 | 审核状态 | `GET /api/submissions/{id}` |
 | 审核列表 | `GET /api/submissions/my` |
 | 充值下单 | `POST /api/wallet/recharges` |
 | 充值渠道 | `GET /api/wallet/recharge/channels` |
 | 提现申请 | `POST /api/wallet/withdrawals` |
-| 提现渠道 | `GET /api/wallet/withdraw-channels` |
+| 提现渠道 | `GET /api/wallet/withdraw/channels` |
 | 钱包汇总 | `GET /api/wallet/summary` |
 | 钱包流水 | `GET /api/wallet/transactions` |
 
@@ -136,9 +129,7 @@ lib/creator_flow/creator_flow_provider.dart
 
 ## 5. 下一步
 
-1. 将 `CreatorFlowProvider` 中的订单、提交、审核和钱包状态拆成 Repository。
-2. 后端新增订单市场、提交审核、充值和提现接口。
-3. 把文生图 / 图生视频页面接到现有 Harness 任务接口。
-4. 生成音频接入后端 TTS Provider。
-5. 将演示版“模拟审核”按钮替换为后端审核轮询。
-6. 充值渠道和提现渠道接入真实支付配置；支付回调必须由后端接收。
+1. 前端完成 F8：个人中心、钱包、充值、提现接入真实接口和统一统计。
+2. 前端完善作品分页、视频详情、结果下载和小屏回归。
+3. 前后端按 `docs/SCHEDULE.md` 执行 P0-11 端到端复验。
+4. 支付回调继续由后端接收；前端只展示渠道和后端返回的状态。

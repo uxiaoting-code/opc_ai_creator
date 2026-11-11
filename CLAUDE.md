@@ -4,7 +4,7 @@
 
 ## 架构（务必理解）
 
-- **Flutter = 用户 App**（`lib/`，已有 13 页基础实现；需按 `docs/prototype-user/` 的 28 页原型对齐）
+- **Flutter = 用户 App**（`lib/`，四 Tab 接单创作闭环已接真实接口；按 `docs/prototype-user/` 继续精修）
 - **后台控制台 = HTML/CSS/JS**（`admin-web/`，12 页）
 - **后端 = Spring Boot**（`server/`，`/api/**` + `/api/admin/**`）
 - **不要创建 `lib/admin/`**，后台控制台不是 Flutter
@@ -13,9 +13,9 @@
 
 ### A. 用户 App（Flutter）
 
-- [ ] 按 `docs/prototype-user/` 的老师用户端原型逐页对照 Flutter 页面与公共组件
-- [ ] Skill 市场页（替换 `lib/pages/skill/skill_market_page.dart` 占位）
-- [ ] 设置页（处理 `lib/pages/settings/settings_page.dart` 的「待实现」区块）
+- [ ] 按 `docs/SCHEDULE.md` 完成 F8 钱包/个人中心统一，再做原型视觉对照和小屏验收
+- [ ] 完成 F8 后执行最终端到端联调和 Web/APK 构建
+- [ ] 保持旧页面兼容，不删除 `web_old/` 和旧 Flutter 页面
 ### B. 后台控制台（admin-web）
 
 - [ ] 12 页接 `/api/admin/**` 真接口（`?mock=0`）

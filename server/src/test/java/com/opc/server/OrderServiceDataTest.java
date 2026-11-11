@@ -166,6 +166,57 @@ class OrderServiceDataTest {
     }
 
     @Test
+    void expiredAcceptedWorkbenchCancelsAndCannotGenerate() {
+        MarketOrder order = saveOrder(
+                "MO-T-016", MediaType.IMAGE, 5, 0, LocalDateTime.now().plusHours(2));
+        orderService.acceptOrder(1L, order.getId());
+
+        order.setDeadlineAt(LocalDateTime.now().minusMinutes(1));
+        marketOrderRepository.save(order);
+
+        var context = orderService.getWorkbench(1L, order.getId());
+
+        assertThat(context.canGenerate()).isFalse();
+        assertThat(context.unavailableReason()).isEqualTo("订单已过截止时间");
+        assertThat(acceptanceRepository.findByOrderIdAndUserId(order.getId(), 1L)
+                .orElseThrow()
+                .getStatus())
+                .isEqualTo(AcceptanceStatus.CANCELLED);
+    }
+
+    @Test
+    void expiredOrderDetailCancelsAcceptance() {
+        MarketOrder order = saveOrder(
+                "MO-T-017", MediaType.IMAGE, 5, 0, LocalDateTime.now().plusHours(2));
+        orderService.acceptOrder(1L, order.getId());
+        order.setDeadlineAt(LocalDateTime.now().minusMinutes(1));
+        marketOrderRepository.save(order);
+
+        var detail = orderService.getDetail(1L, order.getId());
+
+        assertThat(detail.canAccept()).isFalse();
+        assertThat(detail.unavailableReason()).isEqualTo("订单已过截止时间");
+        assertThat(detail.myAcceptance().status()).isEqualTo(AcceptanceStatus.CANCELLED);
+    }
+
+    @Test
+    void expiredAcceptanceIsHiddenFromAcceptedFilter() {
+        MarketOrder order = saveOrder(
+                "MO-T-018", MediaType.IMAGE, 5, 0, LocalDateTime.now().plusHours(2));
+        orderService.acceptOrder(1L, order.getId());
+        order.setDeadlineAt(LocalDateTime.now().minusMinutes(1));
+        marketOrderRepository.save(order);
+
+        var accepted = orderService.listMyAcceptances(
+                1L, AcceptanceStatus.ACCEPTED, 1, 10);
+        var all = orderService.listMyAcceptances(1L, null, 1, 10);
+
+        assertThat(accepted.total()).isZero();
+        assertThat(all.total()).isEqualTo(1);
+        assertThat(all.list().getFirst().status()).isEqualTo(AcceptanceStatus.CANCELLED);
+    }
+
+    @Test
     void rejectsExpiredOrder() {
         MarketOrder order = saveOrder("MO-T-007", MediaType.IMAGE, 5, 0, LocalDateTime.now().minusMinutes(1));
 

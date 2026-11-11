@@ -15,7 +15,7 @@ OPC（一人公司）场景的 AI 内容生产平台，核心链路是 **文生�
 
 | 部分 | 目录 | 技术栈 | 状态 |
 |---|---|---|---|
-| **用户 App（前台）** | `lib/` | Flutter 3（Web + Android） | v2 已实现 16 页接单创作闭环；当前使用演示数据 |
+| **用户 App（前台）** | `lib/` | Flutter 3（Web + Android） | 四 Tab 接单创作闭环已接真实接口；F8 钱包/个人统计联调中 |
 | **后端 API** | `server/` | Spring Boot 4.1.1 + Java 21 + JPA + H2/MySQL | C 端 22 个接口 + 管理端 P0~P8 已跑通 |
 | **后台控制台（运营配置）** | `admin-web/` | 原生 HTML + CSS + JS | 老师原型 + 12 页实现；待逐页接真接口 |
 
@@ -84,7 +84,7 @@ Harness 编排、知识库和运营配置。
 ```text
 opc_ai_creator/
 ├── lib/                      Flutter 用户 App
-│   ├── creator_flow/         新接单创作闭环：16 页 / 路由 / 演示状态
+│   ├── creator_flow/         新接单创作闭环：四 Tab / 路由 / 真实接口适配
 │   ├── core/                 配置 / 网络 / 主题 / 工具
 │   ├── data/                 旧版数据模型、Repository 与 Mock
 │   ├── pages/                旧版 13 页页面（保留但不接入新路由）
@@ -167,8 +167,8 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 | [docs/requirements-opc-admin.pdf](docs/requirements-opc-admin.pdf) | 老师给的后台需求文档 |
 | [docs/prototype-user/](docs/prototype-user/) | **老师提供的用户端移动 App HTML/CSS/JS 原型与页面清单** |
 | [docs/USER_PROTOTYPE_GAP.md](docs/USER_PROTOTYPE_GAP.md) | **原型 28 页与旧 Flutter 的差异和视觉参考** |
-| [docs/USER_APP_V2.md](docs/USER_APP_V2.md) | **当前 16 页接单创作闭环、路由和待接后端接口** |
-| [docs/api-user.md](docs/api-user.md) | **用户端 v2 契约**：M0 冻结；M1～M4 已实现 |
+| [docs/USER_APP_V2.md](docs/USER_APP_V2.md) | 用户端 v2 页面与接口适配说明（当前状态以 `SCHEDULE.md` 为准） |
+| [docs/api-user.md](docs/api-user.md) | **用户端 v2 契约**：M0 冻结；M1～M5 已实现 |
 | [docs/api-admin.md](docs/api-admin.md) | **管理端接口契约**（12 页 / 错误码 / 枚举 / 变更记录） |
 | [docs/SCHEDULE.md](docs/SCHEDULE.md) | **开发排期、分工、当前进度、最终验收清单** |
 | [docs/admin-freeze.md](docs/admin-freeze.md) | 三项共用模型冻结 + 文件归属 |
@@ -187,12 +187,14 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 
 - [x] 后端 P0~P8：鉴权、模型配置、工作台、调试、MCP、知识库、运营账单、API 网关
 - [x] Harness 任务调度 + Mock 出图/出视频
-- [x] Flutter 用户 App v2：16 页接单创作闭环（登录、接单、工作台、图片/视频/音频生成、提交审核、钱包、充值提现）
+- [x] Flutter 用户 App v2：四 Tab 接单创作闭环（登录、课程、创作、接单、提交审核、作品、钱包入口）
 - [x] M0 用户端业务契约已冻结：`docs/api-user.md`
 - [x] M1 订单/接单/工作台接口已实现：5 个 C 端 API、2 张表、6 条演示订单和后端测试
 - [x] M2 作品提交/审核接口已实现：用户提交/列表/详情/结果与后台审核，2 张表
 - [x] M3 钱包/充值/提现接口已实现：钱包流水、充值回调、提现冻结与审核入账，5 张表
 - [x] M4 生成链路已实现：订单绑定任务、图片/视频 Harness、文本转音频 Mock WAV 与 HTTP 扩展参数
+- [x] M5 后端收尾：过期工作台/接单治理、演示订单 deadline 刷新、个人中心统一统计 `GET /api/profile/stats`
+- [x] 后端完整测试 47 项通过，包含 `/api/profile/stats` 的真实 HTTP 鉴权测试
 - [x] `flutter analyze` 与 `flutter test` 通过
 - [x] Prompt 知识库页
 - [x] 素材库 / 用户管理 / 系统设置（C 端与后台接口）
@@ -200,10 +202,10 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 
 ### 待完成
 
-- [ ] Flutter 用户 App v2 接真实后端：订单市场、提交审核、钱包、充值提现
-- [ ] 文生图 / 图生视频接 Harness，音频接后端 TTS
+- [ ] Flutter 用户 App v2 的 F8：钱包、充值、提现和个人中心统计统一到真实接口
+- [ ] 前端完成 F8 后执行最终端到端联调
 - [ ] 按 `docs/prototype-user/` 做视觉精修与小屏回归
-- [ ] **`admin-web/` 12 页逐页接 `/api/admin/**` 真接口**
+- [ ] **`admin-web/` 剩余页面逐页接 `/api/admin/**` 真接口**
 - [ ] 端到端联调：Flutter 指令 → 后端 → Harness → AI → 结果回传
 - [ ] 演示脚本 + 打包 APK
 - [ ] 关闭 `dev-token-enabled` 与 `bypassLogin`

@@ -54,4 +54,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             Pageable pageable);
 
     long countByStatus(ReviewStatus status);
+
+    long countByUserIdAndStatus(Long userId, ReviewStatus status);
 }

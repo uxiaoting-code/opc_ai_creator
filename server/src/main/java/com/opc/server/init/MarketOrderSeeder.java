@@ -74,13 +74,23 @@ public class MarketOrderSeeder implements ApplicationRunner {
         );
 
         int inserted = 0;
+        int refreshed = 0;
         for (MarketOrder order : orders) {
-            if (marketOrderRepository.findByOrderNo(order.getOrderNo()).isEmpty()) {
+            var existing = marketOrderRepository.findByOrderNo(order.getOrderNo());
+            if (existing.isEmpty()) {
                 marketOrderRepository.save(order);
                 inserted++;
+                continue;
+            }
+
+            MarketOrder persisted = existing.get();
+            if (persisted.getDeadlineAt() == null || !persisted.getDeadlineAt().isAfter(now)) {
+                persisted.setDeadlineAt(order.getDeadlineAt());
+                marketOrderRepository.save(persisted);
+                refreshed++;
             }
         }
-        log.info("接单市场初始化完成：新增 {} 条，现有订单保持不变", inserted);
+        log.info("接单市场初始化完成：新增 {} 条，刷新过期演示订单 {} 条", inserted, refreshed);
     }
 
     private MarketOrder order(String orderNo,
