@@ -1,12 +1,12 @@
 # 用户端 v2 · 接单创作业务闭环
 
-> 实现日期：2026-10-29 · 最后核对：2026-11-07
+> 实现日期：2026-10-29 · 最后核对：2026-11-23
 > 入口：`lib/app.dart` → `lib/creator_flow/creator_router.dart`
 > 当前口径：文档保留 v2 页面历史；实际路由、四 Tab 和接口状态以 `docs/SCHEDULE.md` §A～§H 及 `lib/creator_flow/` 代码为准。
 
 ---
 
-## 1. 已实现的 16 个页面
+## 1. 已实现的 19 个核心页面
 
 | # | 页面 | Flutter 文件 | 路由 |
 |---:|---|---|---|
@@ -26,6 +26,9 @@
 | 14 | 充值渠道 | `pages/recharge_pages.dart` | `/recharge/channel` |
 | 15 | 提现 | `pages/withdraw_pages.dart` | `/withdraw` |
 | 16 | 提现渠道 | `pages/withdraw_pages.dart` | `/withdraw/channel` |
+| 17 | 钱包流水 | `pages/wallet_transactions_page.dart` | `/wallet/transactions` |
+| 18 | 充值结果 | `pages/recharge_pages.dart` | `/recharge/result` |
+| 19 | 提现结果 | `pages/withdraw_pages.dart` | `/withdraw/result` |
 
 底部一级导航为：
 
@@ -61,7 +64,8 @@
   → 充值页面
   → 选择金额
   → 充值渠道页面
-  → 确认渠道
+  → 创建待支付订单
+  → 支付渠道回调确认
   → 算力到账
 ```
 
@@ -77,7 +81,7 @@
 
 ## 3. 当前数据层说明
 
-早期演示版本由 `CreatorFlowProvider` 维护；当前主链路订单、生成、提交和审核已通过 `creator_order_repository.dart`、`creator_submission_repository.dart` 调用真实后端。仍在收尾的是钱包、充值、提现和个人中心统一统计。
+早期演示版本由 `CreatorFlowProvider` 维护；当前主链路订单、生成、提交和审核已通过 `creator_order_repository.dart`、`creator_submission_repository.dart` 调用真实后端。钱包、充值、提现和个人中心统一统计已通过 `creator_wallet_repository.dart` 与 `CreatorWalletProvider` 切换到真实接口。
 
 真实接口适配层：
 
@@ -86,9 +90,9 @@ lib/creator_flow/data/creator_order_repository.dart
 lib/creator_flow/data/creator_submission_repository.dart
 ```
 
-订单列表、接单上下文、提交记录、审核状态和 AI 任务已使用真实接口；钱包与个人统计正在按 F8 迁移。
+订单列表、接单上下文、提交记录、审核状态、AI 任务、钱包和个人统计均已使用真实接口。
 
-当前主流程使用真实接口；不要再用演示数据伪装订单、审核或 AI 生成成功。钱包和个人统计按 F8 逐步切换到 `/api/wallet/**` 与 `/api/profile/stats`。
+当前主流程使用真实接口；不要再用演示数据伪装订单、审核、钱包或 AI 生成成功。钱包和个人统计统一读取 `/api/wallet/**` 与 `/api/profile/stats`，金额全程使用整数分。
 
 当前接口适配清单：
 
@@ -129,7 +133,6 @@ lib/creator_flow/data/creator_submission_repository.dart
 
 ## 5. 下一步
 
-1. 前端完成 F8：个人中心、钱包、充值、提现接入真实接口和统一统计。
-2. 前端完善作品分页、视频详情、结果下载和小屏回归。
-3. 前后端按 `docs/SCHEDULE.md` 执行 P0-11 端到端复验。
-4. 支付回调继续由后端接收；前端只展示渠道和后端返回的状态。
+1. 完成 F10：作品分页、视频详情、结果下载和小屏回归。
+2. 前后端按 `docs/SCHEDULE.md` 执行 P0-11 端到端复验。
+3. 支付回调继续由后端接收；前端只展示渠道和后端返回的真实状态。

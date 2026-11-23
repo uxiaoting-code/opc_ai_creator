@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../data/models/task_model.dart';
 import 'models/creator_order.dart';
+import 'models/creator_wallet.dart';
 import 'pages/course_center_page.dart';
 import 'pages/create_home_page.dart';
 import 'pages/creator_works_page.dart';
@@ -19,6 +20,7 @@ import 'pages/result_page.dart';
 import 'pages/review_status_page.dart';
 import 'pages/submission_page.dart';
 import 'pages/submissions_page.dart';
+import 'pages/wallet_transactions_page.dart';
 import 'pages/work_detail_page.dart';
 import 'pages/workbench_page.dart';
 import 'pages/withdraw_pages.dart';
@@ -165,13 +167,17 @@ class CreatorRouter {
       GoRoute(
         path: '/submission',
         builder: (context, state) => SubmissionPage(
-          initialTask: state.extra is TaskModel ? state.extra as TaskModel : null,
+          initialTask: state.extra is TaskModel
+              ? state.extra as TaskModel
+              : null,
         ),
       ),
       GoRoute(
         path: '/result',
         builder: (context, state) => ResultPage(
-          initialTask: state.extra is TaskModel ? state.extra as TaskModel : null,
+          initialTask: state.extra is TaskModel
+              ? state.extra as TaskModel
+              : null,
         ),
       ),
       GoRoute(
@@ -191,9 +197,20 @@ class CreatorRouter {
       GoRoute(
         path: '/recharge/channel',
         builder: (context, state) {
-          final amount =
-              double.tryParse(state.uri.queryParameters['amount'] ?? '') ?? 0;
-          return RechargeChannelPage(amount: amount);
+          final amountFen =
+              int.tryParse(state.uri.queryParameters['amountFen'] ?? '') ?? 0;
+          return RechargeChannelPage(amountFen: amountFen);
+        },
+      ),
+      GoRoute(
+        path: '/recharge/result',
+        builder: (context, state) {
+          final orderId =
+              int.tryParse(state.uri.queryParameters['orderId'] ?? '') ?? 0;
+          final order = state.extra is CreatorRechargeOrder
+              ? state.extra as CreatorRechargeOrder
+              : null;
+          return RechargeResultPage(orderId: orderId, initialOrder: order);
         },
       ),
       GoRoute(
@@ -203,10 +220,27 @@ class CreatorRouter {
       GoRoute(
         path: '/withdraw/channel',
         builder: (context, state) {
-          final amount =
-              double.tryParse(state.uri.queryParameters['amount'] ?? '') ?? 0;
-          return WithdrawChannelPage(amount: amount);
+          final amountFen =
+              int.tryParse(state.uri.queryParameters['amountFen'] ?? '') ?? 0;
+          return WithdrawChannelPage(amountFen: amountFen);
         },
+      ),
+      GoRoute(
+        path: '/withdraw/result',
+        builder: (context, state) {
+          final id = int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0;
+          final withdrawal = state.extra is CreatorWithdrawal
+              ? state.extra as CreatorWithdrawal
+              : null;
+          return WithdrawResultPage(
+            withdrawalId: id,
+            initialWithdrawal: withdrawal,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/wallet/transactions',
+        builder: (context, state) => const WalletTransactionsPage(),
       ),
     ],
     errorBuilder: (context, state) =>

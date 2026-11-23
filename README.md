@@ -15,7 +15,7 @@ OPC（一人公司）场景的 AI 内容生产平台，核心链路是 **文生�
 
 | 部分 | 目录 | 技术栈 | 状态 |
 |---|---|---|---|
-| **用户 App（前台）** | `lib/` | Flutter 3（Web + Android） | 四 Tab 接单创作闭环已接真实接口；F8 钱包/个人统计联调中 |
+| **用户 App（前台）** | `lib/` | Flutter 3（Web + Android） | 四 Tab 接单创作闭环与 F8 钱包/个人统计均已接真实接口 |
 | **后端 API** | `server/` | Spring Boot 4.1.1 + Java 21 + JPA + H2/MySQL | C 端 22 个接口 + 管理端 P0~P8 已跑通 |
 | **后台控制台（运营配置）** | `admin-web/` | 原生 HTML + CSS + JS | 老师原型 + 12 页实现；待逐页接真接口 |
 
@@ -194,6 +194,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 - [x] M3 钱包/充值/提现接口已实现：钱包流水、充值回调、提现冻结与审核入账，5 张表
 - [x] M4 生成链路已实现：订单绑定任务、图片/视频 Harness、文本转音频 Mock WAV 与 HTTP 扩展参数
 - [x] M5 后端收尾：过期工作台/接单治理、演示订单 deadline 刷新、个人中心统一统计 `GET /api/profile/stats`
+- [x] 前端 F8：个人中心统一统计、现金钱包流水、充值/提现渠道、真实订单状态与结果页
 - [x] 后端完整测试 47 项通过，包含 `/api/profile/stats` 的真实 HTTP 鉴权测试
 - [x] `flutter analyze` 与 `flutter test` 通过
 - [x] Prompt 知识库页
@@ -202,8 +203,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 
 ### 待完成
 
-- [ ] Flutter 用户 App v2 的 F8：钱包、充值、提现和个人中心统计统一到真实接口
-- [ ] 前端完成 F8 后执行最终端到端联调
+- [ ] 前端完成 F10 后执行最终端到端联调
 - [ ] 按 `docs/prototype-user/` 做视觉精修与小屏回归
 - [ ] **`admin-web/` 剩余页面逐页接 `/api/admin/**` 真接口**
 - [ ] 端到端联调：Flutter 指令 → 后端 → Harness → AI → 结果回传

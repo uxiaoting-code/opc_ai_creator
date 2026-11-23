@@ -134,7 +134,9 @@ class AppConfig {
       case AppEnv.production:
         return productionBaseUrl;
       case AppEnv.androidDevice:
-        return forceLocalhost ? 'http://localhost:$serverPort' : 'http://$lanHost:$serverPort';
+        return forceLocalhost
+            ? 'http://localhost:$serverPort'
+            : 'http://$lanHost:$serverPort';
       case AppEnv.webDev:
         return 'http://localhost:$serverPort';
     }
@@ -218,6 +220,17 @@ class ApiEndpoints {
   static const String submissions = '/submissions';
   static String submissionDetail(int id) => '/submissions/$id';
   static String submissionResult(int id) => '/submissions/$id/result';
+
+  // --- 个人中心与钱包 ---
+  static const String profileStats = '/profile/stats';
+  static const String walletSummary = '/wallet/summary';
+  static const String walletTransactions = '/wallet/transactions';
+  static const String rechargeChannels = '/wallet/recharge/channels';
+  static const String recharges = '/wallet/recharges';
+  static String rechargeDetail(int id) => '/wallet/recharges/$id';
+  static const String withdrawChannels = '/wallet/withdraw/channels';
+  static const String withdrawals = '/wallet/withdrawals';
+  static String withdrawalDetail(int id) => '/wallet/withdrawals/$id';
 
   // --- 素材库 ---
   static const String materials = '/materials';

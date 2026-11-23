@@ -11,6 +11,7 @@ import '../../data/repositories/material_repository.dart';
 import '../../data/repositories/task_repository.dart';
 import '../../widgets/premium/premium_select_sheet.dart';
 import '../creator_flow_provider.dart';
+import '../creator_wallet_provider.dart';
 import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
 
@@ -144,6 +145,9 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     _prompt = TextEditingController(text: widget.initialPrompt);
     _model = widget.defaultModel;
     _selected = [for (final group in widget.choices) group.values.first];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<CreatorWalletProvider>().load();
+    });
   }
 
   @override
@@ -241,8 +245,8 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   Future<void> _generate() async {
     final flow = context.read<CreatorFlowProvider>();
     final work = flow.workContext;
-    final activeOrderId = widget.orderId ??
-        (work?.canGenerate == true ? work?.order?.id : null);
+    final activeOrderId =
+        widget.orderId ?? (work?.canGenerate == true ? work?.order?.id : null);
     if (work?.hasActiveWork == true && work?.canGenerate == false) {
       _showError(work?.reason ?? '当前订单不可继续生成');
       return;
@@ -361,6 +365,9 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   @override
   Widget build(BuildContext context) {
     final flow = context.watch<CreatorFlowProvider>();
+    final wallet = context.watch<CreatorWalletProvider>();
+    final credits = wallet.stats?.credits;
+    final insufficientCredits = credits != null && credits < _cost;
     return Stack(
       children: [
         CreatorScreen(
@@ -404,7 +411,8 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                           ],
                         ),
                       ),
-                    if (widget.showReference || widget.allowOptionalReference) ...[
+                    if (widget.showReference ||
+                        widget.allowOptionalReference) ...[
                       const SizedBox(height: 18),
                       FormFieldLabel(
                         widget.showReference ? '参考图' : '参考图（可选）',
@@ -446,10 +454,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          _ChoicePill(
-                            label: _model,
-                            onTap: _pickModel,
-                          ),
+                          _ChoicePill(label: _model, onTap: _pickModel),
                         ],
                       ),
                       if (widget.choices.isNotEmpty) ...[
@@ -462,11 +467,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                               setState(() => _selected.first = value),
                         ),
                       ],
-                      for (
-                        var i = 1;
-                        i < widget.choices.length;
-                        i++
-                      ) ...[
+                      for (var i = 1; i < widget.choices.length; i++) ...[
                         const SizedBox(height: 18),
                         FormFieldLabel(widget.choices[i].label),
                         Wrap(
@@ -513,18 +514,16 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                   ],
                 ),
               ),
-              _ModeMiniBar(
-                mode: widget.mode,
-                onSelect: _openMode,
-              ),
+              _ModeMiniBar(mode: widget.mode, onSelect: _openMode),
               CreatorBottomAction(
                 label: _busy
                     ? '生成中…'
                     : '生成${widget.mode == CreationMode.audio ? '音频' : '作品'}',
                 icon: Icons.auto_awesome_rounded,
                 caption:
-                    '预计消耗 $_cost 算力 · 当前余额 ${flow.credits.toStringAsFixed(0)}',
-                onPressed: _busy ? null : _generate,
+                    '预计消耗 $_cost 算力 · '
+                    '${credits == null ? '正在读取余额' : '当前余额 $credits'}',
+                onPressed: _busy || insufficientCredits ? null : _generate,
               ),
             ],
           ),
@@ -603,8 +602,9 @@ class _ModeMiniBar extends StatelessWidget {
                     style: TextStyle(
                       color: item == mode ? AppColors.sage : AppColors.taupe,
                       fontSize: 12,
-                      fontWeight:
-                          item == mode ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: item == mode
+                          ? FontWeight.w600
+                          : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -632,9 +632,7 @@ class _ChoicePill extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.sage.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-          border: Border.all(
-            color: AppColors.sage.withValues(alpha: 0.34),
-          ),
+          border: Border.all(color: AppColors.sage.withValues(alpha: 0.34)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -806,9 +804,7 @@ class _ReferenceImageCard extends StatelessWidget {
           ),
         ),
         child: busy
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:opc_ai_creator/app.dart';
 import 'package:opc_ai_creator/core/network/api_client.dart';
-import 'package:opc_ai_creator/creator_flow/creator_flow_provider.dart';
-import 'package:opc_ai_creator/creator_flow/models/creator_models.dart';
+import 'package:opc_ai_creator/core/network/api_response.dart';
+import 'package:opc_ai_creator/creator_flow/creator_wallet_provider.dart';
+import 'package:opc_ai_creator/creator_flow/data/creator_wallet_repository.dart';
+import 'package:opc_ai_creator/creator_flow/models/creator_wallet.dart';
+import 'package:opc_ai_creator/creator_flow/pages/profile_page.dart';
 import 'package:opc_ai_creator/data/repositories/material_repository.dart';
 import 'package:opc_ai_creator/data/repositories/notification_repository.dart';
 import 'package:opc_ai_creator/data/repositories/prompt_repository.dart';
@@ -17,6 +21,48 @@ import 'package:opc_ai_creator/providers/notification_provider.dart';
 import 'package:opc_ai_creator/providers/skill_provider.dart';
 import 'package:opc_ai_creator/providers/theme_provider.dart';
 import 'package:opc_ai_creator/providers/work_provider.dart';
+
+class _FakeWalletRepository extends CreatorWalletRepository {
+  _FakeWalletRepository() : super(ApiClient(onUnauthorized: () {}));
+
+  @override
+  Future<CreatorProfileStats> fetchProfileStats() async {
+    return const CreatorProfileStats(
+      credits: 1286,
+      withdrawableFen: 36800,
+      frozenFen: 10000,
+      totalIncomeFen: 68000,
+      totalWithdrawnFen: 12000,
+      pendingReviewCount: 1,
+      approvedReviewCount: 3,
+      rejectedReviewCount: 0,
+      taskStats: {'SUCCESS': 8, 'RUNNING': 1},
+    );
+  }
+
+  @override
+  Future<PageResult<CreatorWalletTransaction>> fetchTransactions({
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    return PageResult(
+      list: [
+        CreatorWalletTransaction.fromJson({
+          'id': 1,
+          'transactionNo': 'WT1',
+          'type': 'WITHDRAW_FREEZE',
+          'amountFen': 10000,
+          'balanceAfterFen': 36800,
+          'description': '提现冻结 · 支付宝',
+          'createdAt': '2026-11-23T10:00:00',
+        }),
+      ],
+      page: 1,
+      pageSize: pageSize,
+      total: 1,
+    );
+  }
+}
 
 Future<Widget> buildApp({bool loggedIn = false}) async {
   final apiClient = ApiClient(onUnauthorized: () {});
@@ -55,42 +101,92 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('CreatorFlowProvider', () {
-    test('接单、生成、提交、审核和提现形成完整闭环', () {
-      final flow = CreatorFlowProvider();
-      final beforeWithdrawable = flow.withdrawable;
+  group('钱包金额与模型', () {
+    test('元金额严格转换为整数分', () {
+      expect(parseYuanToFen('10'), 1000);
+      expect(parseYuanToFen('10.5'), 1050);
+      expect(parseYuanToFen('10.05'), 1005);
+      expect(parseYuanToFen('0.01'), 1);
+      expect(parseYuanToFen('-1'), isNull);
+      expect(parseYuanToFen('1.001'), isNull);
+      expect(parseYuanToFen('1e3'), isNull);
+    });
 
-      flow.acceptOrder('o-1001');
-      expect(flow.currentOrder?.id, 'o-1001');
+    test('分金额格式化不经过浮点数', () {
+      expect(formatFen(0), '0.00');
+      expect(formatFen(1005), '10.05');
+      expect(formatFen(-120), '-1.20');
+    });
 
-      final created = flow.createDraft(
-        mode: CreationMode.image,
-        prompt: '香水产品主图，奶油色背景',
-        model: 'GPT-4o Image',
-      );
-      expect(created, isTrue);
-      expect(flow.draft, isNotNull);
+    test('提现流水按资金离开方向展示', () {
+      final freeze = CreatorWalletTransaction.fromJson({
+        'id': 1,
+        'transactionNo': 'WT1',
+        'type': 'WITHDRAW_FREEZE',
+        'amountFen': 10000,
+        'balanceAfterFen': 26800,
+      });
+      final income = CreatorWalletTransaction.fromJson({
+        'id': 2,
+        'transactionNo': 'WT2',
+        'type': 'ORDER_INCOME',
+        'amountFen': 6800,
+        'balanceAfterFen': 36800,
+      });
 
-      final submission = flow.submitDraft(
-        title: '香水主图最终稿',
-        note: '已经按要求完成四张主图',
-      );
-      expect(submission, isNotNull);
-      expect(submission!.status, ReviewStatus.pending);
-      expect(flow.pendingReviewCount, greaterThanOrEqualTo(1));
+      expect(freeze.displayDeltaFen, -10000);
+      expect(income.displayDeltaFen, 6800);
+    });
 
-      flow.reviewSubmission(submission.id, approved: true);
-      final approved = flow.submissionById(submission.id)!;
-      expect(approved.status, ReviewStatus.approved);
-      expect(flow.withdrawable, closeTo(beforeWithdrawable + 68, 0.001));
+    test('个人统计接口字段保持后端口径', () {
+      final stats = CreatorProfileStats.fromJson({
+        'credits': 1286,
+        'withdrawableFen': 36800,
+        'frozenFen': 10000,
+        'totalIncomeFen': 68000,
+        'totalWithdrawnFen': 12000,
+        'pendingReviewCount': 1,
+        'approvedReviewCount': 3,
+        'rejectedReviewCount': 0,
+        'taskStats': {'SUCCESS': 8, 'RUNNING': 1},
+      });
 
-      final withdrawn = flow.withdraw(amount: 100, channel: '支付宝');
-      expect(withdrawn, isTrue);
-      expect(flow.withdrawable, closeTo(beforeWithdrawable + 68 - 100, 0.001));
+      expect(stats.credits, 1286);
+      expect(stats.withdrawableFen, 36800);
+      expect(stats.pendingReviewCount, 1);
+      expect(stats.taskStats['SUCCESS'], 8);
     });
   });
 
   group('用户端页面', () {
+    testWidgets('个人中心展示真实钱包与统一统计', (tester) async {
+      usePhoneViewport(tester);
+      final apiClient = ApiClient(onUnauthorized: () {});
+      final auth = AuthProvider(apiClient: apiClient);
+      await auth.login(username: 'demo', password: 'demo123');
+      final wallet = CreatorWalletProvider(_FakeWalletRepository(), auth: auth);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthProvider>.value(value: auth),
+            ChangeNotifierProvider<CreatorWalletProvider>.value(value: wallet),
+          ],
+          child: const MaterialApp(home: CreatorProfilePage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('¥ 368.00'), findsOneWidget);
+      expect(find.text('1286'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+
+      await tester.drag(find.byType(ListView), const Offset(0, -700));
+      await tester.pumpAndSettle();
+      expect(find.text('提现冻结 · 支付宝'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('未登录启动时显示登录注册页', (tester) async {
       usePhoneViewport(tester);
       await tester.pumpWidget(await buildApp());

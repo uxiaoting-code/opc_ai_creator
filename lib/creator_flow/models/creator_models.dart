@@ -156,24 +156,3 @@ class SubmissionItem {
     );
   }
 }
-
-enum WalletEntryType { recharge, consume, income, withdraw }
-
-@immutable
-class WalletEntry {
-  const WalletEntry({
-    required this.id,
-    required this.type,
-    required this.title,
-    required this.amount,
-    required this.createdAt,
-    this.isCredit = false,
-  });
-
-  final String id;
-  final WalletEntryType type;
-  final String title;
-  final double amount;
-  final DateTime createdAt;
-  final bool isCredit;
-}

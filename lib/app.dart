@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 
 import 'core/network/api_client.dart';
 import 'creator_flow/creator_flow_provider.dart';
+import 'creator_flow/creator_wallet_provider.dart';
 import 'creator_flow/creator_router.dart';
+import 'creator_flow/data/creator_wallet_repository.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/material_repository.dart';
 import 'data/repositories/prompt_repository.dart';
@@ -73,6 +75,12 @@ class _OpcAppState extends State<OpcApp> {
         ChangeNotifierProvider<AuthProvider>.value(value: widget.authProvider),
         ChangeNotifierProvider<CreatorFlowProvider>(
           create: (_) => CreatorFlowProvider(),
+        ),
+        ChangeNotifierProvider<CreatorWalletProvider>(
+          create: (_) => CreatorWalletProvider(
+            CreatorWalletRepository(widget.apiClient),
+            auth: widget.authProvider,
+          ),
         ),
         ChangeNotifierProvider<ThemeProvider>.value(
           value: widget.themeProvider,

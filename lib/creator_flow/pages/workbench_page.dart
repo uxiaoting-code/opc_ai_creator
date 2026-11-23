@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../creator_flow_provider.dart';
+import '../creator_wallet_provider.dart';
 import '../models/creator_models.dart';
 import '../models/creator_order.dart';
 import '../widgets/creator_widgets.dart';
@@ -15,6 +16,7 @@ class WorkbenchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final flow = context.watch<CreatorFlowProvider>();
+    final wallet = context.watch<CreatorWalletProvider>();
     final order = flow.currentOrder;
     final work = flow.workContext;
 
@@ -175,9 +177,11 @@ class WorkbenchPage extends StatelessWidget {
                   };
                   context.push(
                     path,
-                    extra: CreatorCreationArgs(orderId: order.id.startsWith('api-')
-                        ? int.tryParse(order.id.substring(4))
-                        : null),
+                    extra: CreatorCreationArgs(
+                      orderId: order.id.startsWith('api-')
+                          ? int.tryParse(order.id.substring(4))
+                          : null,
+                    ),
                   );
                 },
               ),
@@ -198,7 +202,9 @@ class WorkbenchPage extends StatelessWidget {
               children: [
                 _HintRow(
                   icon: Icons.bolt_rounded,
-                  text: '生成作品会消耗算力，当前余额 ${flow.credits.toStringAsFixed(0)} 点',
+                  text: wallet.stats == null
+                      ? '生成作品会消耗算力，余额正在读取'
+                      : '生成作品会消耗算力，当前余额 ${wallet.stats!.credits} 点',
                 ),
                 const SizedBox(height: 12),
                 _HintRow(
