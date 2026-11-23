@@ -808,7 +808,7 @@
     $('#agents-list-view').classList.add('hidden');
     $('#agents-detail-view').classList.remove('hidden');
     $('#pg-agents').scrollTop = 0;
-    setText('#pg-title', '智能体 Skill 配置 / 加载中…');
+    setText('#pg-title', '智能体工作流编排 / 加载中…');
     setText('#agent-detail-name', '加载中…');
     setText('#ad-skill-count', '正在加载…');
     const list = $('#ad-skill-list');
@@ -832,7 +832,7 @@
       fillDetail(detail);
       setText(
         '#pg-title',
-        '智能体 Skill 配置 / ' + (detail.name || detail.code),
+        '智能体工作流编排 / ' + (detail.name || detail.code),
       );
       if (toolsError) {
         toast(
@@ -846,7 +846,7 @@
     } catch (error) {
       state.detail = null;
       setText('#agent-detail-name', '加载失败');
-      setText('#pg-title', '智能体 Skill 配置 / 加载失败');
+      setText('#pg-title', '智能体工作流编排 / 加载失败');
       const root = $('#ad-skill-list');
       if (root) {
         root.innerHTML =
@@ -869,7 +869,7 @@
   function showList() {
     $('#agents-list-view').classList.remove('hidden');
     $('#agents-detail-view').classList.add('hidden');
-    setText('#pg-title', '智能体 Skill 配置');
+    setText('#pg-title', '智能体工作流编排');
     state.detail = null;
     state.activeAgentId = null;
     state.nodeEditingIndex = -1;
@@ -1169,7 +1169,7 @@
       fillDetail(detail);
       setText(
         '#pg-title',
-        '智能体 Skill 配置 / ' + (detail.name || detail.code),
+        '智能体工作流编排 / ' + (detail.name || detail.code),
       );
       toast(
         '编排已保存为 v' + (detail.currentVersion || '新') + ' 版本',

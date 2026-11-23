@@ -28,9 +28,9 @@
 ### 1.1 `admin-web/` —— 老师给的后台控制台原型（纯静态）
 
 - 文件：`admin-web/index.html`(415 行) + `admin-web/css/admin.css`(23KB) + `admin-web/js/admin.js`(28KB)
-- 侧栏 7 个页面：数据概览 / 用户管理 / 账单管理 / 大模型配置 / 智能体 Skill 配置 / 算力使用 / 系统设置
-- 交互最深的是「智能体 Skill 配置」，两层结构：
-  智能体列表 → **Skill 编排详情**（基础信息 + System Prompt + 开场白 + Skill 列表开关排序
+- 侧栏 7 个页面：数据概览 / 用户管理 / 账单管理 / 大模型配置 / 智能体工作流编排 / 算力使用 / 系统设置
+- 交互最深的是「智能体工作流编排」，两层结构：
+  智能体列表 → **工具节点编排详情**（基础信息 + System Prompt + 开场白 + 节点开关排序
   + 调用计费/轮次/超时/配额 + 静态调用流程预览）
 - **关键事实：`admin.js` 里没有一处 `fetch` / `XMLHttpRequest` / `axios`，`index.html` 里表格数据全是写死的。**
   所以它现在是一个「能点的高保真原型」，不是「能用的后台」。
@@ -132,7 +132,7 @@
 - `PUT  /api/admin/providers/{id}/online` / `/offline` —— 上架 / 下线
 - `PUT  /api/admin/providers/{id}/pricing` —— 调价
 
-### ⑤ 智能体 Skill 配置 `pg-agents` —— 需求 3.5 工作台
+### ⑤ 智能体工作流编排 `pg-agents` —— 需求 3.5 工作台
 - `GET  /api/admin/agents?type&status&page`
 - `POST /api/admin/agents` —— 新建（支持复制模板）
 - `GET  /api/admin/agents/{id}` —— 详情（含编排）
@@ -187,7 +187,7 @@
 |---|---|---|---|---|
 | **P0 地基** | `/api/admin/**` 路由 + ADMIN 角色鉴权 + 管理端登录接口；控制台假登录改真登录 + 抽出 `admin-web/js/api.js` 统一请求封装；MySQL 建库落地；把 dev-token 收窄到不放行 admin | `admin/admin123` 能登录后台；任一页能拿到真数据 | 3~4 天 | **两人结对** |
 | **P1 模型 / API 配置** | `AiProviderConfig` 实体 + CRUD + 鉴权配置 + 请求模板 + 响应模板 + 连通性测试；把 `AiProviderRouter` 从"写死 provider 名"改成"读配置路由" | 后台配一个模型 → 页面点"测试"能看到真实返回；「大模型配置」页接真数据 | 4~5 天 | A |
-| **P2 智能体与工作台** | `Agent` / `AgentNode` / `AgentVersion` 实体；节点 = 能力（工具/模型/知识库/审核）；编排保存、发布、复制、版本回滚、条件路由 | 「智能体 Skill 配置」页真数据；能编排一条"输入→检索→生成"的链并保存 | 5~6 天 | B |
+| **P2 智能体与工作台** | `Agent` / `AgentNode` / `AgentVersion` 实体；节点 = 能力（工具/模型/知识库/审核）；编排保存、发布、复制、版本回滚、条件路由 | 「智能体工作流编排」页真数据；能编排一条"输入→检索→生成"的链并保存 | 5~6 天 | B |
 | **P3 调试面板** | 调用日志表 + 单节点调试 + 全链路调试 + 对话式调试 + 版本对比 + 回归用例集 | 新页面「调试」；一键跑通链路，能看到每个节点的中间结果 / 耗时 / 算力 | 4~5 天 | A |
 | **P4 MCP 接入** | `McpServer` / `McpTool` 实体；注册 / 发现(list tools) / 启用 / 映射为平台工具 / 试调用 | 新页面「MCP 接入」；注册一个 MCP Server 能拉到工具列表并调用成功 | 3~4 天 | A |
 | **P5 知识库** | `KnowledgeBase` / `Document` / `Chunk` 实体；录入(文本/文件/URL/API 同步)、分段、检索、检索测试、绑定智能体 | 新页面「知识库」；传一份 PDF 能检索出片段 | 5~6 天 | B |
@@ -252,7 +252,7 @@ B 做 用户管理 + 系统设置（偏 CRUD）。
 
 **Day 4~5（各自动手）**
 - A：`AiProviderConfig` 实体 + 列表/新增接口 + 「大模型配置」页接真数据
-- B：`Agent` / `AgentNode` 实体 + 列表/详情接口 + 「智能体 Skill 配置」页接真数据
+- B：`Agent` / `AgentNode` 实体 + 列表/详情接口 + 「智能体工作流编排」页接真数据
 
 **第一周验收标准：后台能真登录，两页（大模型配置、智能体配置）看到数据库里的真数据并能保存。**
 

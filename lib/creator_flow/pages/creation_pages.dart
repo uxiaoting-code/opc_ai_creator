@@ -42,7 +42,6 @@ class CreateImagePage extends StatelessWidget {
       initialSkillId: initialSkillId,
       models: const [],
       choices: [
-        _ChoiceGroup('画面风格', ['高级留白', '自然光', '场景化', '极简']),
         _ChoiceGroup('画面比例', ['1:1', '3:4', '4:3', '9:16']),
         _ChoiceGroup('清晰度', ['标准', '高清', '超清']),
       ],
@@ -213,7 +212,6 @@ class _CreationFormPageState extends State<_CreationFormPage> {
             value: value,
             title: value,
             icon: switch (group.label) {
-              '画面风格' => Icons.palette_outlined,
               '画面比例' => Icons.aspect_ratio_rounded,
               '镜头运动' => Icons.movie_filter_outlined,
               '视频比例' => Icons.aspect_ratio_rounded,
@@ -504,7 +502,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                         EmptyPanel(
                           icon: Icons.route_outlined,
                           title: '暂无可用创作线路',
-                          subtitle: '当前媒体类型没有启用中的后台 Skill 线路。',
+                          subtitle: '当前媒体类型没有可用的系统预置生成模板。',
                           actionLabel: '刷新',
                           onAction: () => skillProvider.load(force: true),
                         )
@@ -513,8 +511,8 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                           skills: availableSkills,
                           selectedId: effectiveSkill?.id,
                           allowAuto: false,
-                          title: '选择创作风格',
-                          subtitle: '来自后台 Skill 配置',
+                          title: '选择创作线路',
+                          subtitle: '每条线路包含风格、模型和默认参数',
                           onChanged: (id) {
                             if (id != null) setState(() => _skillId = id);
                           },

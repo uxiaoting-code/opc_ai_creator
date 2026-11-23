@@ -205,7 +205,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
     final selected = await showPremiumSelectSheet<SkillModel>(
       context: context,
       title: '选择创作线路',
-      subtitle: '来自后台 Skill 配置',
+      subtitle: '选择系统预设的生成模板',
       options: [
         for (final skill in skills)
           PremiumSelectOption(
@@ -457,7 +457,7 @@ class _SkillRoutePanel extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '由后台 Skill 配置提供',
+                      '线路决定创作风格、模型和默认参数',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -501,7 +501,7 @@ class _SkillRoutePanel extends StatelessWidget {
             )
           else if (skills.isEmpty)
             Text(
-              '当前媒体类型暂无启用线路，请到后台检查 Skill 配置。',
+              '当前媒体类型暂无可用线路，请稍后刷新。',
               style: Theme.of(context).textTheme.bodySmall,
             )
           else ...[
@@ -509,8 +509,8 @@ class _SkillRoutePanel extends StatelessWidget {
               skills: skills,
               selectedId: selectedId,
               allowAuto: false,
-              title: '选择风格',
-              subtitle: '点击切换',
+              title: '选择创作线路',
+              subtitle: '线路已经包含风格与参数',
               onChanged: (id) {
                 if (id != null) onSelected(id);
               },

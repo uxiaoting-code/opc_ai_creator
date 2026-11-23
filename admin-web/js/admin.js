@@ -42,7 +42,7 @@
   });
 
   /* ---------- 侧栏导航 ---------- */
-  const pgTitles = { dash: '数据概览', users: '用户管理', bills: '账单管理', models: '大模型配置', agents: '智能体 Skill 配置', usage: '算力使用', settings: '系统设置' };
+  const pgTitles = { dash: '数据概览', users: '用户管理', bills: '账单管理', models: '大模型配置', agents: '智能体工作流编排', usage: '算力使用', settings: '系统设置' };
   function goPage(pg) {
     $$('.anv').forEach((b) => b.classList.toggle('active', b.dataset.pg === pg));
     $$('.page').forEach((s) => s.classList.toggle('hidden', s.id !== 'pg-' + pg));
@@ -231,7 +231,7 @@
     });
   });
 
-  /* ---------- 智能体 Skill 配置 ---------- */
+  /* ---------- 智能体工作流编排 ---------- */
   // Skill 类型 → 徽章配色
   const SKILL_TYPE_BADGE = {
     '模型调用': 'teal', '联网搜索': 'blue', '知识库检索': 'purple', '代码执行': 'gold',
@@ -339,7 +339,7 @@
     const stBadge = $('#agent-detail-status');
     stBadge.textContent = $('.st', tr).textContent;
     stBadge.className = 'bdg st ' + ($('.st', tr).className.match(/(teal|gold|red)/) || ['teal'])[0];
-    $('#pg-title').textContent = '智能体 Skill 配置 / ' + name;
+    $('#pg-title').textContent = '智能体工作流编排 / ' + name;
 
     $('#ad-name').value = name;
     $('#ad-key').value = key;
@@ -365,7 +365,7 @@
   function showAgentList() {
     agentDetailView.classList.add('hidden');
     agentListView.classList.remove('hidden');
-    if ($('#pg-title').textContent.indexOf(' / ') > -1) $('#pg-title').textContent = '智能体 Skill 配置';
+    if ($('#pg-title').textContent.indexOf(' / ') > -1) $('#pg-title').textContent = '智能体工作流编排';
   }
   $('#agent-back').addEventListener('click', showAgentList);
 
@@ -412,7 +412,7 @@
       renderSkills();
       toast('Skill「' + lib.name + '」' + (curSkills[idx].enabled ? '已启用' : '已停用'), curSkills[idx].enabled ? 'ok' : 'warn');
     } else if (e.target.closest('.cfg')) {
-      toast('展开 Skill 配置：' + lib.name);
+      toast('展开工具节点：' + lib.name);
     } else if (e.target.closest('.up')) {
       if (idx === 0) { toast('已是第一个 Skill', 'warn'); return; }
       [curSkills[idx - 1], curSkills[idx]] = [curSkills[idx], curSkills[idx - 1]];
@@ -459,7 +459,7 @@
     toast(name + ' 已发布，C 端立即可调用', 'ok');
   });
 
-  // 添加 Skill 弹窗
+  // 添加工具节点弹窗
   function renderSkillPicker() {
     const box = $('#skill-picker');
     box.innerHTML = '';
@@ -499,7 +499,7 @@
     card.classList.add('added');
     $('.sc-add', card).textContent = '已添加';
     renderSkills();
-    toast('已添加 Skill：' + SKILL_MAP[id].name, 'ok');
+    toast('已添加工具节点：' + SKILL_MAP[id].name, 'ok');
   });
 
   // 新建智能体

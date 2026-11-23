@@ -32,7 +32,7 @@
       <button class="anv" data-pg="users"><i>👥</i>用户管理</button>
       <button class="anv" data-pg="bills"><i>🧾</i>账单管理</button>
       <button class="anv" data-pg="models"><i>🧠</i>大模型配置</button>
-      <button class="anv" data-pg="agents"><i>🤖</i>智能体 Skill 配置</button>
+      <button class="anv" data-pg="agents"><i>🤖</i>智能体工作流编排</button>
       <button class="anv" data-pg="usage"><i>⚡</i>算力使用</button>
       <button class="anv" data-pg="settings"><i>⚙</i>系统设置</button>
       <button class="anv" data-pg="debug"><i>🧪</i>调试面板</button>
@@ -172,7 +172,7 @@
       </div>
     </section>
 
-    <!-- ===== 智能体 Skill 配置 ===== -->
+    <!-- ===== 智能体工作流编排 ===== -->
     <section class="page hidden" id="pg-agents">
 
       <!-- 第一层：智能体列表 -->
@@ -189,14 +189,14 @@
         </div>
         <div class="panel flat">
           <table class="tbl" id="agent-table">
-            <thead><tr><th>智能体</th><th>分类</th><th>编排模型数</th><th>已启用 Skill</th><th>今日调用</th><th>平均耗时</th><th>成功率</th><th>状态</th><th>操作</th></tr></thead>
+            <thead><tr><th>智能体</th><th>分类</th><th>编排模型数</th><th>已启用节点</th><th>今日调用</th><th>平均耗时</th><th>成功率</th><th>状态</th><th>操作</th></tr></thead>
             <tbody><tr><td colspan="9" class="empty-cell">正在加载智能体…</td></tr></tbody>
           </table>
           <div class="pager"><span id="agent-count">正在加载…</span><div class="pg-btns" id="agent-pager"></div></div>
         </div>
       </div>
 
-      <!-- 第二层：Skill 编排详情 -->
+      <!-- 第二层：工具节点编排详情 -->
       <div id="agents-detail-view" class="hidden">
         <div class="agent-bar">
           <button class="back" id="agent-back">← 返回智能体列表</button>
@@ -232,9 +232,9 @@
             <textarea class="f-textarea" id="ad-greeting">你好，告诉我目标市场与品类，我来帮你选品。</textarea>
           </div>
 
-          <!-- 中栏：Skill 编排 -->
+          <!-- 中栏：工具节点编排 -->
           <div class="panel">
-            <div class="panel-head"><strong>Skill 编排</strong><span class="ph-hint" id="ad-skill-count">正在加载…</span></div>
+            <div class="panel-head"><strong>工具节点编排</strong><span class="ph-hint" id="ad-skill-count">正在加载…</span></div>
             <div class="skill-list" id="ad-skill-list"></div>
             <button class="btn ghost add-skill" id="btn-add-skill" type="button">＋ 添加工具节点</button>
           </div>
@@ -686,10 +686,10 @@
   </div>
 </div>
 
-<!-- ===== 添加 Skill 弹窗 ===== -->
+<!-- ===== 添加工具节点弹窗 ===== -->
 <div class="mask hidden" id="modal-skill">
   <div class="dlg wide">
-    <div class="dlg-head"><strong>添加 Skill</strong><button class="dlg-x" data-close="modal-skill">✕</button></div>
+            <div class="dlg-head"><strong>添加工具节点</strong><button class="dlg-x" data-close="modal-skill">✕</button></div>
     <div class="skill-filter">
       <div class="tb-search"><span>🔍</span><input id="agent-tool-search" type="text" placeholder="搜索统一工具库..." /></div>
       <select class="tb-select" id="agent-tool-source"><option value="">全部来源</option><option value="MODEL">模型</option><option value="KNOWLEDGE">知识库</option><option value="MCP">MCP</option><option value="BUILTIN">内置工具</option></select>

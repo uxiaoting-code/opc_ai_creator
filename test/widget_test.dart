@@ -313,6 +313,9 @@ void main() {
       expect(find.text('文生图'), findsWidgets);
       expect(find.textContaining('预计消耗 12 算力'), findsOneWidget);
       expect(find.text('二次元插画'), findsWidgets);
+      expect(find.text('选择创作线路'), findsOneWidget);
+      expect(find.text('画面风格'), findsNothing);
+      expect(find.textContaining('后台 Skill'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

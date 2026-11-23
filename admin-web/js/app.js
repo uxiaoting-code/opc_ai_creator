@@ -11,7 +11,7 @@
     users: '用户管理',
     bills: '账单管理',
     models: '大模型配置',
-    agents: '智能体 Skill 配置',
+    agents: '智能体工作流编排',
     usage: '算力使用',
     settings: '系统设置',
     debug: '调试面板',

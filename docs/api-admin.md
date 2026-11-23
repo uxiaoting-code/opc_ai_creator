@@ -293,7 +293,11 @@
 
 ---
 
-## ⑤ 智能体 Skill 配置 `pg-agents` —— 需求 3.5 工作台，**后端核心**
+## ⑤ 智能体工作流编排 `pg-agents`（原型原名“智能体 Skill 配置”）—— 需求 3.5 工作台，**后端核心**
+
+> 命名边界：本页编排的是 `t_agent` / `t_agent_node` 工具节点，不是 App 用户选择
+> 文生图、图生视频风格的 `t_skill` 创作线路。页面中的“节点”才对应模型调用、
+> 知识库、MCP 或内置工具；App 的 Skill 线路不由此页管理。
 
 原型是**两层结构**，两层的接口都要做。
 
@@ -306,7 +310,7 @@
 | 智能体（名称 + 英文标识） | `name` / `code` |
 | 分类 | `category` + `categoryLabel` |
 | 编排模型数 | `modelCount` |
-| 已启用 Skill | `enabledSkillCount` / `skillCount`（原型显示「4」，列表页只展示启用数） |
+| 已启用节点 | `enabledSkillCount` / `skillCount`（历史字段名保留，列表页只展示启用节点数） |
 | 今日调用 | `todayCalls` |
 | 平均耗时 | `avgElapsedMs` |
 | 成功率 | `successRate` |
@@ -331,7 +335,7 @@
 | 原型栏位 | 内容 | 对应 |
 |---|---|---|
 | 左栏 基础信息 | 名称 / 标识 / 分类 / **绑定模型** / 头像 emoji / System Prompt / 开场白 | `PUT /api/admin/agents/{id}` |
-| 中栏 Skill 编排 | Skill 列表（启用开关 + 排序）+ 「添加 Skill」 | `PUT /api/admin/agents/{id}/nodes`、`GET /api/admin/tools`、`POST /api/admin/agents/{id}/nodes` |
+| 中栏 工具节点编排 | 节点列表（启用开关 + 排序）+「添加工具节点」 | `PUT /api/admin/agents/{id}/nodes`、`GET /api/admin/tools`、`POST /api/admin/agents/{id}/nodes` |
 | 右栏 调用与计费 | 单次基础算力 / 各 Skill 附加算力汇总 / 最大轮次 / 超时 / 每日上限 / 两个开关 | 同 `PUT /api/admin/agents/{id}` |
 | 底部 调用流程实时预览 | 静态示意 → 做成**真预览** | `POST /api/admin/agents/{id}/preview` |
 
