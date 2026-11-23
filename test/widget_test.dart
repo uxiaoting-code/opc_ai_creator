@@ -158,6 +158,20 @@ void main() {
     });
   });
 
+  group('登录态', () {
+    test('脚手架模式登录会持久化令牌和用户', () async {
+      final auth = AuthProvider(apiClient: ApiClient(onUnauthorized: () {}));
+
+      final error = await auth.login(username: 'demo', password: 'demo123');
+      expect(error, isNull);
+      expect(auth.isLoggedIn, isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('auth_token'), 'mock-token-for-scaffold');
+      expect(prefs.getInt('auth_user_id'), 1);
+    });
+  });
+
   group('用户端页面', () {
     testWidgets('个人中心展示真实钱包与统一统计', (tester) async {
       usePhoneViewport(tester);

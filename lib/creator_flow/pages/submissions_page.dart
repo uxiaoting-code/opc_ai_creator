@@ -6,6 +6,7 @@ import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
+import '../creator_wallet_provider.dart';
 import '../data/creator_submission_repository.dart';
 import '../models/creator_order.dart';
 import '../models/creator_submission.dart';
@@ -49,6 +50,7 @@ class _SubmissionsPageState extends State<SubmissionsPage> {
       final page = await _repository.fetchMy();
       if (!mounted) return;
       setState(() => _items = page.list);
+      await context.read<CreatorWalletProvider>().reload();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -67,15 +69,18 @@ class _SubmissionsPageState extends State<SubmissionsPage> {
 
   List<CreatorSubmission> get _visible {
     return switch (_filter) {
-      1 => _items
-          .where((item) => item.status == SubmissionReviewStatus.pending)
-          .toList(),
-      2 => _items
-          .where((item) => item.status == SubmissionReviewStatus.approved)
-          .toList(),
-      3 => _items
-          .where((item) => item.status == SubmissionReviewStatus.rejected)
-          .toList(),
+      1 =>
+        _items
+            .where((item) => item.status == SubmissionReviewStatus.pending)
+            .toList(),
+      2 =>
+        _items
+            .where((item) => item.status == SubmissionReviewStatus.approved)
+            .toList(),
+      3 =>
+        _items
+            .where((item) => item.status == SubmissionReviewStatus.rejected)
+            .toList(),
       _ => _items,
     };
   }

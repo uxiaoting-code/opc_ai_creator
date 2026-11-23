@@ -9,6 +9,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../creator_flow_provider.dart';
+import '../creator_wallet_provider.dart';
 import '../data/creator_order_repository.dart';
 
 class CreatorMainShell extends StatefulWidget {
@@ -24,11 +25,7 @@ class _CreatorMainShellState extends State<CreatorMainShell>
     with WidgetsBindingObserver {
   static const _items = [
     _NavItem('课程', Icons.school_outlined, Icons.school_rounded),
-    _NavItem(
-      '创作',
-      Icons.auto_awesome_outlined,
-      Icons.auto_awesome_rounded,
-    ),
+    _NavItem('创作', Icons.auto_awesome_outlined, Icons.auto_awesome_rounded),
     _NavItem('接单', Icons.storefront_outlined, Icons.storefront_rounded),
     _NavItem('我的', Icons.person_outline_rounded, Icons.person_rounded),
   ];
@@ -48,7 +45,16 @@ class _CreatorMainShellState extends State<CreatorMainShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshContext();
+    if (state == AppLifecycleState.resumed) _refreshAllContext();
+  }
+
+  Future<void> _refreshAllContext() async {
+    await Future.wait([_refreshContext(), _refreshWallet()]);
+  }
+
+  Future<void> _refreshWallet() async {
+    if (!mounted) return;
+    await context.read<CreatorWalletProvider>().reload();
   }
 
   Future<void> _refreshContext() async {
@@ -100,6 +106,9 @@ class _CreatorMainShellState extends State<CreatorMainShell>
                           active: navigationShell.currentIndex == i,
                           onTap: () {
                             HapticFeedback.selectionClick();
+                            if (i == 3) {
+                              context.read<CreatorWalletProvider>().reload();
+                            }
                             navigationShell.goBranch(
                               i,
                               initialLocation:

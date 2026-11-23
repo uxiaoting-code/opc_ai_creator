@@ -7,6 +7,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../creator_wallet_provider.dart';
 import '../data/creator_submission_repository.dart';
 import '../models/creator_order.dart';
 import '../models/creator_submission.dart';
@@ -59,6 +60,7 @@ class _ReviewStatusPageState extends State<ReviewStatusPage> {
       final item = await _repository.fetchDetail(id);
       if (!mounted) return;
       setState(() => _item = item);
+      await context.read<CreatorWalletProvider>().reload();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -356,9 +358,8 @@ class _TimelineStep extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: color,
-                  ),
+                  style: Theme.of(context).textTheme.titleSmall
+                      ?.copyWith(color: color),
                 ),
                 const SizedBox(height: 3),
                 Text(subtitle, style: Theme.of(context).textTheme.bodySmall),

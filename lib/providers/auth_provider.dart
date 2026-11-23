@@ -91,7 +91,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       if (AppConfig.bypassLogin) {
         // ---- 脚手架模式：不调后端，本地造一个会话 ----
-        _applyMockSession(username: username);
+        await _applyMockSession(username: username);
         debugPrint('[AuthProvider] 脚手架模式登录，未调用后端接口');
         return null;
       }
@@ -136,7 +136,7 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       if (AppConfig.bypassLogin) {
-        _applyMockSession(username: username, nickname: nickname);
+        await _applyMockSession(username: username, nickname: nickname);
         return null;
       }
 
@@ -260,11 +260,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// 脚手架模式下的模拟会话。
-  void _applyMockSession({String username = 'demo_creator', String? nickname}) {
+  Future<void> _applyMockSession({
+    String username = 'demo_creator',
+    String? nickname,
+  }) async {
     const mockToken = 'mock-token-for-scaffold';
-    _token = mockToken;
-    _api.authToken = mockToken;
-    _user = UserModel(
+    final user = UserModel(
       id: 1,
       username: username.isEmpty ? 'demo_creator' : username,
       nickname: nickname ?? '课设演示账号',
@@ -274,7 +275,7 @@ class AuthProvider extends ChangeNotifier {
       // 而不是先给一个骗人的数字。
       createdAt: '2026-01-01T00:00:00',
     );
-    _errorMessage = null;
+    await _saveSession(token: mockToken, user: user);
   }
 
   void _setLoading(bool value) {

@@ -7,6 +7,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../creator_wallet_provider.dart';
 import '../data/creator_submission_repository.dart';
 import '../models/creator_order.dart';
 import '../models/creator_submission.dart';
@@ -57,6 +58,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
       final item = await _repository.fetchDetail(id);
       if (!mounted) return;
       setState(() => _item = item);
+      await context.read<CreatorWalletProvider>().reload();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -127,10 +129,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
                 GlassPanel(
                   child: Column(
                     children: [
-                      _DetailRow(
-                        label: '作品类型',
-                        value: item.mediaType.label,
-                      ),
+                      _DetailRow(label: '作品类型', value: item.mediaType.label),
                       const SizedBox(height: 12),
                       _DetailRow(
                         label: '订单报酬',
@@ -208,7 +207,11 @@ class _WorkMedia extends StatelessWidget {
           gradient: AppColors.goldGradient,
           borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
         ),
-        child: const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 54),
+        child: const Icon(
+          Icons.graphic_eq_rounded,
+          color: Colors.white,
+          size: 54,
+        ),
       );
     }
     final url = AppConfig.resolveAssetUrl(item.displayImageUrl);

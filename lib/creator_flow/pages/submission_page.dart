@@ -8,6 +8,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../data/models/task_model.dart';
+import '../creator_wallet_provider.dart';
 import '../data/creator_submission_repository.dart';
 import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
@@ -59,14 +60,15 @@ class _SubmissionPageState extends State<SubmissionPage> {
 
     setState(() => _submitting = true);
     try {
-      final submission = await CreatorSubmissionRepository(
-        context.read<ApiClient>(),
-      ).submit(
-        orderId: task.orderId!,
-        taskId: task.id,
-        title: _title.text.trim(),
-        note: _note.text.trim(),
-      );
+      final submission =
+          await CreatorSubmissionRepository(context.read<ApiClient>()).submit(
+            orderId: task.orderId!,
+            taskId: task.id,
+            title: _title.text.trim(),
+            note: _note.text.trim(),
+          );
+      if (!mounted) return;
+      await context.read<CreatorWalletProvider>().reload();
       if (!mounted) return;
       context.go('/review/${submission.id}');
     } on ApiException catch (e) {
@@ -81,7 +83,9 @@ class _SubmissionPageState extends State<SubmissionPage> {
   @override
   Widget build(BuildContext context) {
     final task = widget.initialTask;
-    if (task == null || task.orderId == null || task.status != TaskStatus.success) {
+    if (task == null ||
+        task.orderId == null ||
+        task.status != TaskStatus.success) {
       return CreatorScreen(
         title: '提交作品',
         onBack: () => context.pop(),
