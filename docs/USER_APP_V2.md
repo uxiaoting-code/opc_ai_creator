@@ -88,9 +88,10 @@
 ```text
 lib/creator_flow/data/creator_order_repository.dart
 lib/creator_flow/data/creator_submission_repository.dart
+lib/data/repositories/skill_repository.dart
 ```
 
-订单列表、接单上下文、提交记录、审核状态、AI 任务、钱包和个人统计均已使用真实接口。
+订单列表、接单上下文、提交记录、审核状态、AI 任务、Skill 创作线路、钱包和个人统计均已使用真实接口。
 
 当前主流程使用真实接口；不要再用演示数据伪装订单、审核、钱包或 AI 生成成功。钱包和个人统计统一读取 `/api/wallet/**` 与 `/api/profile/stats`，金额全程使用整数分。
 
@@ -103,6 +104,7 @@ lib/creator_flow/data/creator_submission_repository.dart
 | 接单详情 | `/api/orders/{id}` |
 | 接单 | `POST /api/orders/{id}/accept` |
 | 工作台上下文 | `GET /api/orders/{id}/workbench` |
+| Skill 创作线路 | `GET /api/skills?type=TEXT_TO_IMAGE/IMAGE_TO_VIDEO` |
 | 文生图 | `POST /api/creation/text-to-image`（已存在） |
 | 图生视频 | `POST /api/creation/image-to-video`（已存在） |
 | 生成音频 | `POST /api/creation/text-to-audio`（已完成） |

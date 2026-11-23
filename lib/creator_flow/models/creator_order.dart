@@ -94,9 +94,8 @@ class CreatorOrder {
       deadlineAt: _parseDate(json['deadlineAt']),
       tasksTotal: (json['tasksTotal'] as num?)?.toInt() ?? 0,
       tasksTaken: (json['tasksTaken'] as num?)?.toInt() ?? 0,
-      requirements: (json['requirements'] as List?)
-              ?.whereType<String>()
-              .toList() ??
+      requirements:
+          (json['requirements'] as List?)?.whereType<String>().toList() ??
           const [],
       status: OrderStatus.fromValue(json['status'] as String?),
       myAcceptanceStatus: json['myAcceptanceStatus'] as String?,
@@ -145,10 +144,11 @@ class CreatorOrderDetail {
 /// 从订单详情“去创作”时传给创作页的参数。
 @immutable
 class CreatorCreationArgs {
-  const CreatorCreationArgs({this.prompt = '', this.orderId});
+  const CreatorCreationArgs({this.prompt = '', this.orderId, this.skillId});
 
   final String prompt;
   final int? orderId;
+  final int? skillId;
 }
 
 /// 后端返回的当前工作动作。
@@ -198,8 +198,7 @@ class CreatorWorkContext {
 
   String? get acceptanceStatus => acceptance?['status'] as String?;
 
-  int? get latestSubmissionId =>
-      (latestSubmission?['id'] as num?)?.toInt();
+  int? get latestSubmissionId => (latestSubmission?['id'] as num?)?.toInt();
 
   factory CreatorWorkContext.fromJson(Map<String, dynamic> json) {
     final orderJson = json['order'];

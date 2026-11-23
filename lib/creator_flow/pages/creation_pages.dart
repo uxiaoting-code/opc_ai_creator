@@ -6,9 +6,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/utils/media_utils.dart';
+import '../../data/models/skill_model.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/material_repository.dart';
 import '../../data/repositories/task_repository.dart';
+import '../../providers/skill_provider.dart';
+import '../../widgets/creation/skill_selector.dart';
 import '../../widgets/premium/premium_select_sheet.dart';
 import '../creator_flow_provider.dart';
 import '../creator_wallet_provider.dart';
@@ -16,21 +19,28 @@ import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
 
 class CreateImagePage extends StatelessWidget {
-  const CreateImagePage({super.key, this.initialPrompt, this.orderId});
+  const CreateImagePage({
+    super.key,
+    this.initialPrompt,
+    this.orderId,
+    this.initialSkillId,
+  });
 
   final String? initialPrompt;
   final int? orderId;
+  final int? initialSkillId;
 
   @override
   Widget build(BuildContext context) {
     return _CreationFormPage(
       mode: CreationMode.image,
       title: '文生图',
-      defaultModel: 'GPT-4o Image',
+      defaultModel: '自动线路',
       promptHint: '例如：春季香水瓶，奶油色背景，柔和自然光，高级电商广告质感',
       initialPrompt: initialPrompt ?? '',
       orderId: orderId,
-      models: ['GPT-4o Image', 'DALL·E 3', '通义万相'],
+      initialSkillId: initialSkillId,
+      models: const [],
       choices: [
         _ChoiceGroup('画面风格', ['高级留白', '自然光', '场景化', '极简']),
         _ChoiceGroup('画面比例', ['1:1', '3:4', '4:3', '9:16']),
@@ -42,21 +52,28 @@ class CreateImagePage extends StatelessWidget {
 }
 
 class CreateVideoPage extends StatelessWidget {
-  const CreateVideoPage({super.key, this.initialPrompt, this.orderId});
+  const CreateVideoPage({
+    super.key,
+    this.initialPrompt,
+    this.orderId,
+    this.initialSkillId,
+  });
 
   final String? initialPrompt;
   final int? orderId;
+  final int? initialSkillId;
 
   @override
   Widget build(BuildContext context) {
     return _CreationFormPage(
       mode: CreationMode.video,
       title: '图生视频',
-      defaultModel: '可灵 Kling',
+      defaultModel: '自动线路',
       promptHint: '例如：咖啡机缓慢旋转，蒸汽升起，镜头平稳推进，暖色生活场景',
       initialPrompt: initialPrompt ?? '',
       orderId: orderId,
-      models: ['可灵 Kling', 'Runway Gen-3', '即梦 Jimeng'],
+      initialSkillId: initialSkillId,
+      models: const [],
       choices: [
         _ChoiceGroup('镜头运动', ['平稳推进', '环绕展示', '拉近特写', '固定镜头']),
         _ChoiceGroup('视频比例', ['9:16', '16:9', '1:1']),
@@ -108,6 +125,7 @@ class _CreationFormPage extends StatefulWidget {
     required this.promptHint,
     this.initialPrompt = '',
     this.orderId,
+    this.initialSkillId,
     required this.models,
     required this.choices,
     this.showReference = false,
@@ -121,6 +139,7 @@ class _CreationFormPage extends StatefulWidget {
   final String promptHint;
   final String initialPrompt;
   final int? orderId;
+  final int? initialSkillId;
   final List<String> models;
   final List<_ChoiceGroup> choices;
   final bool showReference;
@@ -134,6 +153,7 @@ class _CreationFormPage extends StatefulWidget {
 class _CreationFormPageState extends State<_CreationFormPage> {
   late final TextEditingController _prompt;
   late String _model;
+  int? _skillId;
   late final List<String> _selected;
   bool _busy = false;
   bool _pickingReference = false;
@@ -144,9 +164,12 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     super.initState();
     _prompt = TextEditingController(text: widget.initialPrompt);
     _model = widget.defaultModel;
+    _skillId = widget.initialSkillId;
     _selected = [for (final group in widget.choices) group.values.first];
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<CreatorWalletProvider>().load();
+      if (!mounted) return;
+      context.read<CreatorWalletProvider>().load();
+      if (!widget.audioMode) context.read<SkillProvider>().loadIfNeeded();
     });
   }
 
@@ -162,25 +185,21 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     CreationMode.audio => 8,
   };
 
-  Future<void> _pickModel() async {
-    final selected = await showPremiumSelectSheet<String>(
-      context: context,
-      title: '选择生成模型',
-      options: [
-        for (final model in widget.models)
-          PremiumSelectOption(
-            value: model,
-            title: model,
-            description: model == widget.defaultModel
-                ? '推荐 · 由后台模型配置提供'
-                : 'AI 创作模型',
-            icon: Icons.auto_awesome_rounded,
-            highlighted: model == widget.defaultModel,
-          ),
-      ],
-      selected: _model,
-    );
-    if (selected != null && mounted) setState(() => _model = selected);
+  List<SkillModel> _availableSkills(SkillProvider provider) {
+    return switch (widget.mode) {
+      CreationMode.image => provider.textToImageSkills,
+      CreationMode.video => provider.imageToVideoSkills,
+      CreationMode.audio => const [],
+    };
+  }
+
+  SkillModel? _effectiveSkill(SkillProvider provider) {
+    final skills = _availableSkills(provider);
+    if (skills.isEmpty) return null;
+    for (final skill in skills) {
+      if (skill.id == _skillId) return skill;
+    }
+    return skills.first;
   }
 
   Future<void> _pickChoice(int index) async {
@@ -260,6 +279,13 @@ class _CreationFormPageState extends State<_CreationFormPage> {
       _showError('视频生成需要先上传一张参考图');
       return;
     }
+    final selectedSkill = widget.audioMode
+        ? null
+        : _effectiveSkill(context.read<SkillProvider>());
+    if (!widget.audioMode && selectedSkill == null) {
+      _showError('暂无可用创作线路，请刷新后重试');
+      return;
+    }
 
     setState(() => _busy = true);
     try {
@@ -268,12 +294,14 @@ class _CreationFormPageState extends State<_CreationFormPage> {
       switch (widget.mode) {
         case CreationMode.image:
           task = await repository.createTextToImage(
+            skillId: selectedSkill!.id,
             prompt: prompt,
             refImageUrl: _refImageUrl,
             orderId: activeOrderId,
           );
         case CreationMode.video:
           task = await repository.createImageToVideo(
+            skillId: selectedSkill!.id,
             prompt: prompt,
             refImageUrl: _refImageUrl!,
             orderId: activeOrderId,
@@ -366,8 +394,14 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   Widget build(BuildContext context) {
     final flow = context.watch<CreatorFlowProvider>();
     final wallet = context.watch<CreatorWalletProvider>();
+    final skillProvider = context.watch<SkillProvider>();
+    final availableSkills = _availableSkills(skillProvider);
+    final effectiveSkill = widget.audioMode
+        ? null
+        : _effectiveSkill(skillProvider);
     final credits = wallet.stats?.credits;
     final insufficientCredits = credits != null && credits < _cost;
+    final skillReady = widget.audioMode || effectiveSkill != null;
     return Stack(
       children: [
         CreatorScreen(
@@ -449,14 +483,47 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                       ),
                     ] else ...[
                       const SizedBox(height: 12),
-                      const FormFieldLabel('生成模型'),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _ChoicePill(label: _model, onTap: _pickModel),
+                      const FormFieldLabel('创作线路', required: true),
+                      if (skillProvider.isLoading && availableSkills.isEmpty)
+                        const GlassPanel(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 18),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        )
+                      else if (skillProvider.error != null &&
+                          availableSkills.isEmpty)
+                        EmptyPanel(
+                          icon: Icons.route_outlined,
+                          title: '创作线路加载失败',
+                          subtitle: skillProvider.error!,
+                          actionLabel: '重新加载',
+                          onAction: () => skillProvider.load(force: true),
+                        )
+                      else if (availableSkills.isEmpty)
+                        EmptyPanel(
+                          icon: Icons.route_outlined,
+                          title: '暂无可用创作线路',
+                          subtitle: '当前媒体类型没有启用中的后台 Skill 线路。',
+                          actionLabel: '刷新',
+                          onAction: () => skillProvider.load(force: true),
+                        )
+                      else ...[
+                        SkillSelector(
+                          skills: availableSkills,
+                          selectedId: effectiveSkill?.id,
+                          allowAuto: false,
+                          title: '选择创作风格',
+                          subtitle: '来自后台 Skill 配置',
+                          onChanged: (id) {
+                            if (id != null) setState(() => _skillId = id);
+                          },
+                        ),
+                        if (effectiveSkill != null) ...[
+                          const SizedBox(height: 10),
+                          _SelectedSkillSummary(skill: effectiveSkill),
                         ],
-                      ),
+                      ],
                       if (widget.choices.isNotEmpty) ...[
                         const SizedBox(height: 18),
                         FormFieldLabel(widget.choices.first.label),
@@ -520,10 +587,13 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                     ? '生成中…'
                     : '生成${widget.mode == CreationMode.audio ? '音频' : '作品'}',
                 icon: Icons.auto_awesome_rounded,
-                caption:
-                    '预计消耗 $_cost 算力 · '
-                    '${credits == null ? '正在读取余额' : '当前余额 $credits'}',
-                onPressed: _busy || insufficientCredits ? null : _generate,
+                caption: !skillReady
+                    ? '请先选择可用创作线路'
+                    : '预计消耗 $_cost 算力 · '
+                          '${credits == null ? '正在读取余额' : '当前余额 $credits'}',
+                onPressed: _busy || insufficientCredits || !skillReady
+                    ? null
+                    : _generate,
               ),
             ],
           ),
@@ -559,6 +629,63 @@ class _CreationFormPageState extends State<_CreationFormPage> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _SelectedSkillSummary extends StatelessWidget {
+  const _SelectedSkillSummary({required this.skill});
+
+  final SkillModel skill;
+
+  @override
+  Widget build(BuildContext context) {
+    final details = [
+      if (skill.scene?.isNotEmpty == true) skill.scene!,
+      if (skill.modelName?.isNotEmpty == true) skill.modelName!,
+      if (skill.width != null && skill.height != null)
+        '${skill.width}×${skill.height}',
+      if (skill.steps != null) '${skill.steps} 步',
+    ];
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.sage.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.sage.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.palette_outlined, color: AppColors.sage, size: 20),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(skill.name, style: Theme.of(context).textTheme.titleSmall),
+                if (skill.description?.isNotEmpty == true) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    skill.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    details.join(' · '),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: AppColors.sage, fontSize: 10.5),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

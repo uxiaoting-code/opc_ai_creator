@@ -5,8 +5,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../data/models/skill_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/skill_provider.dart';
 import '../../providers/work_provider.dart';
+import '../../widgets/creation/skill_selector.dart';
 import '../creator_flow_provider.dart';
 import '../models/creator_models.dart';
 import '../models/creator_order.dart';
@@ -29,13 +32,16 @@ class CreateHomePage extends StatefulWidget {
 class _CreateHomePageState extends State<CreateHomePage> {
   final _prompt = TextEditingController();
   CreationMode _mode = CreationMode.image;
-  String _model = 'GPT-4o Image';
+  String _audioVoice = '温柔女声';
+  int? _imageSkillId;
+  int? _videoSkillId;
   String _ratio = '1:1';
   int _count = 4;
   bool _videoHasRef = false;
   bool _worksRequested = false;
+  bool _skillsRequested = false;
 
-  static const _models = ['GPT-4o Image', 'DALL·E 3', '通义万相'];
+  static const _audioVoices = ['温柔女声', '磁性男声', '活力主播', '多语言女声'];
   static const _ratios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
   static const _counts = [1, 2, 4, 6, 9];
   static const _scenes = [
@@ -91,11 +97,18 @@ class _CreateHomePageState extends State<CreateHomePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_worksRequested) return;
-    _worksRequested = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<WorkProvider>().loadIfNeeded();
-    });
+    if (!_worksRequested) {
+      _worksRequested = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<WorkProvider>().loadIfNeeded();
+      });
+    }
+    if (!_skillsRequested) {
+      _skillsRequested = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<SkillProvider>().loadIfNeeded();
+      });
+    }
   }
 
   @override
@@ -128,27 +141,87 @@ class _CreateHomePageState extends State<CreateHomePage> {
     CreationMode.audio => '/create/audio',
   };
 
-  Future<void> _pickModel() async {
-    final selected = await showPremiumSelectSheet<String>(
+  List<SkillModel> _skillsForMode(SkillProvider provider) {
+    return switch (_mode) {
+      CreationMode.image => provider.textToImageSkills,
+      CreationMode.video => provider.imageToVideoSkills,
+      CreationMode.audio => const [],
+    };
+  }
+
+  SkillModel? _selectedSkill(SkillProvider provider) {
+    final skills = _skillsForMode(provider);
+    if (skills.isEmpty) return null;
+    final selectedId = _mode == CreationMode.image
+        ? _imageSkillId
+        : _videoSkillId;
+    for (final skill in skills) {
+      if (skill.id == selectedId) return skill;
+    }
+    return skills.first;
+  }
+
+  void _selectSkill(int id) {
+    setState(() {
+      if (_mode == CreationMode.image) {
+        _imageSkillId = id;
+      } else {
+        _videoSkillId = id;
+      }
+    });
+  }
+
+  Future<void> _pickModel(SkillProvider skillProvider) async {
+    if (_mode == CreationMode.audio) {
+      final selected = await showPremiumSelectSheet<String>(
+        context: context,
+        title: '选择音色',
+        options: [
+          for (final voice in _audioVoices)
+            PremiumSelectOption(
+              value: voice,
+              title: voice,
+              icon: Icons.record_voice_over_outlined,
+              highlighted: voice == _audioVoice,
+            ),
+        ],
+        selected: _audioVoice,
+      );
+      if (selected != null && mounted) {
+        setState(() => _audioVoice = selected);
+      }
+      return;
+    }
+
+    final skills = _skillsForMode(skillProvider);
+    if (skillProvider.isLoading && skills.isEmpty) {
+      _showMessage('创作线路正在加载，请稍后再试');
+      return;
+    }
+    if (skills.isEmpty) {
+      _showMessage('暂无可用创作线路，请刷新后重试');
+      return;
+    }
+    final selected = await showPremiumSelectSheet<SkillModel>(
       context: context,
-      title: '选择模型',
-      subtitle: '由后端 Skill / 模型配置提供',
+      title: '选择创作线路',
+      subtitle: '来自后台 Skill 配置',
       options: [
-        for (final model in _models)
+        for (final skill in skills)
           PremiumSelectOption(
-            value: model,
-            title: model,
-            description: model == 'GPT-4o Image'
-                ? '高画质 · 中文优化 · 推荐'
-                : 'AI 创作模型',
-            icon: Icons.auto_awesome_rounded,
-            highlighted: model == 'GPT-4o Image',
-            trailing: model == 'GPT-4o Image' ? '推荐' : null,
+            value: skill,
+            title: skill.name,
+            description: [
+              if (skill.scene?.isNotEmpty == true) skill.scene!,
+              if (skill.modelName?.isNotEmpty == true) skill.modelName!,
+            ].join(' · '),
+            icon: Icons.route_rounded,
+            highlighted: skill.id == _selectedSkill(skillProvider)?.id,
           ),
       ],
-      selected: _model,
+      selected: _selectedSkill(skillProvider),
     );
-    if (selected != null && mounted) setState(() => _model = selected);
+    if (selected != null && mounted) _selectSkill(selected.id);
   }
 
   Future<void> _pickRatio() async {
@@ -185,19 +258,50 @@ class _CreateHomePageState extends State<CreateHomePage> {
     if (selected != null && mounted) setState(() => _count = selected);
   }
 
-  void _generate() {
+  void _generate(SkillProvider skillProvider) {
     HapticFeedback.selectionClick();
-    context.push(_route, extra: _prompt.text.trim());
+    final skill = _mode == CreationMode.audio
+        ? null
+        : _selectedSkill(skillProvider);
+    if (_mode != CreationMode.audio && skill == null) {
+      _showMessage('暂无可用创作线路，请刷新后重试');
+      return;
+    }
+    final currentOrderId = context.read<CreatorFlowProvider>().currentOrder?.id;
+    final orderId = currentOrderId?.startsWith('api-') == true
+        ? int.tryParse(currentOrderId!.substring(4))
+        : null;
+    context.push(
+      _route,
+      extra: CreatorCreationArgs(
+        prompt: _prompt.text.trim(),
+        orderId: orderId,
+        skillId: skill?.id,
+      ),
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final flow = context.watch<CreatorFlowProvider>();
+    final skillProvider = context.watch<SkillProvider>();
     final worksProvider = context.watch<WorkProvider>();
     final recentWorks = worksProvider.recentWorks.take(4).toList();
     final order = flow.currentOrder;
     final work = flow.workContext;
+    final selectedSkill = _selectedSkill(skillProvider);
+    final primaryValue = _mode == CreationMode.audio
+        ? _audioVoice
+        : selectedSkill?.name ??
+              (skillProvider.isLoading ? '加载线路中…' : '暂无可选线路');
 
     return CreatorScreen(
       padding: EdgeInsets.zero,
@@ -209,9 +313,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
               children: [
                 _HomeHeader(auth: auth),
                 const SizedBox(height: 16),
-                _CourseBanner(
-                  onTap: () => context.go('/course'),
-                ),
+                _CourseBanner(onTap: () => context.go('/course')),
                 const SizedBox(height: 16),
                 _QuickEntries(
                   onCourse: () => context.go('/course'),
@@ -231,22 +333,33 @@ class _CreateHomePageState extends State<CreateHomePage> {
                 const SizedBox(height: 16),
                 _CreationHero(
                   mode: _mode,
-                  model: _model,
+                  model: primaryValue,
                   ratio: _ratio,
                   count: _count,
                   promptController: _prompt,
                   placeholder: _placeholder,
                   videoHasRef: _videoHasRef,
                   onModeChanged: (mode) => setState(() => _mode = mode),
-                  onModelTap: _pickModel,
+                  onModelTap: () => _pickModel(skillProvider),
                   onRatioTap: _pickRatio,
                   onCountTap: _pickCount,
                   onToggleRef: () =>
                       setState(() => _videoHasRef = !_videoHasRef),
-                  onGenerate: _generate,
+                  onGenerate: () => _generate(skillProvider),
                   buttonText: _buttonText,
                   cost: _cost,
+                  generateEnabled:
+                      _mode == CreationMode.audio || selectedSkill != null,
                 ),
+                if (_mode != CreationMode.audio) ...[
+                  const SizedBox(height: 16),
+                  _SkillRoutePanel(
+                    provider: skillProvider,
+                    skills: _skillsForMode(skillProvider),
+                    selectedId: selectedSkill?.id,
+                    onSelected: _selectSkill,
+                  ),
+                ],
                 const SizedBox(height: 22),
                 const CreatorSectionHeader(
                   title: '创作工具',
@@ -309,6 +422,111 @@ class _CreateHomePageState extends State<CreateHomePage> {
       CreationMode.audio => '/create/audio',
     };
     context.push(path, extra: scene.prompt);
+  }
+}
+
+class _SkillRoutePanel extends StatelessWidget {
+  const _SkillRoutePanel({
+    required this.provider,
+    required this.skills,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final SkillProvider provider;
+  final List<SkillModel> skills;
+  final int? selectedId;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '创作线路',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '由后台 Skill 配置提供',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: '刷新创作线路',
+                onPressed: provider.isLoading
+                    ? null
+                    : () => provider.load(force: true),
+                icon: provider.isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (provider.isLoading && skills.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (provider.error != null && skills.isEmpty)
+            Column(
+              children: [
+                Text(
+                  provider.error!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.statusFailed),
+                ),
+                TextButton(
+                  onPressed: () => provider.load(force: true),
+                  child: const Text('重新加载线路'),
+                ),
+              ],
+            )
+          else if (skills.isEmpty)
+            Text(
+              '当前媒体类型暂无启用线路，请到后台检查 Skill 配置。',
+              style: Theme.of(context).textTheme.bodySmall,
+            )
+          else ...[
+            SkillSelector(
+              skills: skills,
+              selectedId: selectedId,
+              allowAuto: false,
+              title: '选择风格',
+              subtitle: '点击切换',
+              onChanged: (id) {
+                if (id != null) onSelected(id);
+              },
+            ),
+            if (provider.error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                provider.error!,
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: AppColors.statusFailed),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -384,10 +602,11 @@ class _CreateHomeDock extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: (active == null || waitingReview
-                        ? AppColors.gold
-                        : AppColors.sage)
-                    .withValues(alpha: 0.12),
+                color:
+                    (active == null || waitingReview
+                            ? AppColors.gold
+                            : AppColors.sage)
+                        .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(
@@ -408,10 +627,7 @@ class _CreateHomeDock extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  Text(label, style: theme.textTheme.bodySmall),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
@@ -431,8 +647,7 @@ class _CreateHomeDock extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   minimumSize: const Size(0, 36),
-                  backgroundColor:
-                      active == null || waitingReview
+                  backgroundColor: active == null || waitingReview
                       ? AppColors.gold
                       : AppColors.sage,
                   textStyle: const TextStyle(
@@ -524,7 +739,11 @@ class _CourseBanner extends StatelessWidget {
                 left: Radius.circular(AppSpacing.radiusCard),
               ),
             ),
-            child: const Icon(Icons.school_rounded, color: Colors.white, size: 34),
+            child: const Icon(
+              Icons.school_rounded,
+              color: Colors.white,
+              size: 34,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -533,10 +752,7 @@ class _CourseBanner extends StatelessWidget {
               children: [
                 Text('AI 电商创作训练营', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
-                Text(
-                  '培训 · 实操 · 考核，解锁专业订单',
-                  style: theme.textTheme.bodySmall,
-                ),
+                Text('培训 · 实操 · 考核，解锁专业订单', style: theme.textTheme.bodySmall),
               ],
             ),
           ),
@@ -573,11 +789,7 @@ class _QuickEntries extends StatelessWidget {
       children: [
         for (final item in items)
           Expanded(
-            child: _QuickEntry(
-              icon: item.$1,
-              label: item.$2,
-              onTap: item.$3,
-            ),
+            child: _QuickEntry(icon: item.$1, label: item.$2, onTap: item.$3),
           ),
       ],
     );
@@ -641,6 +853,7 @@ class _CreationHero extends StatelessWidget {
     required this.onGenerate,
     required this.buttonText,
     required this.cost,
+    required this.generateEnabled,
   });
 
   final CreationMode mode;
@@ -658,6 +871,7 @@ class _CreationHero extends StatelessWidget {
   final VoidCallback onGenerate;
   final String buttonText;
   final int cost;
+  final bool generateEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -710,7 +924,7 @@ class _CreationHero extends StatelessWidget {
             runSpacing: 8,
             children: [
               PrototypeParamPill(
-                label: '模型',
+                label: mode == CreationMode.audio ? '音色' : '线路',
                 value: model,
                 onTap: onModelTap,
               ),
@@ -726,12 +940,6 @@ class _CreationHero extends StatelessWidget {
                   onTap: onCountTap,
                 ),
               ],
-              if (mode == CreationMode.video)
-                PrototypeParamPill(
-                  label: '时长',
-                  value: '5s',
-                  onTap: onModelTap,
-                ),
               if (mode == CreationMode.audio)
                 PrototypeParamPill(
                   label: '音色',
@@ -744,7 +952,7 @@ class _CreationHero extends StatelessWidget {
           SizedBox(
             height: AppSpacing.buttonHeight,
             child: FilledButton.icon(
-              onPressed: onGenerate,
+              onPressed: generateEnabled ? onGenerate : null,
               icon: const Icon(Icons.auto_awesome_rounded, size: 18),
               label: Text(buttonText),
             ),
@@ -807,4 +1015,3 @@ class _VideoRefSlot extends StatelessWidget {
     );
   }
 }
-

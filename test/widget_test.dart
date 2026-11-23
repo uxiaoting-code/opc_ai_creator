@@ -10,6 +10,7 @@ import 'package:opc_ai_creator/creator_flow/creator_wallet_provider.dart';
 import 'package:opc_ai_creator/creator_flow/data/creator_wallet_repository.dart';
 import 'package:opc_ai_creator/creator_flow/models/creator_wallet.dart';
 import 'package:opc_ai_creator/creator_flow/pages/profile_page.dart';
+import 'package:opc_ai_creator/data/models/skill_model.dart';
 import 'package:opc_ai_creator/data/repositories/material_repository.dart';
 import 'package:opc_ai_creator/data/repositories/notification_repository.dart';
 import 'package:opc_ai_creator/data/repositories/prompt_repository.dart';
@@ -21,6 +22,55 @@ import 'package:opc_ai_creator/providers/notification_provider.dart';
 import 'package:opc_ai_creator/providers/skill_provider.dart';
 import 'package:opc_ai_creator/providers/theme_provider.dart';
 import 'package:opc_ai_creator/providers/work_provider.dart';
+
+class _FakeSkillRepository extends SkillRepository {
+  _FakeSkillRepository() : super(ApiClient(onUnauthorized: () {}));
+
+  static const _skills = [
+    SkillModel(
+      id: 1,
+      code: 'anime_v1',
+      name: '二次元插画',
+      type: SkillType.textToImage,
+      scene: '头像 / 立绘',
+      provider: 'mock',
+      modelName: 'sd-xl-anime',
+      width: 1024,
+      height: 1024,
+    ),
+    SkillModel(
+      id: 2,
+      code: 'ecommerce_v1',
+      name: '电商海报',
+      type: SkillType.textToImage,
+      scene: '商品主图',
+      provider: 'mock',
+      modelName: 'sd-xl-product',
+      width: 1024,
+      height: 1024,
+    ),
+    SkillModel(
+      id: 5,
+      code: 'motion_v1',
+      name: '短视频运镜',
+      type: SkillType.imageToVideo,
+      scene: '产品展示',
+      provider: 'mock',
+      modelName: 'svd-xt',
+      width: 1024,
+      height: 576,
+    ),
+  ];
+
+  @override
+  Future<List<SkillModel>> fetchSkills({SkillType? type, int? limit}) async {
+    var result = type == null
+        ? List<SkillModel>.from(_skills)
+        : _skills.where((skill) => skill.type == type).toList();
+    if (limit != null) result = result.take(limit).toList();
+    return result;
+  }
+}
 
 class _FakeWalletRepository extends CreatorWalletRepository {
   _FakeWalletRepository() : super(ApiClient(onUnauthorized: () {}));
@@ -79,7 +129,7 @@ Future<Widget> buildApp({bool loggedIn = false}) async {
     apiClient: apiClient,
     authProvider: authProvider,
     themeProvider: ThemeProvider(),
-    skillProvider: SkillProvider(repository: SkillRepository(apiClient)),
+    skillProvider: SkillProvider(repository: _FakeSkillRepository()),
     workProvider: WorkProvider(repository: WorkRepository(apiClient)),
     notificationProvider: NotificationProvider(
       repository: NotificationRepository(apiClient),
@@ -262,6 +312,7 @@ void main() {
 
       expect(find.text('文生图'), findsWidgets);
       expect(find.textContaining('预计消耗 12 算力'), findsOneWidget);
+      expect(find.text('二次元插画'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
   });

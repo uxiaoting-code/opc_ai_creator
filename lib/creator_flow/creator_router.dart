@@ -93,6 +93,7 @@ class CreatorRouter {
                       return CreateImagePage(
                         initialPrompt: args.prompt,
                         orderId: args.orderId,
+                        initialSkillId: args.skillId,
                       );
                     },
                   ),
@@ -103,6 +104,7 @@ class CreatorRouter {
                       return CreateVideoPage(
                         initialPrompt: args.prompt,
                         orderId: args.orderId,
+                        initialSkillId: args.skillId,
                       );
                     },
                   ),
