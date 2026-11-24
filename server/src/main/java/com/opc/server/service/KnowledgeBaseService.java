@@ -66,7 +66,7 @@ public class KnowledgeBaseService {
     private final KbDocumentRepository documentRepository;
     private final KbChunkRepository chunkRepository;
     private final AgentRepository agentRepository;
-    private final HttpClient httpClient;
+    private volatile HttpClient httpClient;
 
     public KnowledgeBaseService(KnowledgeBaseRepository kbRepository,
                                 KbDocumentRepository documentRepository,
@@ -76,10 +76,23 @@ public class KnowledgeBaseService {
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
         this.agentRepository = agentRepository;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
+    }
+
+    private HttpClient httpClient() {
+        HttpClient client = httpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = httpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(10))
+                            .followRedirects(HttpClient.Redirect.NORMAL)
+                            .build();
+                    httpClient = client;
+                }
+            }
+        }
+        return client;
     }
 
     // =========================================================================
@@ -445,7 +458,7 @@ public class KnowledgeBaseService {
                     .timeout(Duration.ofSeconds(15))
                     .GET()
                     .build();
-            HttpResponse<String> response = httpClient.send(request,
+            HttpResponse<String> response = httpClient().send(request,
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new BizException(ErrorCode.KB_DOCUMENT_PARSE_FAILED,

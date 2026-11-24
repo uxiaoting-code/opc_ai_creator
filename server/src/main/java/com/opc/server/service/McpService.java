@@ -47,7 +47,7 @@ public class McpService {
     private final McpServerRepository serverRepository;
     private final McpToolRepository toolRepository;
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient;
+    private volatile HttpClient httpClient;
 
     public McpService(McpServerRepository serverRepository,
                       McpToolRepository toolRepository,
@@ -55,10 +55,23 @@ public class McpService {
         this.serverRepository = serverRepository;
         this.toolRepository = toolRepository;
         this.objectMapper = objectMapper;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
+    }
+
+    private HttpClient httpClient() {
+        HttpClient client = httpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = httpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(10))
+                            .followRedirects(HttpClient.Redirect.NORMAL)
+                            .build();
+                    httpClient = client;
+                }
+            }
+        }
+        return client;
     }
 
     // =========================================================================
@@ -209,7 +222,7 @@ public class McpService {
                     .timeout(Duration.ofSeconds(10))
                     .GET();
             applyAuth(builder, server);
-            HttpResponse<String> response = httpClient.send(builder.build(),
+            HttpResponse<String> response = httpClient().send(builder.build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new BizException(ErrorCode.MCP_DISCOVER_FAILED,
@@ -265,7 +278,7 @@ public class McpService {
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
             applyAuth(builder, server);
-            HttpResponse<String> response = httpClient.send(builder.build(),
+            HttpResponse<String> response = httpClient().send(builder.build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new BizException(ErrorCode.MCP_INVOKE_FAILED,

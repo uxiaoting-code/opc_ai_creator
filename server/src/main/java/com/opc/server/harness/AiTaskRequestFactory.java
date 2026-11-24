@@ -4,6 +4,7 @@ package com.opc.server.harness;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import com.opc.server.ai.AiTaskRequest;
+import com.opc.server.entity.AiProviderConfig;
 import com.opc.server.entity.AiTask;
 import com.opc.server.entity.Skill;
 import org.slf4j.Logger;
@@ -40,7 +41,14 @@ public class AiTaskRequestFactory {
      * @param task  任务实体，提供提示词与类型
      * @param skill 线路配置，提供模型与推理参数；可为 null（线路被删的情况）
      */
-    public AiTaskRequest build(AiTask task, Skill skill) {
+    public AiTaskRequest build(AiTask task,
+                               Skill skill,
+                               AiProviderConfig providerConfig) {
+        String modelName = providerConfig != null
+                && providerConfig.getModelName() != null
+                && !providerConfig.getModelName().isBlank()
+                ? providerConfig.getModelName()
+                : (skill == null ? null : skill.getModelName());
         return new AiTaskRequest(
                 task.getTaskNo(),
                 task.getType(),
@@ -48,7 +56,7 @@ public class AiTaskRequestFactory {
                 task.getNegativePrompt(),
                 task.getRefImageUrl(),
                 skill == null ? null : skill.getCode(),
-                skill == null ? null : skill.getModelName(),
+                modelName,
                 skill == null ? null : skill.getSteps(),
                 skill == null || skill.getCfgScale() == null
                         ? null : skill.getCfgScale().doubleValue(),

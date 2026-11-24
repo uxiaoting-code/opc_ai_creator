@@ -15,6 +15,9 @@ public record CreationRequest(
         /** Skill 线路 ID，为空时用默认参数 */
         Long skillId,
 
+        /** 用户选择的模型配置 ID；为空时兼容旧版按 Skill.provider 路由 */
+        Long providerConfigId,
+
         @Size(max = 2000, message = "提示词最长 2000 个字符")
         String prompt,
 

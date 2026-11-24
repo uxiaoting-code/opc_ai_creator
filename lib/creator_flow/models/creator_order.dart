@@ -144,11 +144,17 @@ class CreatorOrderDetail {
 /// 从订单详情“去创作”时传给创作页的参数。
 @immutable
 class CreatorCreationArgs {
-  const CreatorCreationArgs({this.prompt = '', this.orderId, this.skillId});
+  const CreatorCreationArgs({
+    this.prompt = '',
+    this.orderId,
+    this.skillId,
+    this.providerConfigId,
+  });
 
   final String prompt;
   final int? orderId;
   final int? skillId;
+  final int? providerConfigId;
 }
 
 /// 后端返回的当前工作动作。

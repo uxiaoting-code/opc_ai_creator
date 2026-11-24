@@ -94,6 +94,7 @@ class CreatorRouter {
                         initialPrompt: args.prompt,
                         orderId: args.orderId,
                         initialSkillId: args.skillId,
+                        initialProviderConfigId: args.providerConfigId,
                       );
                     },
                   ),
@@ -105,6 +106,7 @@ class CreatorRouter {
                         initialPrompt: args.prompt,
                         orderId: args.orderId,
                         initialSkillId: args.skillId,
+                        initialProviderConfigId: args.providerConfigId,
                       );
                     },
                   ),
@@ -115,6 +117,7 @@ class CreatorRouter {
                       return CreateAudioPage(
                         initialPrompt: args.prompt,
                         orderId: args.orderId,
+                        initialProviderConfigId: args.providerConfigId,
                       );
                     },
                   ),

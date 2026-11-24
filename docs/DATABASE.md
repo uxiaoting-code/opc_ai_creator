@@ -37,6 +37,7 @@
 
 ```
 t_user ──1:N──▶ t_ai_task ──N:1──▶ t_skill
+t_ai_task ──N:1──▶ t_ai_provider_config
    │                 │
    │                 └──1:1──▶ t_work        （任务成功 → 产出作品）
    │
@@ -122,6 +123,7 @@ CREATE TABLE `t_ai_task` (
   `acceptance_id`   BIGINT                DEFAULT NULL   COMMENT '关联接单记录ID（M4）',
   `type`            VARCHAR(20)  NOT NULL                COMMENT '任务类型：TEXT_TO_IMAGE / IMAGE_TO_VIDEO / TEXT_TO_AUDIO',
   `skill_id`        BIGINT                DEFAULT NULL   COMMENT '使用的Skill线路',
+  `provider_config_id` BIGINT             DEFAULT NULL   COMMENT '用户选择的模型通道',
   -- ↓ 输入参数（创建任务时快照，Skill 后续被改不影响历史任务）
   `prompt`          TEXT                  DEFAULT NULL   COMMENT '用户输入的提示词',
   `negative_prompt` TEXT                  DEFAULT NULL   COMMENT '负面提示词',

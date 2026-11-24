@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 
 import 'core/network/api_client.dart';
 import 'creator_flow/creator_flow_provider.dart';
+import 'creator_flow/creator_model_provider.dart';
 import 'creator_flow/creator_wallet_provider.dart';
 import 'creator_flow/creator_router.dart';
+import 'creator_flow/data/creator_model_repository.dart';
 import 'creator_flow/data/creator_wallet_repository.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/material_repository.dart';
@@ -37,6 +39,7 @@ class OpcApp extends StatefulWidget {
     required this.taskRepository,
     required this.materialRepository,
     required this.promptRepository,
+    this.creatorModelProvider,
   });
 
   final ApiClient apiClient;
@@ -57,6 +60,7 @@ class OpcApp extends StatefulWidget {
 
   /// Prompt 知识库数据仓库。
   final PromptRepository promptRepository;
+  final CreatorModelProvider? creatorModelProvider;
 
   @override
   State<OpcApp> createState() => _OpcAppState();
@@ -76,6 +80,15 @@ class _OpcAppState extends State<OpcApp> {
         ChangeNotifierProvider<CreatorFlowProvider>(
           create: (_) => CreatorFlowProvider(),
         ),
+        widget.creatorModelProvider == null
+            ? ChangeNotifierProvider<CreatorModelProvider>(
+                create: (_) => CreatorModelProvider(
+                  CreatorModelRepository(widget.apiClient),
+                ),
+              )
+            : ChangeNotifierProvider<CreatorModelProvider>.value(
+                value: widget.creatorModelProvider!,
+              ),
         ChangeNotifierProvider<CreatorWalletProvider>(
           create: (_) => CreatorWalletProvider(
             CreatorWalletRepository(widget.apiClient),

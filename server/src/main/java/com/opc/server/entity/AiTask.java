@@ -63,6 +63,10 @@ public class AiTask extends BaseEntity {
     @Column(name = "skill_id")
     private Long skillId;
 
+    /** 用户选择的模型通道 ID；旧任务可为空。 */
+    @Column(name = "provider_config_id")
+    private Long providerConfigId;
+
     // -----------------------------------------------------------------------
     // 输入参数（创建时快照）
     // -----------------------------------------------------------------------
@@ -166,6 +170,14 @@ public class AiTask extends BaseEntity {
     /** 线路编码，由 Service 填充 */
     @Transient
     private String skillCode;
+
+    /** 模型通道名称，由 Service 填充 */
+    @Transient
+    private String providerConfigName;
+
+    /** 模型通道的真实模型名，由 Service 填充 */
+    @Transient
+    private String providerModelName;
 
     // =========================================================================
     // 状态流转：所有状态变更都必须走这里

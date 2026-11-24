@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 public record AudioCreationRequest(
         Long skillId,
 
+        Long providerConfigId,
+
         @NotBlank @Size(max = 2000) String prompt,
 
         @NotBlank @Size(max = 50) String voiceCode,

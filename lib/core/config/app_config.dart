@@ -209,6 +209,7 @@ class ApiEndpoints {
   static const String textToImage = '/creation/text-to-image';
   static const String imageToVideo = '/creation/image-to-video';
   static const String textToAudio = '/creation/text-to-audio';
+  static const String creationModels = '/creation/models';
 
   // --- 接单市场 ---
   static const String ordersAvailable = '/orders/available';

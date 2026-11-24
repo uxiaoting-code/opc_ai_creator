@@ -24,5 +24,8 @@ public interface AiProviderConfigRepository
     /** 工具库 / 智能体节点只允许引用已上架的模型。 */
     List<AiProviderConfig> findByOnlineTrueAndDeletedFalseOrderBySortOrderAscIdAsc();
 
+    List<AiProviderConfig> findByTypeAndOnlineTrueAndDeletedFalseOrderBySortOrderAscIdAsc(
+            String type);
+
     long countByDeletedFalse();
 }

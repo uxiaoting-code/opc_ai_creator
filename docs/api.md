@@ -232,6 +232,28 @@ GET /api/skills/{id}
 > **重要**：接口**立即返回一个「排队中」的任务**，不会阻塞等生成完成。
 > 前端拿到 `task.id` 后跳任务详情页轮询进度。
 
+### 4.0 用户端模型目录
+
+```http
+GET /api/creation/models?mediaType=IMAGE
+```
+
+`mediaType` 必须是 `IMAGE / VIDEO / AUDIO`。只返回已上架、未删除的模型，
+不返回 Base URL、API Key 或请求模板。
+
+```json
+[
+  {
+    "id": 1,
+    "name": "TT Image 2",
+    "vendor": "字节跳动",
+    "type": "IMAGE",
+    "typeLabel": "图片",
+    "modelName": "tt-image-2"
+  }
+]
+```
+
 ### 4.1 文生图
 
 ```
@@ -249,6 +271,7 @@ POST /api/creation/image-to-video
 ```json
 {
   "skillId": 1,
+  "providerConfigId": 1,
   "prompt": "雨夜霓虹街道，赛博朋克风格",
   "negativePrompt": "低分辨率、水印",
   "refImageUrl": null,
@@ -259,6 +282,7 @@ POST /api/creation/image-to-video
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `skillId` | long | ❌ | 线路 ID，不传用默认参数 |
+| `providerConfigId` | long | 推荐 | 模型通道 ID，来自 `/api/creation/models`；不传时兼容旧版按 Skill.provider 路由 |
 | `prompt` | string | 文生图必填 | ≤ 2000 字 |
 | `negativePrompt` | string | ❌ | ≤ 1000 字 |
 | `refImageUrl` | string | **图生视频必填** | 首帧图地址，用素材上传接口拿到的相对路径 |
@@ -314,6 +338,7 @@ POST /api/creation/text-to-audio
 ```
 
 返回同一个 `TaskResponse`，其中 `type=TEXT_TO_AUDIO`。Mock Provider 会生成可播放 WAV；真实 TTS 由模型配置/HTTP Provider 决定。
+可为音频任务增加 `providerConfigId`，来自 `GET /api/creation/models?mediaType=AUDIO`。
 
 ### 4.4 算力点
 
@@ -399,6 +424,9 @@ GET /api/tasks/{id}
   "skillId": 5,
   "skillName": "短视频运镜",
   "skillCode": "motion_v1",
+  "providerConfigId": 3,
+  "providerConfigName": "即梦 3.5 Pro",
+  "providerModelName": "jimeng-3.5-pro",
 
   "prompt": "镜头缓慢推进…",
   "negativePrompt": "画面抖动",
@@ -854,3 +882,4 @@ curl -X POST http://localhost:8080/api/prompts/1/favorite \
 
 - 2026-10-26：新增 Prompt 列表、自定义保存、收藏切换接口（6500-6599 错误码段）。
 - 2026-10-30：M4 新增 /api/creation/text-to-audio；图片/视频/音频任务支持 orderId 绑定接单上下文；TaskResponse 增加 orderId/acceptanceId。
+- 2026-11-24：新增 /api/creation/models；创作请求增加 providerConfigId；TaskResponse 增加 providerConfigId/providerConfigName/providerModelName。

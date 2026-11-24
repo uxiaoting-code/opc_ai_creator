@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS `t_ai_task` (
   `acceptance_id`    BIGINT                 DEFAULT NULL   COMMENT '关联接单记录ID（M4）',
   `type`             VARCHAR(20)   NOT NULL                COMMENT '任务类型：TEXT_TO_IMAGE / IMAGE_TO_VIDEO / TEXT_TO_AUDIO',
   `skill_id`         BIGINT                 DEFAULT NULL   COMMENT '使用的Skill线路',
+  `provider_config_id` BIGINT               DEFAULT NULL   COMMENT '用户选择的模型通道ID',
   `prompt`           VARCHAR(2000)          DEFAULT NULL   COMMENT '最终提示词（已拼上线路的风格前缀/后缀）',
   `negative_prompt`  VARCHAR(1000)          DEFAULT NULL   COMMENT '负面提示词',
   `ref_image_url`    VARCHAR(255)           DEFAULT NULL   COMMENT '参考图/首帧图URL（图生视频必填）',
@@ -138,6 +139,7 @@ CREATE TABLE IF NOT EXISTS `t_ai_task` (
   KEY `idx_status_queue` (`status`, `queue_at`),
   KEY `idx_provider_task` (`provider`, `provider_task_id`),
   KEY `idx_skill` (`skill_id`),
+  KEY `idx_provider_config` (`provider_config_id`),
   KEY `idx_task_order` (`order_id`),
   KEY `idx_task_acceptance` (`acceptance_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='AI生成任务表';

@@ -24,6 +24,10 @@ public record TaskResponse(
         String skillName,
         String skillCode,
 
+        Long providerConfigId,
+        String providerConfigName,
+        String providerModelName,
+
         String prompt,
         String negativePrompt,
         String refImageUrl,
@@ -66,6 +70,9 @@ public record TaskResponse(
                 task.getSkillId(),
                 task.getSkillName(),
                 task.getSkillCode(),
+                task.getProviderConfigId(),
+                task.getProviderConfigName(),
+                task.getProviderModelName(),
                 task.getPrompt(),
                 task.getNegativePrompt(),
                 task.getRefImageUrl(),

@@ -64,6 +64,7 @@ public class CreationController {
                 null,
                 null,
                 request.orderId(),
+                request.providerConfigId(),
                 params);
         return Result.success(TaskResponse.from(task), "音频任务已提交，正在排队");
     }
@@ -77,6 +78,7 @@ public class CreationController {
                 request.negativePrompt(),
                 request.refImageUrl(),
                 request.orderId(),
+                request.providerConfigId(),
                 Map.of());
 
         return Result.success(TaskResponse.from(task), "任务已提交，正在排队");

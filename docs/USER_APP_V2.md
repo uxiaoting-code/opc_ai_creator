@@ -105,6 +105,7 @@ lib/data/repositories/skill_repository.dart
 | 接单 | `POST /api/orders/{id}/accept` |
 | 工作台上下文 | `GET /api/orders/{id}/workbench` |
 | Skill 创作线路 | `GET /api/skills?type=TEXT_TO_IMAGE/IMAGE_TO_VIDEO` |
+| 用户端模型目录 | `GET /api/creation/models?mediaType=IMAGE/VIDEO/AUDIO` |
 | 文生图 | `POST /api/creation/text-to-image`（已存在） |
 | 图生视频 | `POST /api/creation/image-to-video`（已存在） |
 | 生成音频 | `POST /api/creation/text-to-audio`（已完成） |

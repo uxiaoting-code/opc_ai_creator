@@ -14,7 +14,9 @@ import '../../providers/skill_provider.dart';
 import '../../widgets/creation/skill_selector.dart';
 import '../../widgets/premium/premium_select_sheet.dart';
 import '../creator_flow_provider.dart';
+import '../creator_model_provider.dart';
 import '../creator_wallet_provider.dart';
+import '../models/creator_model.dart';
 import '../models/creator_models.dart';
 import '../widgets/creator_widgets.dart';
 
@@ -24,11 +26,13 @@ class CreateImagePage extends StatelessWidget {
     this.initialPrompt,
     this.orderId,
     this.initialSkillId,
+    this.initialProviderConfigId,
   });
 
   final String? initialPrompt;
   final int? orderId;
   final int? initialSkillId;
+  final int? initialProviderConfigId;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +44,7 @@ class CreateImagePage extends StatelessWidget {
       initialPrompt: initialPrompt ?? '',
       orderId: orderId,
       initialSkillId: initialSkillId,
+      initialProviderConfigId: initialProviderConfigId,
       models: const [],
       choices: [
         _ChoiceGroup('画面比例', ['1:1', '3:4', '4:3', '9:16']),
@@ -56,11 +61,13 @@ class CreateVideoPage extends StatelessWidget {
     this.initialPrompt,
     this.orderId,
     this.initialSkillId,
+    this.initialProviderConfigId,
   });
 
   final String? initialPrompt;
   final int? orderId;
   final int? initialSkillId;
+  final int? initialProviderConfigId;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +79,7 @@ class CreateVideoPage extends StatelessWidget {
       initialPrompt: initialPrompt ?? '',
       orderId: orderId,
       initialSkillId: initialSkillId,
+      initialProviderConfigId: initialProviderConfigId,
       models: const [],
       choices: [
         _ChoiceGroup('镜头运动', ['平稳推进', '环绕展示', '拉近特写', '固定镜头']),
@@ -84,10 +92,16 @@ class CreateVideoPage extends StatelessWidget {
 }
 
 class CreateAudioPage extends StatelessWidget {
-  const CreateAudioPage({super.key, this.initialPrompt, this.orderId});
+  const CreateAudioPage({
+    super.key,
+    this.initialPrompt,
+    this.orderId,
+    this.initialProviderConfigId,
+  });
 
   final String? initialPrompt;
   final int? orderId;
+  final int? initialProviderConfigId;
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +112,7 @@ class CreateAudioPage extends StatelessWidget {
       promptHint: '输入需要配音的商品文案，例如：欢迎来到花漾美妆直播间……',
       initialPrompt: initialPrompt ?? '',
       orderId: orderId,
+      initialProviderConfigId: initialProviderConfigId,
       models: ['温柔女声', '磁性男声', '活力主播', '多语言女声'],
       choices: [
         _ChoiceGroup('语言', ['中文', 'English', '日本語']),
@@ -125,6 +140,7 @@ class _CreationFormPage extends StatefulWidget {
     this.initialPrompt = '',
     this.orderId,
     this.initialSkillId,
+    this.initialProviderConfigId,
     required this.models,
     required this.choices,
     this.showReference = false,
@@ -139,6 +155,7 @@ class _CreationFormPage extends StatefulWidget {
   final String initialPrompt;
   final int? orderId;
   final int? initialSkillId;
+  final int? initialProviderConfigId;
   final List<String> models;
   final List<_ChoiceGroup> choices;
   final bool showReference;
@@ -153,6 +170,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
   late final TextEditingController _prompt;
   late String _model;
   int? _skillId;
+  int? _providerConfigId;
   late final List<String> _selected;
   bool _busy = false;
   bool _pickingReference = false;
@@ -164,11 +182,15 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     _prompt = TextEditingController(text: widget.initialPrompt);
     _model = widget.defaultModel;
     _skillId = widget.initialSkillId;
+    _providerConfigId = widget.initialProviderConfigId;
     _selected = [for (final group in widget.choices) group.values.first];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<CreatorWalletProvider>().load();
-      if (!widget.audioMode) context.read<SkillProvider>().loadIfNeeded();
+      if (!widget.audioMode) {
+        context.read<SkillProvider>().loadIfNeeded();
+      }
+      context.read<CreatorModelProvider>().loadFor(_mediaType);
     });
   }
 
@@ -183,6 +205,52 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     CreationMode.video => 48,
     CreationMode.audio => 8,
   };
+
+  String get _mediaType => switch (widget.mode) {
+    CreationMode.image => 'IMAGE',
+    CreationMode.video => 'VIDEO',
+    CreationMode.audio => 'AUDIO',
+  };
+
+  CreatorModel? _effectiveModel(CreatorModelProvider provider) {
+    final models = provider.modelsFor(_mediaType);
+    if (models.isEmpty) return null;
+    return provider.findById(_mediaType, _providerConfigId) ?? models.first;
+  }
+
+  Future<void> _pickProviderModel(CreatorModelProvider provider) async {
+    final models = provider.modelsFor(_mediaType);
+    if (provider.isLoading(_mediaType) && models.isEmpty) {
+      _showError('模型目录正在加载，请稍后再试');
+      return;
+    }
+    if (models.isEmpty) {
+      _showError('当前创作类型暂无可用模型');
+      return;
+    }
+    final selected = await showPremiumSelectSheet<CreatorModel>(
+      context: context,
+      title: '选择模型',
+      subtitle: '选择实际执行生成的模型通道',
+      options: [
+        for (final model in models)
+          PremiumSelectOption(
+            value: model,
+            title: model.name,
+            description: [
+              if (model.vendor?.isNotEmpty == true) model.vendor!,
+              if (model.modelName?.isNotEmpty == true) model.modelName!,
+            ].join(' · '),
+            icon: Icons.memory_rounded,
+            highlighted: model.id == _effectiveModel(provider)?.id,
+          ),
+      ],
+      selected: _effectiveModel(provider),
+    );
+    if (selected != null && mounted) {
+      setState(() => _providerConfigId = selected.id);
+    }
+  }
 
   List<SkillModel> _availableSkills(SkillProvider provider) {
     return switch (widget.mode) {
@@ -284,6 +352,11 @@ class _CreationFormPageState extends State<_CreationFormPage> {
       _showError('暂无可用创作线路，请刷新后重试');
       return;
     }
+    final selectedModel = _effectiveModel(context.read<CreatorModelProvider>());
+    if (selectedModel == null) {
+      _showError('暂无可用模型，请刷新后重试');
+      return;
+    }
 
     setState(() => _busy = true);
     try {
@@ -293,6 +366,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
         case CreationMode.image:
           task = await repository.createTextToImage(
             skillId: selectedSkill!.id,
+            providerConfigId: selectedModel.id,
             prompt: prompt,
             refImageUrl: _refImageUrl,
             orderId: activeOrderId,
@@ -300,12 +374,14 @@ class _CreationFormPageState extends State<_CreationFormPage> {
         case CreationMode.video:
           task = await repository.createImageToVideo(
             skillId: selectedSkill!.id,
+            providerConfigId: selectedModel.id,
             prompt: prompt,
             refImageUrl: _refImageUrl!,
             orderId: activeOrderId,
           );
         case CreationMode.audio:
           task = await repository.createTextToAudio(
+            providerConfigId: selectedModel.id,
             prompt: prompt,
             voiceCode: _voiceCode,
             language: _languageCode,
@@ -393,13 +469,17 @@ class _CreationFormPageState extends State<_CreationFormPage> {
     final flow = context.watch<CreatorFlowProvider>();
     final wallet = context.watch<CreatorWalletProvider>();
     final skillProvider = context.watch<SkillProvider>();
+    final modelProvider = context.watch<CreatorModelProvider>();
     final availableSkills = _availableSkills(skillProvider);
+    final availableModels = modelProvider.modelsFor(_mediaType);
+    final effectiveModel = _effectiveModel(modelProvider);
     final effectiveSkill = widget.audioMode
         ? null
         : _effectiveSkill(skillProvider);
     final credits = wallet.stats?.credits;
     final insufficientCredits = credits != null && credits < _cost;
     final skillReady = widget.audioMode || effectiveSkill != null;
+    final modelReady = effectiveModel != null;
     return Stack(
       children: [
         CreatorScreen(
@@ -471,8 +551,48 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                         alignLabelWithHint: true,
                       ),
                     ),
+                    const SizedBox(height: 18),
+                    const FormFieldLabel('模型', required: true),
+                    if (modelProvider.isLoading(_mediaType) &&
+                        availableModels.isEmpty)
+                      const GlassPanel(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      )
+                    else if (modelProvider.errorFor(_mediaType) != null &&
+                        availableModels.isEmpty)
+                      EmptyPanel(
+                        icon: Icons.memory_outlined,
+                        title: '模型目录加载失败',
+                        subtitle: modelProvider.errorFor(_mediaType)!,
+                        actionLabel: '重新加载',
+                        onAction: () =>
+                            modelProvider.loadFor(_mediaType, force: true),
+                      )
+                    else if (availableModels.isEmpty)
+                      EmptyPanel(
+                        icon: Icons.memory_outlined,
+                        title: '暂无可用模型',
+                        subtitle: '当前创作类型没有已上架的模型通道。',
+                        actionLabel: '刷新',
+                        onAction: () =>
+                            modelProvider.loadFor(_mediaType, force: true),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _ChoicePill(
+                            label: effectiveModel?.name ?? '选择模型',
+                            onTap: () => _pickProviderModel(modelProvider),
+                          ),
+                        ],
+                      ),
                     if (widget.audioMode) ...[
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
                       const FormFieldLabel('选择音色'),
                       _VoiceChips(
                         voices: widget.models,
@@ -512,7 +632,7 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                           selectedId: effectiveSkill?.id,
                           allowAuto: false,
                           title: '选择创作线路',
-                          subtitle: '每条线路包含风格、模型和默认参数',
+                          subtitle: '线路决定提示词风格和默认参数',
                           onChanged: (id) {
                             if (id != null) setState(() => _skillId = id);
                           },
@@ -587,9 +707,12 @@ class _CreationFormPageState extends State<_CreationFormPage> {
                 icon: Icons.auto_awesome_rounded,
                 caption: !skillReady
                     ? '请先选择可用创作线路'
+                    : !modelReady
+                    ? '请先选择可用模型'
                     : '预计消耗 $_cost 算力 · '
                           '${credits == null ? '正在读取余额' : '当前余额 $credits'}',
-                onPressed: _busy || insufficientCredits || !skillReady
+                onPressed:
+                    _busy || insufficientCredits || !skillReady || !modelReady
                     ? null
                     : _generate,
               ),
@@ -640,7 +763,6 @@ class _SelectedSkillSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final details = [
       if (skill.scene?.isNotEmpty == true) skill.scene!,
-      if (skill.modelName?.isNotEmpty == true) skill.modelName!,
       if (skill.width != null && skill.height != null)
         '${skill.width}×${skill.height}',
       if (skill.steps != null) '${skill.steps} 步',

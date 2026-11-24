@@ -5,9 +5,11 @@ import com.opc.server.ai.AiProvider;
 import com.opc.server.ai.AiProviderRouter;
 import com.opc.server.ai.AiTaskRequest;
 import com.opc.server.ai.AiTaskResult;
+import com.opc.server.ai.ProviderRuntimeConfig;
 import com.opc.server.common.BizException;
 import com.opc.server.common.ErrorCode;
 import com.opc.server.entity.AiTask;
+import com.opc.server.entity.AiProviderConfig;
 import com.opc.server.entity.MarketOrder;
 import com.opc.server.entity.OrderAcceptance;
 import com.opc.server.entity.Skill;
@@ -18,6 +20,7 @@ import com.opc.server.entity.enums.SkillType;
 import com.opc.server.entity.enums.TaskStatus;
 import com.opc.server.entity.enums.TaskType;
 import com.opc.server.repository.AiTaskRepository;
+import com.opc.server.repository.AiProviderConfigRepository;
 import com.opc.server.repository.MarketOrderRepository;
 import com.opc.server.repository.OrderAcceptanceRepository;
 import com.opc.server.repository.SkillRepository;
@@ -61,6 +64,7 @@ public class HarnessService {
     private static final Logger log = LoggerFactory.getLogger(HarnessService.class);
 
     private final AiTaskRepository taskRepository;
+    private final AiProviderConfigRepository providerConfigRepository;
     private final SkillRepository skillRepository;
     private final UserRepository userRepository;
     private final MarketOrderRepository marketOrderRepository;
@@ -74,6 +78,7 @@ public class HarnessService {
     private final CreditTransactionService creditTransactionService;
 
     public HarnessService(AiTaskRepository taskRepository,
+                          AiProviderConfigRepository providerConfigRepository,
                           SkillRepository skillRepository,
                           UserRepository userRepository,
                           MarketOrderRepository marketOrderRepository,
@@ -86,6 +91,7 @@ public class HarnessService {
                           ObjectMapper objectMapper,
                           CreditTransactionService creditTransactionService) {
         this.taskRepository = taskRepository;
+        this.providerConfigRepository = providerConfigRepository;
         this.skillRepository = skillRepository;
         this.userRepository = userRepository;
         this.marketOrderRepository = marketOrderRepository;
@@ -128,6 +134,21 @@ public class HarnessService {
                              String refImageUrl,
                              Long orderId,
                              Map<String, Object> creationParams) {
+        return createTask(
+                userId, type, skillId, prompt, negativePrompt, refImageUrl,
+                orderId, null, creationParams);
+    }
+
+    @Transactional
+    public AiTask createTask(Long userId,
+                             TaskType type,
+                             Long skillId,
+                             String prompt,
+                             String negativePrompt,
+                             String refImageUrl,
+                             Long orderId,
+                             Long providerConfigId,
+                             Map<String, Object> creationParams) {
 
         // ---- 1. 参数校验 ----
         if (type == null) {
@@ -152,6 +173,7 @@ public class HarnessService {
 
         // ---- 2. 线路校验 ----
         Skill skill = resolveSkill(skillId, type);
+        AiProviderConfig providerConfig = resolveProviderConfig(providerConfigId, type);
 
         // ---- 2.5 接单上下文校验 ----
         MarketOrder order = null;
@@ -197,6 +219,7 @@ public class HarnessService {
                 .userId(userId)
                 .type(type)
                 .skillId(skill == null ? null : skill.getId())
+                .providerConfigId(providerConfig == null ? null : providerConfig.getId())
                 // 关键：把用户输入套进线路模板，拼出最终提示词
                 .prompt(skill == null ? prompt : skill.buildFinalPrompt(prompt))
                 .negativePrompt(skill == null
@@ -204,8 +227,10 @@ public class HarnessService {
                 .refImageUrl(refImageUrl)
                 .orderId(order == null ? null : order.getId())
                 .acceptanceId(acceptance == null ? null : acceptance.getId())
-                .paramsJson(snapshotParams(skill, creationParams))
-                .provider(skill == null ? "mock" : skill.getProvider())
+                .paramsJson(snapshotParams(skill, providerConfig, creationParams))
+                .provider(providerConfig != null
+                        ? providerConfig.getProviderImpl()
+                        : (skill == null ? "mock" : skill.getProvider()))
                 .status(TaskStatus.QUEUED)
                 .progress(0)
                 .queueAt(LocalDateTime.now())
@@ -229,9 +254,14 @@ public class HarnessService {
             saved.setSkillName(skill.getName());
             saved.setSkillCode(skill.getCode());
         }
+        if (providerConfig != null) {
+            saved.setProviderConfigName(providerConfig.getName());
+            saved.setProviderModelName(providerConfig.getModelName());
+        }
 
-        log.info("任务创建成功 taskNo={} type={} skill={} provider={}",
-                saved.getTaskNo(), type, saved.getSkillId(), saved.getProvider());
+        log.info("任务创建成功 taskNo={} type={} skill={} providerConfig={} provider={}",
+                saved.getTaskNo(), type, saved.getSkillId(),
+                saved.getProviderConfigId(), saved.getProvider());
 
         return saved;
     }
@@ -259,13 +289,49 @@ public class HarnessService {
     }
 
     /**
+     * 校验用户选择的模型通道。
+     *
+     * <p>模型决定实际执行引擎，线路只提供风格与默认参数。旧客户端不传
+     * providerConfigId 时返回 null，继续走原有 Skill.provider 兼容链路。
+     */
+    private AiProviderConfig resolveProviderConfig(Long providerConfigId, TaskType taskType) {
+        if (providerConfigId == null) {
+            return null;
+        }
+        AiProviderConfig config = providerConfigRepository
+                .findByIdAndDeletedFalse(providerConfigId)
+                .orElseThrow(() -> new BizException(
+                        ErrorCode.BAD_REQUEST, "所选模型不存在或已下线"));
+        if (!config.isOnline()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "所选模型当前未上架");
+        }
+        String expectedType = switch (taskType) {
+            case TEXT_TO_IMAGE -> "IMAGE";
+            case IMAGE_TO_VIDEO -> "VIDEO";
+            case TEXT_TO_AUDIO -> "AUDIO";
+        };
+        if (!expectedType.equalsIgnoreCase(config.getType())) {
+            throw new BizException(
+                    ErrorCode.BAD_REQUEST,
+                    "所选模型不支持当前创作类型，需要 " + expectedType + " 模型"
+            );
+        }
+        if (config.getProviderImpl() == null || config.getProviderImpl().isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "所选模型未配置执行引擎");
+        }
+        return config;
+    }
+
+    /**
      * 把线路参数快照成 JSON 存进任务。
      *
      * <p>为什么要快照：线路是运营可改的配置。如果只存 skillId，
      * 半年后运营把某条线路的模型换了，用户回看历史任务时看到的参数
      * 就和当初实际生成的不一致了。快照保证了历史可追溯。
      */
-    private String snapshotParams(Skill skill, Map<String, Object> creationParams) {
+    private String snapshotParams(Skill skill,
+                                  AiProviderConfig providerConfig,
+                                  Map<String, Object> creationParams) {
         try {
             Map<String, Object> params = new java.util.LinkedHashMap<>();
             if (skill != null) {
@@ -280,6 +346,12 @@ public class HarnessService {
                 params.put("height", skill.getHeight());
                 params.put("promptPrefix", skill.getPromptPrefix());
                 params.put("promptSuffix", skill.getPromptSuffix());
+            }
+            if (providerConfig != null) {
+                params.put("providerConfigId", providerConfig.getId());
+                params.put("providerConfigName", providerConfig.getName());
+                params.put("providerModelName", providerConfig.getModelName());
+                params.put("providerImpl", providerConfig.getProviderImpl());
             }
             if (creationParams != null) {
                 params.putAll(creationParams);
@@ -355,19 +427,34 @@ public class HarnessService {
                 .map(AiTask::getSkillId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        if (skillIds.isEmpty()) {
-            return;
+        if (!skillIds.isEmpty()) {
+            Map<Long, Skill> skillMap = skillRepository.findAllById(skillIds).stream()
+                    .collect(Collectors.toMap(Skill::getId, s -> s));
+
+            for (AiTask task : tasks) {
+                Skill skill = skillMap.get(task.getSkillId());
+                if (skill != null) {
+                    // @Transient 字段，不会被写库，纯展示用
+                    task.setSkillName(skill.getName());
+                    task.setSkillCode(skill.getCode());
+                }
+            }
         }
 
-        Map<Long, Skill> skillMap = skillRepository.findAllById(skillIds).stream()
-                .collect(Collectors.toMap(Skill::getId, s -> s));
-
-        for (AiTask task : tasks) {
-            Skill skill = skillMap.get(task.getSkillId());
-            if (skill != null) {
-                // @Transient 字段，不会被写库，纯展示用
-                task.setSkillName(skill.getName());
-                task.setSkillCode(skill.getCode());
+        Set<Long> providerConfigIds = tasks.stream()
+                .map(AiTask::getProviderConfigId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!providerConfigIds.isEmpty()) {
+            Map<Long, AiProviderConfig> configMap =
+                    providerConfigRepository.findAllById(providerConfigIds).stream()
+                            .collect(Collectors.toMap(AiProviderConfig::getId, c -> c));
+            for (AiTask task : tasks) {
+                AiProviderConfig config = configMap.get(task.getProviderConfigId());
+                if (config != null) {
+                    task.setProviderConfigName(config.getName());
+                    task.setProviderModelName(config.getModelName());
+                }
             }
         }
     }
@@ -446,8 +533,20 @@ public class HarnessService {
                 ? null
                 : skillRepository.findById(task.getSkillId()).orElse(null);
 
-        AiTaskRequest request = requestFactory.build(task, skill);
-        AiProvider provider = providerRouter.route(task.getProvider());
+        AiProviderConfig providerConfig = task.getProviderConfigId() == null
+                ? null
+                : providerConfigRepository
+                        .findByIdAndDeletedFalse(task.getProviderConfigId())
+                        .orElse(null);
+        if (task.getProviderConfigId() != null && providerConfig == null) {
+            stateService.markFailed(taskId, "所选模型配置已被删除或下线，请重新选择模型");
+            return;
+        }
+
+        AiTaskRequest request = requestFactory.build(task, skill, providerConfig);
+        AiProvider provider = providerConfig == null
+                ? providerRouter.route(task.getProvider())
+                : providerRouter.routeByConfig(toRuntimeConfig(providerConfig));
 
         var settings = settingService.getSettings();
         if (Boolean.TRUE.equals(settings.aiDebugLogEnabled())) {
@@ -474,6 +573,32 @@ public class HarnessService {
         } else {
             stateService.markFailed(taskId, result.errorMessage());
         }
+    }
+
+    private ProviderRuntimeConfig toRuntimeConfig(AiProviderConfig config) {
+        return new ProviderRuntimeConfig(
+                config.getProviderImpl(),
+                config.getName(),
+                config.getModelName(),
+                config.getType(),
+                config.getBaseUrl(),
+                config.getAuthType(),
+                config.getApiKey(),
+                config.getHeaderName(),
+                config.getHeaderValue(),
+                config.getRequestMethod(),
+                config.getRequestPath(),
+                config.getRequestContentType(),
+                config.getRequestQueryJson(),
+                config.getRequestHeadersJson(),
+                config.getRequestBodyJson(),
+                config.getResponseSuccessPath(),
+                config.getResponseResultUrlPath(),
+                config.getResponseThumbPath(),
+                config.getResponseErrorPath(),
+                config.getResponseTaskIdPath(),
+                config.getTimeoutSeconds() == null ? 180 : config.getTimeoutSeconds()
+        );
     }
 
     /** 供调度器做超时清理：把卡在「生成中」太久的任务判为失败。 */

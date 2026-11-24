@@ -229,7 +229,10 @@ class _TaskStatusBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(task.displayStatusLabel, style: theme.textTheme.titleSmall),
+                Text(
+                  task.displayStatusLabel,
+                  style: theme.textTheme.titleSmall,
+                ),
                 const SizedBox(height: 3),
                 Text(
                   isRunning ? '任务正在后台生成，页面会自动刷新' : '任务已完成',
@@ -262,7 +265,10 @@ class _ErrorBanner extends StatelessWidget {
       borderColor: AppColors.statusFailed.withValues(alpha: 0.2),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppColors.statusFailed),
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.statusFailed,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(message, style: Theme.of(context).textTheme.bodySmall),
@@ -307,31 +313,54 @@ class _ResultMeta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final modelLabel =
+        task.providerConfigName ??
+        task.providerModelName ??
+        task.provider ??
+        '—';
+    final styleLabel = task.skillName ?? '未使用风格线路';
+    return Column(
       children: [
-        Expanded(
-          child: CreatorMetric(
-            label: '模型',
-            value: task.skillName ?? task.provider ?? task.typeLabel ?? '—',
-            icon: Icons.auto_awesome_rounded,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: CreatorMetric(
+                label: '模型',
+                value: modelLabel,
+                icon: Icons.memory_rounded,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: CreatorMetric(
+                label: '创作线路',
+                value: styleLabel,
+                icon: Icons.palette_outlined,
+                accent: AppColors.gold,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: CreatorMetric(
-            label: '任务号',
-            value: task.taskNo,
-            icon: Icons.tag_rounded,
-            accent: AppColors.gold,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: CreatorMetric(
-            label: '耗时',
-            value: task.durationLabel ?? '生成中',
-            icon: Icons.timer_outlined,
-          ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: CreatorMetric(
+                label: '任务号',
+                value: task.taskNo,
+                icon: Icons.tag_rounded,
+                accent: AppColors.gold,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: CreatorMetric(
+                label: '耗时',
+                value: task.durationLabel ?? '生成中',
+                icon: Icons.timer_outlined,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -439,16 +468,10 @@ class _ResultActions extends StatelessWidget {
             if (!context.mounted) return;
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(content: Text(ok ? '已保存' : '下载功能暂未完成')),
-              );
+              ..showSnackBar(SnackBar(content: Text(ok ? '已保存' : '下载功能暂未完成')));
           },
         ),
-        _ResultAction(
-          icon: Icons.refresh_rounded,
-          label: '重生',
-          onTap: onRetry,
-        ),
+        _ResultAction(icon: Icons.refresh_rounded, label: '重生', onTap: onRetry),
         _ResultAction(
           icon: Icons.hd_rounded,
           label: '高清',
@@ -463,11 +486,7 @@ class _ResultActions extends StatelessWidget {
           label: '参考',
           onTap: onCopy,
         ),
-        _ResultAction(
-          icon: Icons.share_rounded,
-          label: '分享',
-          onTap: onCopy,
-        ),
+        _ResultAction(icon: Icons.share_rounded, label: '分享', onTap: onCopy),
       ],
     );
   }
@@ -526,9 +545,8 @@ class _AudioResult extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             '音频已生成',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white,
-            ),
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 6),
           Text(

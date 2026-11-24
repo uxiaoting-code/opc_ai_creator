@@ -85,6 +85,9 @@ class TaskModel {
     this.skillId,
     this.skillName,
     this.skillCode,
+    this.providerConfigId,
+    this.providerConfigName,
+    this.providerModelName,
     this.prompt,
     this.negativePrompt,
     this.refImageUrl,
@@ -125,6 +128,11 @@ class TaskModel {
   final String? skillName;
 
   final String? skillCode;
+
+  /// 用户选择的模型通道
+  final int? providerConfigId;
+  final String? providerConfigName;
+  final String? providerModelName;
 
   /// 最终提示词（后端已拼上线路的风格前缀 / 后缀）
   final String? prompt;
@@ -185,7 +193,9 @@ class TaskModel {
   /// 详情页优先展示的大图地址（缩略图缺失时回退到原图）。
   String? get displayImageUrl {
     if (hasResult) return resultUrl;
-    return (resultThumb != null && resultThumb!.isNotEmpty) ? resultThumb : null;
+    return (resultThumb != null && resultThumb!.isNotEmpty)
+        ? resultThumb
+        : null;
   }
 
   /// 耗时文案，如 `3.2s` / `1m24s`。
@@ -211,6 +221,9 @@ class TaskModel {
       skillId: (json['skillId'] as num?)?.toInt(),
       skillName: json['skillName'] as String?,
       skillCode: json['skillCode'] as String?,
+      providerConfigId: (json['providerConfigId'] as num?)?.toInt(),
+      providerConfigName: json['providerConfigName'] as String?,
+      providerModelName: json['providerModelName'] as String?,
       prompt: json['prompt'] as String?,
       negativePrompt: json['negativePrompt'] as String?,
       refImageUrl: json['refImageUrl'] as String?,
@@ -235,36 +248,39 @@ class TaskModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'taskNo': taskNo,
-        'type': type.value,
-        'typeLabel': typeLabel,
-        'orderId': orderId,
-        'acceptanceId': acceptanceId,
-        'skillId': skillId,
-        'skillName': skillName,
-        'skillCode': skillCode,
-        'prompt': prompt,
-        'negativePrompt': negativePrompt,
-        'refImageUrl': refImageUrl,
-        'status': status.value,
-        'statusLabel': statusLabel,
-        'progress': progress,
-        'resultUrl': resultUrl,
-        'resultThumb': resultThumb,
-        'errorMsg': errorMsg,
-        'provider': provider,
-        'retryCount': retryCount,
-        'maxRetry': maxRetry,
-        'canRetry': canRetry,
-        'canCancel': canCancel,
-        'finished': finished,
-        'queueAt': queueAt?.toIso8601String(),
-        'startAt': startAt?.toIso8601String(),
-        'finishAt': finishAt?.toIso8601String(),
-        'durationMs': durationMs,
-        'createdAt': createdAt?.toIso8601String(),
-      };
+    'id': id,
+    'taskNo': taskNo,
+    'type': type.value,
+    'typeLabel': typeLabel,
+    'orderId': orderId,
+    'acceptanceId': acceptanceId,
+    'skillId': skillId,
+    'skillName': skillName,
+    'skillCode': skillCode,
+    'providerConfigId': providerConfigId,
+    'providerConfigName': providerConfigName,
+    'providerModelName': providerModelName,
+    'prompt': prompt,
+    'negativePrompt': negativePrompt,
+    'refImageUrl': refImageUrl,
+    'status': status.value,
+    'statusLabel': statusLabel,
+    'progress': progress,
+    'resultUrl': resultUrl,
+    'resultThumb': resultThumb,
+    'errorMsg': errorMsg,
+    'provider': provider,
+    'retryCount': retryCount,
+    'maxRetry': maxRetry,
+    'canRetry': canRetry,
+    'canCancel': canCancel,
+    'finished': finished,
+    'queueAt': queueAt?.toIso8601String(),
+    'startAt': startAt?.toIso8601String(),
+    'finishAt': finishAt?.toIso8601String(),
+    'durationMs': durationMs,
+    'createdAt': createdAt?.toIso8601String(),
+  };
 
   /// 宽容解析时间：后端返回 ISO8601 字符串（application.yml 里关掉了时间戳数组），
   /// 但也兼容时间戳，避免配置被改回去后整页崩掉。

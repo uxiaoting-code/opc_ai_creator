@@ -33,6 +33,7 @@ class TaskRepository {
   /// [prompt] 会在后端被套进线路模板（拼上风格前缀 / 后缀）。
   Future<TaskModel> createTextToImage({
     int? skillId,
+    int? providerConfigId,
     required String prompt,
     String? negativePrompt,
     String? refImageUrl,
@@ -41,6 +42,7 @@ class TaskRepository {
     return _create(
       ApiEndpoints.textToImage,
       skillId: skillId,
+      providerConfigId: providerConfigId,
       prompt: prompt,
       negativePrompt: negativePrompt,
       refImageUrl: refImageUrl,
@@ -55,6 +57,7 @@ class TaskRepository {
   /// 等页面开发时直接调，不用再动仓库层。
   Future<TaskModel> createImageToVideo({
     int? skillId,
+    int? providerConfigId,
     required String prompt,
     String? negativePrompt,
     required String refImageUrl,
@@ -63,6 +66,7 @@ class TaskRepository {
     return _create(
       ApiEndpoints.imageToVideo,
       skillId: skillId,
+      providerConfigId: providerConfigId,
       prompt: prompt,
       negativePrompt: negativePrompt,
       refImageUrl: refImageUrl,
@@ -76,6 +80,7 @@ class TaskRepository {
   /// 任务共用同一套状态轮询。
   Future<TaskModel> createTextToAudio({
     int? skillId,
+    int? providerConfigId,
     required String prompt,
     required String voiceCode,
     required String language,
@@ -87,6 +92,7 @@ class TaskRepository {
       ApiEndpoints.textToAudio,
       body: {
         'skillId': ?skillId,
+        'providerConfigId': ?providerConfigId,
         'prompt': prompt,
         'voiceCode': voiceCode,
         'language': language,
@@ -111,6 +117,7 @@ class TaskRepository {
   Future<TaskModel> _create(
     String path, {
     int? skillId,
+    int? providerConfigId,
     required String prompt,
     String? negativePrompt,
     String? refImageUrl,
@@ -120,6 +127,7 @@ class TaskRepository {
       path,
       body: {
         'skillId': ?skillId,
+        'providerConfigId': ?providerConfigId,
         'prompt': prompt,
         'negativePrompt': ?negativePrompt,
         'refImageUrl': ?refImageUrl,
@@ -175,11 +183,7 @@ class TaskRepository {
   }) async {
     final raw = await _api.get<Map<String, dynamic>>(
       ApiEndpoints.tasks,
-      query: {
-        'status': ?status?.value,
-        'page': page,
-        'pageSize': pageSize,
-      },
+      query: {'status': ?status?.value, 'page': page, 'pageSize': pageSize},
       parser: (data) => Map<String, dynamic>.from(data as Map),
     );
 

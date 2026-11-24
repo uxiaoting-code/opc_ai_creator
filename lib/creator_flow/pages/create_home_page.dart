@@ -11,11 +11,14 @@ import '../../providers/skill_provider.dart';
 import '../../providers/work_provider.dart';
 import '../../widgets/creation/skill_selector.dart';
 import '../creator_flow_provider.dart';
+import '../creator_model_provider.dart';
+import '../models/creator_model.dart';
 import '../models/creator_models.dart';
 import '../models/creator_order.dart';
 import '../widgets/creator_widgets.dart';
 import '../widgets/prototype_widgets.dart';
 import '../../widgets/premium/premium_mode_switch.dart';
+import '../../widgets/premium/premium_choice_chip.dart';
 import '../../widgets/premium/premium_select_sheet.dart';
 
 /// 原型中的「首页 · 创作」。
@@ -35,6 +38,9 @@ class _CreateHomePageState extends State<CreateHomePage> {
   String _audioVoice = '温柔女声';
   int? _imageSkillId;
   int? _videoSkillId;
+  int? _imageModelId;
+  int? _videoModelId;
+  int? _audioModelId;
   String _ratio = '1:1';
   int _count = 4;
   bool _videoHasRef = false;
@@ -109,6 +115,9 @@ class _CreateHomePageState extends State<CreateHomePage> {
         if (mounted) context.read<SkillProvider>().loadIfNeeded();
       });
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<CreatorModelProvider>().loadFor(_mediaType);
+    });
   }
 
   @override
@@ -141,6 +150,36 @@ class _CreateHomePageState extends State<CreateHomePage> {
     CreationMode.audio => '/create/audio',
   };
 
+  String get _mediaType => switch (_mode) {
+    CreationMode.image => 'IMAGE',
+    CreationMode.video => 'VIDEO',
+    CreationMode.audio => 'AUDIO',
+  };
+
+  CreatorModel? _selectedModel(CreatorModelProvider provider) {
+    final models = provider.modelsFor(_mediaType);
+    if (models.isEmpty) return null;
+    final selectedId = switch (_mode) {
+      CreationMode.image => _imageModelId,
+      CreationMode.video => _videoModelId,
+      CreationMode.audio => _audioModelId,
+    };
+    return provider.findById(_mediaType, selectedId) ?? models.first;
+  }
+
+  void _selectModel(int id) {
+    setState(() {
+      switch (_mode) {
+        case CreationMode.image:
+          _imageModelId = id;
+        case CreationMode.video:
+          _videoModelId = id;
+        case CreationMode.audio:
+          _audioModelId = id;
+      }
+    });
+  }
+
   List<SkillModel> _skillsForMode(SkillProvider provider) {
     return switch (_mode) {
       CreationMode.image => provider.textToImageSkills,
@@ -171,28 +210,39 @@ class _CreateHomePageState extends State<CreateHomePage> {
     });
   }
 
-  Future<void> _pickModel(SkillProvider skillProvider) async {
-    if (_mode == CreationMode.audio) {
-      final selected = await showPremiumSelectSheet<String>(
-        context: context,
-        title: '选择音色',
-        options: [
-          for (final voice in _audioVoices)
-            PremiumSelectOption(
-              value: voice,
-              title: voice,
-              icon: Icons.record_voice_over_outlined,
-              highlighted: voice == _audioVoice,
-            ),
-        ],
-        selected: _audioVoice,
-      );
-      if (selected != null && mounted) {
-        setState(() => _audioVoice = selected);
-      }
+  Future<void> _pickModel(CreatorModelProvider modelProvider) async {
+    final models = modelProvider.modelsFor(_mediaType);
+    if (modelProvider.isLoading(_mediaType) && models.isEmpty) {
+      _showMessage('模型目录正在加载，请稍后重试');
       return;
     }
+    if (models.isEmpty) {
+      _showMessage('当前创作类型暂无可用模型');
+      return;
+    }
+    final selected = await showPremiumSelectSheet<CreatorModel>(
+      context: context,
+      title: '选择模型',
+      subtitle: '选择实际执行生成的模型通道',
+      options: [
+        for (final model in models)
+          PremiumSelectOption(
+            value: model,
+            title: model.name,
+            description: [
+              if (model.vendor?.isNotEmpty == true) model.vendor!,
+              if (model.modelName?.isNotEmpty == true) model.modelName!,
+            ].join(' · '),
+            icon: Icons.memory_rounded,
+            highlighted: model.id == _selectedModel(modelProvider)?.id,
+          ),
+      ],
+      selected: _selectedModel(modelProvider),
+    );
+    if (selected != null && mounted) _selectModel(selected.id);
+  }
 
+  Future<void> _pickSkill(SkillProvider skillProvider) async {
     final skills = _skillsForMode(skillProvider);
     if (skillProvider.isLoading && skills.isEmpty) {
       _showMessage('创作线路正在加载，请稍后再试');
@@ -211,10 +261,8 @@ class _CreateHomePageState extends State<CreateHomePage> {
           PremiumSelectOption(
             value: skill,
             title: skill.name,
-            description: [
-              if (skill.scene?.isNotEmpty == true) skill.scene!,
-              if (skill.modelName?.isNotEmpty == true) skill.modelName!,
-            ].join(' · '),
+            description: [if (skill.scene?.isNotEmpty == true) skill.scene!]
+                .join(' · '),
             icon: Icons.route_rounded,
             highlighted: skill.id == _selectedSkill(skillProvider)?.id,
           ),
@@ -222,6 +270,26 @@ class _CreateHomePageState extends State<CreateHomePage> {
       selected: _selectedSkill(skillProvider),
     );
     if (selected != null && mounted) _selectSkill(selected.id);
+  }
+
+  Future<void> _pickVoice() async {
+    final selected = await showPremiumSelectSheet<String>(
+      context: context,
+      title: '选择音色',
+      options: [
+        for (final voice in _audioVoices)
+          PremiumSelectOption(
+            value: voice,
+            title: voice,
+            icon: Icons.record_voice_over_outlined,
+            highlighted: voice == _audioVoice,
+          ),
+      ],
+      selected: _audioVoice,
+    );
+    if (selected != null && mounted) {
+      setState(() => _audioVoice = selected);
+    }
   }
 
   Future<void> _pickRatio() async {
@@ -258,8 +326,16 @@ class _CreateHomePageState extends State<CreateHomePage> {
     if (selected != null && mounted) setState(() => _count = selected);
   }
 
-  void _generate(SkillProvider skillProvider) {
+  void _generate(
+    SkillProvider skillProvider,
+    CreatorModelProvider modelProvider,
+  ) {
     HapticFeedback.selectionClick();
+    final model = _selectedModel(modelProvider);
+    if (model == null) {
+      _showMessage('请先选择可用模型');
+      return;
+    }
     final skill = _mode == CreationMode.audio
         ? null
         : _selectedSkill(skillProvider);
@@ -277,6 +353,7 @@ class _CreateHomePageState extends State<CreateHomePage> {
         prompt: _prompt.text.trim(),
         orderId: orderId,
         skillId: skill?.id,
+        providerConfigId: model.id,
       ),
     );
   }
@@ -293,15 +370,24 @@ class _CreateHomePageState extends State<CreateHomePage> {
     final auth = context.watch<AuthProvider>();
     final flow = context.watch<CreatorFlowProvider>();
     final skillProvider = context.watch<SkillProvider>();
+    final modelProvider = context.watch<CreatorModelProvider>();
     final worksProvider = context.watch<WorkProvider>();
     final recentWorks = worksProvider.recentWorks.take(4).toList();
     final order = flow.currentOrder;
     final work = flow.workContext;
     final selectedSkill = _selectedSkill(skillProvider);
-    final primaryValue = _mode == CreationMode.audio
+    final selectedModel = _selectedModel(modelProvider);
+    final modelValue =
+        selectedModel?.name ??
+        (modelProvider.isLoading(_mediaType) ? '加载模型中…' : '暂无可选模型');
+    final secondaryLabel = _mode == CreationMode.audio ? '音色' : '线路';
+    final secondaryValue = _mode == CreationMode.audio
         ? _audioVoice
         : selectedSkill?.name ??
               (skillProvider.isLoading ? '加载线路中…' : '暂无可选线路');
+    final generateEnabled =
+        selectedModel != null &&
+        (_mode == CreationMode.audio || selectedSkill != null);
 
     return CreatorScreen(
       padding: EdgeInsets.zero,
@@ -333,26 +419,46 @@ class _CreateHomePageState extends State<CreateHomePage> {
                 const SizedBox(height: 16),
                 _CreationHero(
                   mode: _mode,
-                  model: primaryValue,
+                  model: modelValue,
+                  secondaryLabel: secondaryLabel,
+                  secondaryValue: secondaryValue,
                   ratio: _ratio,
                   count: _count,
                   promptController: _prompt,
                   placeholder: _placeholder,
                   videoHasRef: _videoHasRef,
-                  onModeChanged: (mode) => setState(() => _mode = mode),
-                  onModelTap: () => _pickModel(skillProvider),
+                  onModeChanged: (mode) {
+                    setState(() => _mode = mode);
+                    final mediaType = switch (mode) {
+                      CreationMode.image => 'IMAGE',
+                      CreationMode.video => 'VIDEO',
+                      CreationMode.audio => 'AUDIO',
+                    };
+                    context.read<CreatorModelProvider>().loadFor(mediaType);
+                  },
+                  onModelTap: () => _pickModel(modelProvider),
+                  onSecondaryTap: _mode == CreationMode.audio
+                      ? _pickVoice
+                      : () => _pickSkill(skillProvider),
                   onRatioTap: _pickRatio,
                   onCountTap: _pickCount,
                   onToggleRef: () =>
                       setState(() => _videoHasRef = !_videoHasRef),
-                  onGenerate: () => _generate(skillProvider),
+                  onGenerate: () => _generate(skillProvider, modelProvider),
                   buttonText: _buttonText,
                   cost: _cost,
-                  generateEnabled:
-                      _mode == CreationMode.audio || selectedSkill != null,
+                  generateEnabled: generateEnabled,
+                ),
+                const SizedBox(height: 16),
+                _ModelRoutePanel(
+                  provider: modelProvider,
+                  mediaType: _mediaType,
+                  models: modelProvider.modelsFor(_mediaType),
+                  selectedId: selectedModel?.id,
+                  onSelected: _selectModel,
                 ),
                 if (_mode != CreationMode.audio) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _SkillRoutePanel(
                     provider: skillProvider,
                     skills: _skillsForMode(skillProvider),
@@ -425,6 +531,104 @@ class _CreateHomePageState extends State<CreateHomePage> {
   }
 }
 
+class _ModelRoutePanel extends StatelessWidget {
+  const _ModelRoutePanel({
+    required this.provider,
+    required this.mediaType,
+    required this.models,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final CreatorModelProvider provider;
+  final String mediaType;
+  final List<CreatorModel> models;
+  final int? selectedId;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('模型', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 3),
+                    Text(
+                      '决定实际执行生成的模型通道',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: '刷新模型目录',
+                onPressed: provider.isLoading(mediaType)
+                    ? null
+                    : () => provider.loadFor(mediaType, force: true),
+                icon: provider.isLoading(mediaType)
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (provider.isLoading(mediaType) && models.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (provider.errorFor(mediaType) != null && models.isEmpty)
+            Column(
+              children: [
+                Text(
+                  provider.errorFor(mediaType)!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.statusFailed),
+                ),
+                TextButton(
+                  onPressed: () => provider.loadFor(mediaType, force: true),
+                  child: const Text('重新加载模型'),
+                ),
+              ],
+            )
+          else if (models.isEmpty)
+            Text('当前创作类型暂无已上架模型。', style: Theme.of(context).textTheme.bodySmall)
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (var i = 0; i < models.length; i++) ...[
+                    PremiumChoiceChip(
+                      label: models[i].name,
+                      selected: models[i].id == selectedId,
+                      onTap: () => onSelected(models[i].id),
+                      compact: true,
+                    ),
+                    if (i != models.length - 1) const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SkillRoutePanel extends StatelessWidget {
   const _SkillRoutePanel({
     required this.provider,
@@ -457,7 +661,7 @@ class _SkillRoutePanel extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '线路决定创作风格、模型和默认参数',
+                      '线路决定提示词风格和默认参数',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -510,7 +714,7 @@ class _SkillRoutePanel extends StatelessWidget {
               selectedId: selectedId,
               allowAuto: false,
               title: '选择创作线路',
-              subtitle: '线路已经包含风格与参数',
+              subtitle: '选择提示词风格与默认参数',
               onChanged: (id) {
                 if (id != null) onSelected(id);
               },
@@ -840,6 +1044,8 @@ class _CreationHero extends StatelessWidget {
   const _CreationHero({
     required this.mode,
     required this.model,
+    required this.secondaryLabel,
+    required this.secondaryValue,
     required this.ratio,
     required this.count,
     required this.promptController,
@@ -847,6 +1053,7 @@ class _CreationHero extends StatelessWidget {
     required this.videoHasRef,
     required this.onModeChanged,
     required this.onModelTap,
+    required this.onSecondaryTap,
     required this.onRatioTap,
     required this.onCountTap,
     required this.onToggleRef,
@@ -858,6 +1065,8 @@ class _CreationHero extends StatelessWidget {
 
   final CreationMode mode;
   final String model;
+  final String secondaryLabel;
+  final String secondaryValue;
   final String ratio;
   final int count;
   final TextEditingController promptController;
@@ -865,6 +1074,7 @@ class _CreationHero extends StatelessWidget {
   final bool videoHasRef;
   final ValueChanged<CreationMode> onModeChanged;
   final VoidCallback onModelTap;
+  final VoidCallback onSecondaryTap;
   final VoidCallback onRatioTap;
   final VoidCallback onCountTap;
   final VoidCallback onToggleRef;
@@ -923,10 +1133,11 @@ class _CreationHero extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
+              PrototypeParamPill(label: '模型', value: model, onTap: onModelTap),
               PrototypeParamPill(
-                label: mode == CreationMode.audio ? '音色' : '线路',
-                value: model,
-                onTap: onModelTap,
+                label: secondaryLabel,
+                value: secondaryValue,
+                onTap: onSecondaryTap,
               ),
               if (mode == CreationMode.image) ...[
                 PrototypeParamPill(
@@ -940,12 +1151,6 @@ class _CreationHero extends StatelessWidget {
                   onTap: onCountTap,
                 ),
               ],
-              if (mode == CreationMode.audio)
-                PrototypeParamPill(
-                  label: '音色',
-                  value: '温柔女声',
-                  onTap: onModelTap,
-                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -959,7 +1164,7 @@ class _CreationHero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '预计消耗 $cost 算力 · $model',
+            '预计消耗 $cost 算力 · $model · $secondaryValue',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall,
           ),

@@ -6,8 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:opc_ai_creator/app.dart';
 import 'package:opc_ai_creator/core/network/api_client.dart';
 import 'package:opc_ai_creator/core/network/api_response.dart';
+import 'package:opc_ai_creator/creator_flow/creator_model_provider.dart';
 import 'package:opc_ai_creator/creator_flow/creator_wallet_provider.dart';
+import 'package:opc_ai_creator/creator_flow/data/creator_model_repository.dart';
 import 'package:opc_ai_creator/creator_flow/data/creator_wallet_repository.dart';
+import 'package:opc_ai_creator/creator_flow/models/creator_model.dart';
 import 'package:opc_ai_creator/creator_flow/models/creator_wallet.dart';
 import 'package:opc_ai_creator/creator_flow/pages/profile_page.dart';
 import 'package:opc_ai_creator/data/models/skill_model.dart';
@@ -69,6 +72,78 @@ class _FakeSkillRepository extends SkillRepository {
         : _skills.where((skill) => skill.type == type).toList();
     if (limit != null) result = result.take(limit).toList();
     return result;
+  }
+}
+
+class _FakeModelRepository extends CreatorModelRepository {
+  _FakeModelRepository() : super(ApiClient(onUnauthorized: () {}));
+
+  @override
+  Future<List<CreatorModel>> fetchModels(String mediaType) async {
+    return switch (mediaType) {
+      'IMAGE' => const [
+        CreatorModel(
+          id: 1,
+          name: 'TT Image 2',
+          vendor: '字节跳动',
+          type: 'IMAGE',
+          modelName: 'tt-image-2',
+        ),
+        CreatorModel(
+          id: 4,
+          name: '纳米香蕉 Pro',
+          vendor: 'Google',
+          type: 'IMAGE',
+          modelName: 'nano-banana-pro',
+        ),
+      ],
+      'VIDEO' => const [
+        CreatorModel(
+          id: 3,
+          name: '即梦 3.5 Pro',
+          vendor: '字节跳动',
+          type: 'VIDEO',
+          modelName: 'jimeng-3.5-pro',
+        ),
+      ],
+      'AUDIO' => const [
+        CreatorModel(
+          id: 5,
+          name: '海螺 语音克隆 2.8',
+          vendor: 'MiniMax',
+          type: 'AUDIO',
+          modelName: 'hailuo-voice-2.8',
+        ),
+      ],
+      _ => const [],
+    };
+  }
+}
+
+class _CapturingApiClient extends ApiClient {
+  _CapturingApiClient() : super(onUnauthorized: () {});
+
+  String? capturedPath;
+  Object? capturedBody;
+
+  @override
+  Future<T?> post<T>(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+    T Function(Object? data)? parser,
+    dynamic cancelToken,
+  }) async {
+    capturedPath = path;
+    capturedBody = body;
+    final data = <String, dynamic>{
+      'id': 1,
+      'taskNo': 'T1',
+      'type': 'TEXT_TO_IMAGE',
+      'status': 'QUEUED',
+      'progress': 0,
+    };
+    return parser?.call(data);
   }
 }
 
@@ -137,6 +212,7 @@ Future<Widget> buildApp({bool loggedIn = false}) async {
     taskRepository: TaskRepository(apiClient),
     materialRepository: MaterialRepository(apiClient),
     promptRepository: PromptRepository(apiClient),
+    creatorModelProvider: CreatorModelProvider(_FakeModelRepository()),
   );
 }
 
@@ -205,6 +281,25 @@ void main() {
       expect(stats.withdrawableFen, 36800);
       expect(stats.pendingReviewCount, 1);
       expect(stats.taskStats['SUCCESS'], 8);
+    });
+  });
+
+  group('创作请求', () {
+    test('同时提交模型和创作线路 ID', () async {
+      final api = _CapturingApiClient();
+      final repository = TaskRepository(api);
+
+      await repository.createTextToImage(
+        skillId: 3,
+        providerConfigId: 1,
+        prompt: '香水主图',
+      );
+
+      expect(api.capturedPath, '/creation/text-to-image');
+      final body = Map<String, dynamic>.from(api.capturedBody! as Map);
+      expect(body['skillId'], 3);
+      expect(body['providerConfigId'], 1);
+      expect(body['prompt'], '香水主图');
     });
   });
 
@@ -313,6 +408,7 @@ void main() {
       expect(find.text('文生图'), findsWidgets);
       expect(find.textContaining('预计消耗 12 算力'), findsOneWidget);
       expect(find.text('二次元插画'), findsWidgets);
+      expect(find.text('TT Image 2'), findsWidgets);
       expect(find.text('选择创作线路'), findsOneWidget);
       expect(find.text('画面风格'), findsNothing);
       expect(find.textContaining('后台 Skill'), findsNothing);

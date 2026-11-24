@@ -41,14 +41,33 @@ public class HttpApiProvider implements ConfigAwareAiProvider {
     private static final int RAW_RESPONSE_LIMIT = 2000;
 
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient;
+    private volatile HttpClient httpClient;
 
     public HttpApiProvider(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
+    }
+
+    /**
+     * 延迟到真正发起 HTTP 调用时再创建。
+     *
+     * <p>JDK HttpClient 构造时会建立 selector/loopback 资源；把它放在 Bean
+     * 构造期会让只使用 Mock 的后端和普通测试也依赖本机网络能力。
+     */
+    private HttpClient httpClient() {
+        HttpClient client = httpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = httpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(10))
+                            .followRedirects(HttpClient.Redirect.NORMAL)
+                            .build();
+                    httpClient = client;
+                }
+            }
+        }
+        return client;
     }
 
     @Override
@@ -81,7 +100,7 @@ public class HttpApiProvider implements ConfigAwareAiProvider {
             HttpRequest httpRequest = buildRequest(config, request, vars);
 
             listener.onProgress(30);
-            HttpResponse<String> response = httpClient.send(
+            HttpResponse<String> response = httpClient().send(
                     httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             long elapsed = System.currentTimeMillis() - start;
 
@@ -119,7 +138,7 @@ public class HttpApiProvider implements ConfigAwareAiProvider {
             Map<String, String> vars = buildVars(config, request);
             HttpRequest httpRequest = buildRequest(config, request, vars);
 
-            HttpResponse<String> response = httpClient.send(
+            HttpResponse<String> response = httpClient().send(
                     httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             long elapsed = System.currentTimeMillis() - start;
 
