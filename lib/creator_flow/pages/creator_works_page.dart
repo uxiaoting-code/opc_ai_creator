@@ -126,10 +126,7 @@ class _CreatorWorksPageState extends State<CreatorWorksPage> {
         ),
         itemBuilder: (context, index) {
           final work = works[index];
-          return _WorkCard(
-            work: work,
-            onTap: () => _openWork(work),
-          );
+          return _WorkCard(work: work, onTap: () => _openWork(work));
         },
       ),
     );
@@ -172,6 +169,7 @@ class _WorkCard extends StatelessWidget {
               Image.network(
                 url,
                 fit: BoxFit.cover,
+                webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
                 errorBuilder: (_, _, _) =>
                     const ColoredBox(color: AppColors.sageTint),
               ),
@@ -179,10 +177,7 @@ class _WorkCard extends StatelessWidget {
               left: 8,
               top: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.24),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
@@ -287,11 +282,14 @@ class _WorkDetailSheet extends StatelessWidget {
                   const SizedBox(height: 12),
                   if (url.isNotEmpty)
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusHero),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusHero,
+                      ),
                       child: Image.network(
                         url,
                         height: 300,
                         fit: BoxFit.cover,
+                        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
                         errorBuilder: (_, _, _) => Container(
                           height: 220,
                           color: AppColors.sageTint,

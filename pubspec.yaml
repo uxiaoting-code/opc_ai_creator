@@ -43,6 +43,7 @@ dependencies:
   chewie: ^1.17.1
   permission_handler: ^13.0.2
   intl: ^0.20.3
+  web: ^1.1.1
   # 双列 Masonry 瀑布流（作品画廊页用）。
   #
   # 为什么不用内置 GridView：GridView 会把同一行的卡片拉到等高，

@@ -223,6 +223,7 @@ class _WorkMedia extends StatelessWidget {
         height: 280,
         width: double.infinity,
         fit: BoxFit.cover,
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
         errorBuilder: (_, _, _) => Container(
           height: 220,
           color: AppColors.sageTint,

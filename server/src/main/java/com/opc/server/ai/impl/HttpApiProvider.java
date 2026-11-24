@@ -385,8 +385,18 @@ public class HttpApiProvider implements ConfigAwareAiProvider {
     // 工具方法
     // =========================================================================
 
-    private Map<String, String> buildVars(ProviderRuntimeConfig config, AiTaskRequest request) {
+    Map<String, String> buildVars(ProviderRuntimeConfig config, AiTaskRequest request) {
         Map<String, String> vars = new LinkedHashMap<>();
+
+        // 线路扩展参数先放，核心请求字段后放。
+        // 任务快照会保存 skill.modelName 等历史字段；这些字段只能作为扩展参数，
+        // 不能覆盖用户本次选择的模型通道，否则后台明明选了真实模型，
+        // 实际请求仍可能发出 Skill 里旧的 mock 模型名。
+        if (request.extraParams() != null) {
+            request.extraParams().forEach((key, value) ->
+                    vars.put(key, value == null ? "" : String.valueOf(value)));
+        }
+
         vars.put("prompt", safe(request.prompt()));
         vars.put("negativePrompt", safe(request.negativePrompt()));
         vars.put("modelName", defaultIfBlank(request.modelName(), safe(config.modelName())));
@@ -398,10 +408,6 @@ public class HttpApiProvider implements ConfigAwareAiProvider {
         vars.put("refImageUrl", safe(request.referenceImageUrl()));
         vars.put("taskNo", safe(request.taskNo()));
         vars.put("apiKey", safe(config.apiKey()));
-        if (request.extraParams() != null) {
-            request.extraParams().forEach((key, value) ->
-                    vars.put(key, value == null ? "" : String.valueOf(value)));
-        }
         return vars;
     }
 

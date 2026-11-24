@@ -197,11 +197,15 @@ class TaskRepository {
   Future<TaskModel> retryTask(int taskId) =>
       _taskAction(ApiEndpoints.taskRetry(taskId));
 
+  /// 基于成功任务创建一个新的生成任务。旧任务和作品不会被覆盖。
+  Future<TaskModel> regenerateTask(int taskId) =>
+      _taskAction(ApiEndpoints.taskRegenerate(taskId));
+
   /// 取消排队中的任务。只有 QUEUED 状态可以取消。
   Future<TaskModel> cancelTask(int taskId) =>
       _taskAction(ApiEndpoints.taskCancel(taskId));
 
-  /// 重试 / 取消两个接口的返回结构一致，共用这一个实现。
+  /// 重试 / 重新生成 / 取消接口的返回结构一致，共用这一个实现。
   Future<TaskModel> _taskAction(String path) async {
     final json = await _api.post<Map<String, dynamic>>(
       path,

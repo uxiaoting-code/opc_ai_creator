@@ -882,6 +882,21 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8080/api/wallet/withdrawals"
 ```
 
+### 5.13 基于成功任务重新生成
+
+```http
+POST /api/tasks/{id}/regenerate
+Authorization: Bearer <token>
+```
+
+仅允许基于当前用户自己的 `SUCCESS` 任务创建一条新任务。原任务和原作品保留，
+新任务复制原提示词、扩展参数、参考图、订单上下文和模型通道，并重新扣减一次算力。
+
+> 本接口与 `POST /api/tasks/{id}/retry` 不同：`retry` 只用于失败任务，不额外扣费；
+> `regenerate` 用于成功任务，会创建新的任务 ID 并正常扣费与排队。
+
+返回 `data`：新的 `TaskResponse`，初始状态为 `QUEUED`。
+
 ---
 
 ## 6. 音频生成接口（M4）
@@ -1289,3 +1304,4 @@ M1/M3/M4 实现时至少准备：
 | v1.4 | 2026-10-30 | M4 实现：图片/视频任务绑定订单与接单上下文；新增 TEXT_TO_AUDIO、WAV Mock 音频、音频提交与订单媒体校验；HTTP Provider 支持音色等扩展变量 |
 | v1.5 | 2026-11-07 | M5 收尾：新增 `GET /api/profile/stats`，统一个人中心算力、钱包、审核数量和任务状态；补齐工作台/订单详情/我的接单的过期状态清理与演示订单 deadline 刷新口径 |
 | v1.6 | 2026-11-24 | 模型与创作线路拆分：新增 `GET /api/creation/models`，创作请求支持 `providerConfigId`，任务响应和快照记录所选模型通道 |
+| v1.7 | 2026-11-24 | 新增 `POST /api/tasks/{id}/regenerate`：基于成功任务创建新的生成任务；第三方生成结果由后端转存为本地媒体 URL |

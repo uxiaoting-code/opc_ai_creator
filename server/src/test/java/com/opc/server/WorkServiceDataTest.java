@@ -45,4 +45,28 @@ class WorkServiceDataTest {
         assertThat(responses).hasSize(1);
         assertThat(responses.getFirst().skillName()).isNull();
     }
+
+    @Test
+    void persistsThirdPartyResultUrlLongerThanLegacy255Characters() {
+        String longUrl = "https://ark-content-generation.example.com/"
+                + "image/".repeat(100)
+                + "generated.png";
+
+        Work saved = workRepository.saveAndFlush(Work.builder()
+                .userId(1L)
+                .taskId(2L)
+                .title("长 URL 作品")
+                .type(WorkType.IMAGE)
+                .resourceUrl(longUrl)
+                .prompt("test prompt")
+                .isPublic(false)
+                .likeCount(0)
+                .viewCount(0)
+                .deleted(false)
+                .build());
+
+        assertThat(saved.getResourceUrl())
+                .hasSizeGreaterThan(255)
+                .isEqualTo(longUrl);
+    }
 }

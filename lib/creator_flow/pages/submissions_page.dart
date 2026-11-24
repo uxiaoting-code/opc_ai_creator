@@ -290,6 +290,7 @@ class _SubmissionThumb extends StatelessWidget {
     return Image.network(
       url,
       fit: BoxFit.cover,
+      webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
       errorBuilder: (_, _, _) => const ColoredBox(color: AppColors.sageTint),
     );
   }

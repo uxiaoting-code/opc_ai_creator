@@ -27,6 +27,7 @@ import com.opc.server.repository.SkillRepository;
 import com.opc.server.repository.UserRepository;
 import com.opc.server.service.AdminSettingService;
 import com.opc.server.service.CreditTransactionService;
+import com.opc.server.storage.GeneratedMediaLocalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -76,6 +77,7 @@ public class HarnessService {
     private final AdminSettingService settingService;
     private final ObjectMapper objectMapper;
     private final CreditTransactionService creditTransactionService;
+    private final GeneratedMediaLocalizer mediaLocalizer;
 
     public HarnessService(AiTaskRepository taskRepository,
                           AiProviderConfigRepository providerConfigRepository,
@@ -89,7 +91,8 @@ public class HarnessService {
                           HarnessProperties properties,
                           AdminSettingService settingService,
                           ObjectMapper objectMapper,
-                          CreditTransactionService creditTransactionService) {
+                          CreditTransactionService creditTransactionService,
+                          GeneratedMediaLocalizer mediaLocalizer) {
         this.taskRepository = taskRepository;
         this.providerConfigRepository = providerConfigRepository;
         this.skillRepository = skillRepository;
@@ -103,6 +106,7 @@ public class HarnessService {
         this.settingService = settingService;
         this.objectMapper = objectMapper;
         this.creditTransactionService = creditTransactionService;
+        this.mediaLocalizer = mediaLocalizer;
     }
 
     // =========================================================================
@@ -490,6 +494,51 @@ public class HarnessService {
         return saved;
     }
 
+    /**
+     * 基于一个已经成功的任务创建一条全新任务。
+     *
+     * <p>与失败重试不同，这里不会改写原任务：原结果和作品历史继续保留，
+     * 新任务重新扣费并进入正常 Harness 队列。原 prompt 已经拼接过 Skill
+     * 前缀和后缀，所以克隆时必须原样保存，不能再次套用线路模板。
+     */
+    @Transactional
+    public AiTask regenerateTask(Long userId, Long taskId) {
+        AiTask original = taskRepository
+                .findByIdAndUserIdAndDeletedFalse(taskId, userId)
+                .orElseThrow(() -> new BizException(ErrorCode.TASK_NOT_FOUND));
+
+        if (original.getStatus() != TaskStatus.SUCCESS) {
+            throw new BizException(ErrorCode.TASK_STATUS_ILLEGAL,
+                    "只有成功的任务可以重新生成，失败任务请使用重试");
+        }
+
+        AiTask regenerated = createTask(
+                userId,
+                original.getType(),
+                null,
+                original.getPrompt(),
+                original.getNegativePrompt(),
+                original.getRefImageUrl(),
+                original.getOrderId(),
+                original.getProviderConfigId(),
+                Map.of());
+
+        Skill skill = original.getSkillId() == null
+                ? null
+                : skillRepository.findById(original.getSkillId()).orElse(null);
+        regenerated.setSkillId(original.getSkillId());
+        regenerated.setParamsJson(original.getParamsJson());
+        if (skill != null) {
+            skill.increaseUsage();
+            skillRepository.save(skill);
+            regenerated.setSkillName(skill.getName());
+            regenerated.setSkillCode(skill.getCode());
+        }
+        AiTask saved = taskRepository.save(regenerated);
+        log.info("任务 {} 已克隆为新的重新生成任务 {}", taskId, saved.getId());
+        return saved;
+    }
+
     /** 取消任务：只允许取消还在排队的。 */
     @Transactional
     public AiTask cancelTask(Long userId, Long taskId) {
@@ -569,7 +618,15 @@ public class HarnessService {
         }
 
         if (result.success()) {
-            stateService.markSuccess(taskId, result);
+            try {
+                AiTaskResult storedResult = mediaLocalizer.localize(
+                        result, task.getType(), task.getTaskNo());
+                stateService.markSuccess(taskId, storedResult);
+            } catch (Exception e) {
+                log.error("任务 {} 结果转存失败", taskId, e);
+                stateService.markFailed(taskId,
+                        "生成成功，但结果文件保存失败：" + e.getMessage());
+            }
         } else {
             stateService.markFailed(taskId, result.errorMessage());
         }

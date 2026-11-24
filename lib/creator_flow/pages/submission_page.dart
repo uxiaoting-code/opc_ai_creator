@@ -220,6 +220,7 @@ class _TaskResultPreview extends StatelessWidget {
         height: 250,
         width: double.infinity,
         fit: BoxFit.cover,
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
         errorBuilder: (_, _, _) => ArtworkPreview(
           mode: task.type == TaskType.imageToVideo
               ? CreationMode.video

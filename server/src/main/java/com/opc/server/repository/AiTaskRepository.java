@@ -25,6 +25,9 @@ public interface AiTaskRepository extends JpaRepository<AiTask, Long> {
 
     Optional<AiTask> findByIdAndUserIdAndDeletedFalse(Long id, Long userId);
 
+    List<AiTask> findByStatusAndResultUrlStartingWith(
+            TaskStatus status, String resultUrlPrefix);
+
     /**
      * 按状态分页查询用户的任务。{@code status} 传 null 表示查全部。
      *

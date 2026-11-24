@@ -1,0 +1,59 @@
+[33m233d2c7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m docs: 更新P0完成情况与F8后续排期
+[33me69c56c[m fix(user): 首页最近作品接入真实作品数据
+[33m5da20bb[m fix(user): 补齐审核页面返回入口
+[33m90db44c[m fix: 打通当前工作上下文与作品审核闭环
+[33m77ea09e[m feat(order): 新增三条演示订单并支持增量补种
+[33m27d9ccf[m fix(order): 过期接单不再阻塞新订单
+[33m1708f2f[m docs: 更新F1-F7完成进度与F8下一步
+[33m40cd62d[m feat(user): 完成真实作品提交与审核链路
+[33m6f01757[m fix(user): 精简创作首页底部并同步接单状态
+[33mb6354a4[m fix(user): 恢复接单卡片详细信息展示
+[33m4cabe3d[m feat(user): 修复创作工具横滑并接入真实订单市场
+[33m684b63f[m fix(user): 修复作品跳转并增强创作工具横滑
+[33m0657faf[m feat(user): 对齐原型创作交互并补齐结果操作
+[33m75da91d[m feat(user): 接入真实生成任务与结果轮询
+[33mb0048ca[m feat(user): 完成F1-F3组件课程与创作首页参数传递
+[33m7c2bfc0[m docs: 精简新版排期并增加速览
+[33m10c932d[m docs: 补充前后端分工与模块拆解排期
+[33m3d85790[m docs: 新增2026-11-04原型对齐排期并保留历史版本
+[33meaed4c0[m fix(user): 移除滚动页面重复底部留白
+[33maa427fd[m feat(user): 个人中心入口对齐四Tab结构
+[33md4777f4[m feat(user): 重构为四Tab原型导航并新增创作首页与结果页
+[33me04f5d1[m feat(user): 实现 M4 订单生成上下文与音频 TTS 链路
+[33m4bd03e6[m feat(user): 实现 M3 钱包充值提现与审核入账
+[33mab1c6e6[m feat(user): 实现 M2 作品提交与审核接口
+[33maec0ac9[m feat(user): 实现 M1 接单市场与工作台接口
+[33m91d876f[m docs: 冻结用户端订单创作审核钱包接口契约
+[33m2695d34[m docs: 按模块拆分用户端开发排期
+[33ma64b80e[m docs: 加入用户端 Flutter 原型与页面差异对照
+[33m0d3edb6[m docs: admin-web 切页任务由 Flutter 管理端取代，保留 App 收尾
+[33m93708f7[m docs: 更新 README、AGENTS 与 Flutter 管理端排期
+[33mf9ff116[m feat(admin): P5 知识库 + P7 运营账单 + API 网关
+[33m31de4ab[m docs: 标记 P3/P4 交付完成
+[33mcb7c98c[m feat(admin): P3 调试面板 + P4 MCP 接入
+[33mc1e36b6[m Merge branch 'main' of https://github.com/uxiaoting-code/opc_ai_creator
+[33m7bf3305[m docs: 勾选搭档 Week 2/3 前端任务
+[33m9c41e8b[m ywk week2,3  Update
+[33ma84f2ab[m docs: 标记 P1/P2 交付完成
+[33m3f40d59[m feat(admin): P2 智能体工作台——Agent/节点/版本、编排保存、工具库、预览
+[33mee5b471[m feat(admin): P1 模型/API 配置——CRUD、鉴权与模板、连通性测试、HttpApiProvider
+[33mb42d387[m Merge branch 'main' of https://github.com/uxiaoting-code/opc_ai_creator
+[33m26c5803[m docs: 新增前端上手指南与 Git 基础说明
+[33m7a396e9[m Update Flutter UI and D1-5
+[33mad25a7c[m Before Codex libui changes
+[33m9d82740[m feat(admin): P0 地基——ADMIN 鉴权、管理员登录、dev-token 隔离、5 张新表
+[33m6f3673c[m docs: 分工定稿为前后端 + 3 个 CRUD 后端模块
+[33mb90bd55[m docs: 加入需求文档 PDF，新增 AGENTS.md / CLAUDE.md 项目说明
+[33m617c808[m merge: 合并远端 README 改动，保留本地版 docs/api.md
+[33mb7e5f53[m chore: 停止跟踪 H2 本地数据库文件，忽略 web_old
+[33m51f1874[m chore(web): 接入老师后台原型，控制台拆分为 api.js + pages/*.js
+[33m26a6349[m docs: 新增管理端接口契约、三项冻结与后台开发计划
+[33m4e39df4[m feat: 用户初始算力修改为10000，修复skill枚举500报错，同步更新api文档和交接文档
+[33m4254de9[m Fix table formatting in README.md
+[33mc6c087b[m Update README.md
+[33m8b7c206[m Fix link formatting in README.md
+[33m4233e1d[m Add API documentation link to README
+[33m81b6207[m Update README with API documentation reference
+[33m3974ae9[m Add API documentation for OPC AI creative platform
+[33m5447f23[m feat: 完成Flutter前端文生图、图生视频页面开发
+[33m513957a[m Initial commit：OPC AI创作平台，SpringBoot后端+Flutter前端，素材库、图生视频页面

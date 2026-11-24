@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'media_saver.dart';
 import 'permission_utils.dart';
 import 'platform_utils.dart';
 
@@ -35,8 +37,7 @@ class MediaUtils {
       _pickImage(ImageSource.gallery);
 
   /// 拍照。
-  static Future<XFile?> pickImageFromCamera() =>
-      _pickImage(ImageSource.camera);
+  static Future<XFile?> pickImageFromCamera() => _pickImage(ImageSource.camera);
 
   static Future<XFile?> _pickImage(ImageSource source) async {
     // Web 端不需要权限，直接选文件；移动端先申请
@@ -160,32 +161,69 @@ class MediaUtils {
   }
 
   // ===========================================================================
-  // 下载 / 保存（待实现）
+  // 下载 / 保存
   // ===========================================================================
 
-  /// 把生成的图片或视频保存到本地。
+  /// 把生成的图片或视频下载后保存到本地。
   ///
-  /// **当前为占位实现，尚未接通。** 两端差异较大，单独排一个迭代：
-  ///
-  /// - **Web**：用 `package:web` + `dart:js_interop` 创建一个带 `download`
-  ///   属性的 `<a>` 标签并触发 click。注意跨域资源要先 fetch 成 Blob，
-  ///   否则 download 属性对跨域 URL 不生效。
-  ///
-  /// - **Android**：`dio.download` 存到临时目录，再用
-  ///   `MediaStore`（Android 10+）或 `gal` 之类的插件写入相册；
-  ///   注意 `path_provider` **不支持 Web**，必须用条件导入
-  ///   （`if (dart.library.io)` / `if (dart.library.js_interop)`）拆成
-  ///   两个文件，否则 `flutter build web` 会直接编译失败。
-  ///
-  /// 返回值：true 表示保存成功。
+  /// Web 通过 Blob 触发浏览器下载；Android 通过原生 MediaStore 写入相册。
   static Future<bool> saveToLocal({
     required String url,
     required String filename,
     bool isVideo = false,
   }) async {
-    debugPrint('saveToLocal 尚未实现: $url');
-    lastErrorMessage = '保存到本地功能将在后续迭代实现';
-    return false;
+    try {
+      final response = await Dio().get<List<int>>(
+        url,
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: const Duration(seconds: 90),
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
+        ),
+      );
+      final data = response.data;
+      if (data == null || data.isEmpty) {
+        lastErrorMessage = '下载内容为空';
+        return false;
+      }
+
+      final extension = _downloadExtension(url, isVideo: isVideo);
+      final safeName = filename.endsWith('.$extension')
+          ? filename
+          : '$filename.$extension';
+      final ok = await saveMediaBytes(
+        bytes: Uint8List.fromList(data),
+        fileName: safeName,
+        mimeType: isVideo ? 'video/mp4' : _imageMimeType(extension),
+      );
+      lastErrorMessage = ok ? null : '当前平台不支持保存该文件';
+      return ok;
+    } catch (e) {
+      debugPrint('下载结果失败: $e');
+      lastErrorMessage = '下载失败：$e';
+      return false;
+    }
+  }
+
+  static String _downloadExtension(String url, {required bool isVideo}) {
+    final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
+    for (final extension
+        in isVideo
+            ? const ['mp4', 'webm', 'mov']
+            : const ['png', 'jpg', 'jpeg', 'webp', 'gif']) {
+      if (path.endsWith('.$extension')) return extension;
+    }
+    return isVideo ? 'mp4' : 'png';
+  }
+
+  static String _imageMimeType(String extension) {
+    return switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      _ => 'image/png',
+    };
   }
 
   // ===========================================================================

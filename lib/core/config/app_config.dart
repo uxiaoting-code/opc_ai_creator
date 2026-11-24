@@ -199,6 +199,7 @@ class ApiEndpoints {
   static const String tasks = '/tasks';
   static String taskDetail(int id) => '/tasks/$id';
   static String taskRetry(int id) => '/tasks/$id/retry';
+  static String taskRegenerate(int id) => '/tasks/$id/regenerate';
   static String taskCancel(int id) => '/tasks/$id/cancel';
 
   /// 各状态任务数量，个人中心的数据统计用它。

@@ -117,10 +117,10 @@ public class AiTask extends BaseEntity {
     // 结果
     // -----------------------------------------------------------------------
 
-    @Column(name = "result_url", length = 255)
+    @Column(name = "result_url", length = 2048)
     private String resultUrl;
 
-    @Column(name = "result_thumb", length = 255)
+    @Column(name = "result_thumb", length = 2048)
     private String resultThumb;
 
     @Column(name = "result_json", length = 4000)

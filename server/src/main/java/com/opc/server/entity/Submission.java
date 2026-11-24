@@ -56,10 +56,10 @@ public class Submission extends BaseEntity {
     @Column(name = "note", length = 1000)
     private String note;
 
-    @Column(name = "result_url", nullable = false, length = 500)
+    @Column(name = "result_url", nullable = false, length = 2048)
     private String resultUrl;
 
-    @Column(name = "thumbnail_url", length = 500)
+    @Column(name = "thumbnail_url", length = 2048)
     private String thumbnailUrl;
 
     @Column(name = "duration_ms")

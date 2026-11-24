@@ -45,11 +45,11 @@ public class Work extends BaseEntity {
     private WorkType type;
 
     /** 封面（视频取首帧） */
-    @Column(name = "cover_url", length = 255)
+    @Column(name = "cover_url", length = 2048)
     private String coverUrl;
 
     /** 作品资源地址（图片 URL 或视频 URL） */
-    @Column(name = "resource_url", nullable = false, length = 255)
+    @Column(name = "resource_url", nullable = false, length = 2048)
     private String resourceUrl;
 
     @Column(name = "prompt", length = 2000)

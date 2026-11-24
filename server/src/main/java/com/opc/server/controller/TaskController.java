@@ -88,6 +88,13 @@ public class TaskController {
         return Result.success(TaskResponse.from(task), "已重新排队");
     }
 
+    /** 基于成功任务创建一个新的生成任务，旧任务和作品继续保留。 */
+    @PostMapping("/{id}/regenerate")
+    public Result<TaskResponse> regenerate(@PathVariable Long id) {
+        AiTask task = harnessService.regenerateTask(UserContext.require(), id);
+        return Result.success(TaskResponse.from(task), "已创建重新生成任务");
+    }
+
     /** 取消排队中的任务。 */
     @PostMapping("/{id}/cancel")
     public Result<TaskResponse> cancel(@PathVariable Long id) {

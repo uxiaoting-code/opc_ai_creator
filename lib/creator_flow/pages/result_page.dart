@@ -78,12 +78,15 @@ class _ResultPageState extends State<ResultPage> {
     }
   }
 
-  Future<void> _retry() async {
+  Future<void> _regenerate() async {
     final task = _task;
-    if (task == null || !task.canRetry) return;
+    if (task == null || !task.finished) return;
     setState(() => _loading = true);
     try {
-      final fresh = await context.read<TaskRepository>().retryTask(task.id);
+      final repository = context.read<TaskRepository>();
+      final fresh = task.status == TaskStatus.failed
+          ? await repository.retryTask(task.id)
+          : await repository.regenerateTask(task.id);
       if (!mounted) return;
       setState(() {
         _task = fresh;
@@ -154,11 +157,15 @@ class _ResultPageState extends State<ResultPage> {
               _ResultMeta(task: task),
               const SizedBox(height: 14),
               _ResultViewer(task: task),
-              if (succeeded) ...[
+              if (task.finished) ...[
                 const SizedBox(height: 14),
                 _ResultActions(
                   task: task,
-                  onRetry: task.canRetry ? _retry : null,
+                  onRetry:
+                      (task.status == TaskStatus.failed && !task.canRetry) ||
+                          task.status == TaskStatus.canceled
+                      ? null
+                      : _regenerate,
                   onCopy: _copyResultUrl,
                 ),
               ],
@@ -385,6 +392,7 @@ class _ResultViewer extends StatelessWidget {
           AppConfig.resolveAssetUrl(url),
           height: 340,
           fit: BoxFit.cover,
+          webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
           loadingBuilder: (context, child, progress) {
             if (progress == null) return child;
             return Container(
@@ -457,19 +465,29 @@ class _ResultActions extends StatelessWidget {
         _ResultAction(
           icon: Icons.download_rounded,
           label: '下载',
-          onTap: () async {
-            final url = task.resultUrl;
-            if (url == null) return;
-            final ok = await MediaUtils.saveToLocal(
-              url: AppConfig.resolveAssetUrl(url),
-              filename: 'task_${task.id}',
-              isVideo: task.type == TaskType.imageToVideo,
-            );
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(ok ? '已保存' : '下载功能暂未完成')));
-          },
+          onTap: !task.hasResult
+              ? null
+              : () async {
+                  final url = task.resultUrl;
+                  if (url == null) return;
+                  final ok = await MediaUtils.saveToLocal(
+                    url: AppConfig.resolveAssetUrl(url),
+                    filename: 'task_${task.id}',
+                    isVideo: task.type == TaskType.imageToVideo,
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          ok
+                              ? '已保存到本地'
+                              : (MediaUtils.lastErrorMessage ?? '下载失败'),
+                        ),
+                      ),
+                    );
+                },
         ),
         _ResultAction(icon: Icons.refresh_rounded, label: '重生', onTap: onRetry),
         _ResultAction(
