@@ -170,6 +170,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 | [docs/USER_APP_V2.md](docs/USER_APP_V2.md) | 用户端 v2 页面与接口适配说明（当前状态以 `SCHEDULE.md` 为准） |
 | [docs/api-user.md](docs/api-user.md) | **用户端 v2 契约**：M0 冻结；M1～M5 已实现 |
 | [docs/api-admin.md](docs/api-admin.md) | **管理端接口契约**（12 页 / 错误码 / 枚举 / 变更记录） |
+| [docs/ai-provider-contract.md](docs/ai-provider-contract.md) | 火山引擎视频/TTS Provider 环境变量与接口合同 |
 | [docs/SCHEDULE.md](docs/SCHEDULE.md) | **开发排期、分工、当前进度、最终验收清单** |
 | [docs/admin-freeze.md](docs/admin-freeze.md) | 三项共用模型冻结 + 文件归属 |
 | [docs/COMPONENTS.md](docs/COMPONENTS.md) | Flutter 组件清单 |
@@ -195,7 +196,7 @@ flutter run -d <device-id> --dart-define=LAN_HOST=192.168.1.20
 - [x] M4 生成链路已实现：订单绑定任务、图片/视频 Harness、文本转音频 Mock WAV 与 HTTP 扩展参数
 - [x] M5 后端收尾：过期工作台/接单治理、演示订单 deadline 刷新、个人中心统一统计 `GET /api/profile/stats`
 - [x] 前端 F8：个人中心统一统计、现金钱包流水、充值/提现渠道、真实订单状态与结果页
-- [x] 后端完整测试 47 项通过，包含 `/api/profile/stats` 的真实 HTTP 鉴权测试
+- [x] 后端完整测试 54 项通过，包含 `/api/profile/stats` 鉴权测试和火山引擎 Provider 契约测试
 - [x] `flutter analyze` 与 `flutter test` 通过
 - [x] Prompt 知识库页
 - [x] 素材库 / 用户管理 / 系统设置（C 端与后台接口）

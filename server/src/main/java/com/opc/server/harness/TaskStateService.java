@@ -63,6 +63,21 @@ public class TaskStateService {
         return false;
     }
 
+    /** 记录异步 Provider 返回的供应商任务 ID，不改变任务状态。 */
+    @Transactional
+    public void recordProviderSubmission(Long taskId, String providerTaskId, Integer progress) {
+        AiTask task = taskRepository.findById(taskId).orElse(null);
+        if (task == null || task.getStatus() != TaskStatus.RUNNING) {
+            return;
+        }
+        task.setProviderTaskId(providerTaskId);
+        if (progress != null) {
+            task.updateProgress(progress);
+        }
+        taskRepository.save(task);
+        log.info("任务 {} 已提交异步 Provider，providerTaskId={}", taskId, providerTaskId);
+    }
+
     /**
      * 标记成功，并同步落一条作品记录。
      *

@@ -132,6 +132,18 @@ public interface AiTaskRepository extends JpaRepository<AiTask, Long> {
 
     long countByUserIdAndStatusAndDeletedFalse(Long userId, TaskStatus status);
 
+    /** 查询等待供应商回查的异步任务。 */
+    @Query("""
+            select t from AiTask t
+             where t.status = :status
+               and t.providerTaskId is not null
+               and t.deleted = false
+             order by t.startAt asc, t.id asc
+            """)
+    List<AiTask> findRunningAsyncTasks(
+            @Param("status") TaskStatus status,
+            Pageable pageable);
+
     /** 各状态任务数，用于任务列表 Tab 上的角标。 */
     @Query("""
             select t.status, count(t) from AiTask t
@@ -163,6 +175,7 @@ public interface AiTaskRepository extends JpaRepository<AiTask, Long> {
                    t.startAt = null,
                    t.errorMsg = :reason
              where t.status = :running
+               and t.providerTaskId is null
             """)
     int resetStuckTasks(
             @Param("queued") TaskStatus queued,

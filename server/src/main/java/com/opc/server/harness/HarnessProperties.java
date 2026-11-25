@@ -20,6 +20,9 @@ public class HarnessProperties {
     /** 每轮最多捞几个任务。 */
     private int batchSize = 5;
 
+    /** 异步 Provider 每轮最多查询几个任务。 */
+    private int asyncPollBatchSize = 20;
+
     /** 同时执行的任务数下限。 */
     private int corePoolSize = 2;
 
@@ -60,6 +63,14 @@ public class HarnessProperties {
 
     public int getBatchSize() {
         return batchSize;
+    }
+
+    public int getAsyncPollBatchSize() {
+        return asyncPollBatchSize;
+    }
+
+    public void setAsyncPollBatchSize(int asyncPollBatchSize) {
+        this.asyncPollBatchSize = asyncPollBatchSize;
     }
 
     public void setBatchSize(int batchSize) {

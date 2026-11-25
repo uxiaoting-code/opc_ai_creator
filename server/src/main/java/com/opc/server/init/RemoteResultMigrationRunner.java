@@ -59,7 +59,8 @@ public class RemoteResultMigrationRunner implements ApplicationRunner {
                         task.getResultThumb(),
                         task.getResultJson(),
                         null,
-                        task.getDurationMs() == null ? 0L : task.getDurationMs());
+                        task.getDurationMs() == null ? 0L : task.getDurationMs(),
+                        null);
                 AiTaskResult localized = localizer.localize(
                         original, task.getType(), task.getTaskNo());
 

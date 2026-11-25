@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -93,6 +94,26 @@ public class AiProviderRouter {
             return route(ProviderNames.MOCK);
         }
         return route(impl);
+    }
+
+    /**
+     * Strict route for real providers. Missing/unavailable real providers must
+     * fail the task instead of silently returning a Mock result.
+     */
+    public Optional<AiProvider> routeStrict(String providerName) {
+        if (!isStrictRealProvider(providerName)) {
+            return Optional.of(route(providerName));
+        }
+        AiProvider provider = providerMap.get(providerName);
+        if (provider == null || !provider.isAvailable()) {
+            return Optional.empty();
+        }
+        return Optional.of(provider);
+    }
+
+    public boolean isStrictRealProvider(String providerName) {
+        return ProviderNames.VOLCENGINE_VIDEO.equals(providerName)
+                || ProviderNames.VOLCENGINE_TTS.equals(providerName);
     }
 
     /** 已注册的服务商标识集合，设置页可以展示出来。 */

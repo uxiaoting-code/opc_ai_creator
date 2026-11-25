@@ -593,9 +593,18 @@ public class HarnessService {
         }
 
         AiTaskRequest request = requestFactory.build(task, skill, providerConfig);
-        AiProvider provider = providerConfig == null
-                ? providerRouter.route(task.getProvider())
-                : providerRouter.routeByConfig(toRuntimeConfig(providerConfig));
+        AiProvider provider;
+        if (providerConfig != null) {
+            provider = providerRouter.routeByConfig(toRuntimeConfig(providerConfig));
+        } else {
+            provider = providerRouter.routeStrict(task.getProvider()).orElse(null);
+            if (provider == null) {
+                stateService.markFailed(taskId,
+                        "Provider unavailable: " + task.getProvider()
+                                + ". Check provider configuration or use a Mock skill.");
+                return;
+            }
+        }
 
         var settings = settingService.getSettings();
         if (Boolean.TRUE.equals(settings.aiDebugLogEnabled())) {
@@ -618,14 +627,21 @@ public class HarnessService {
         }
 
         if (result.success()) {
-            try {
-                AiTaskResult storedResult = mediaLocalizer.localize(
-                        result, task.getType(), task.getTaskNo());
-                stateService.markSuccess(taskId, storedResult);
-            } catch (Exception e) {
-                log.error("任务 {} 结果转存失败", taskId, e);
-                stateService.markFailed(taskId,
-                        "生成成功，但结果文件保存失败：" + e.getMessage());
+            if (result.isAsync()) {
+                stateService.recordProviderSubmission(
+                        taskId,
+                        result.providerTaskId(),
+                        result.progress());
+            } else {
+                try {
+                    AiTaskResult storedResult = mediaLocalizer.localize(
+                            result, task.getType(), task.getTaskNo());
+                    stateService.markSuccess(taskId, storedResult);
+                } catch (Exception e) {
+                    log.error("任务 {} 结果转存失败", taskId, e);
+                    stateService.markFailed(taskId,
+                            "生成成功，但结果文件保存失败：" + e.getMessage());
+                }
             }
         } else {
             stateService.markFailed(taskId, result.errorMessage());

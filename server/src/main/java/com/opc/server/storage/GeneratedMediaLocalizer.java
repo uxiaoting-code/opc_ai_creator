@@ -58,7 +58,8 @@ public class GeneratedMediaLocalizer {
                 localThumbUrl,
                 result.resultJson(),
                 result.errorMessage(),
-                result.elapsedMs()
+                result.elapsedMs(),
+                result.progress()
         );
     }
 

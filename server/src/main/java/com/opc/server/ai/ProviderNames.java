@@ -31,7 +31,11 @@ public final class ProviderNames {
     /** OpenAI DALL·E / Sora */
     public static final String OPENAI = "openai";
 
-    /** 火山引擎即梦（国内可直连，视频能力强） */
+    /** 火山引擎即梦视频 Provider。 */
+    public static final String VOLCENGINE_VIDEO = "volcengine-video";
+
+    /** 火山引擎文本转语音 Provider。 */
+    public static final String VOLCENGINE_TTS = "volcengine-tts";
     public static final String VOLCENGINE = "volcengine";
 
     /** 阿里云通义万相 */

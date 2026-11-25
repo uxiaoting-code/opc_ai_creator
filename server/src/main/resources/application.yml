@@ -74,6 +74,8 @@ opc:
   # --- Harness 任务调度 ---
   harness:
     poll-interval-ms: 3000        # 轮询间隔：3 秒扫一次排队任务
+    async-poll-interval-ms: ${OPC_HARNESS_ASYNC_POLL_INTERVAL_MS:3000}
+    async-poll-batch-size: ${OPC_HARNESS_ASYNC_POLL_BATCH_SIZE:20}
     timeout-sweep-interval-ms: 30000
     batch-size: 5                 # 每轮最多捞 5 个任务
     core-pool-size: 2             # 常驻并发
@@ -98,6 +100,67 @@ opc:
       base-url: http://127.0.0.1:7860
       api-key: ""
       timeout-seconds: 180
+
+  # --- 火山引擎视频 Provider：默认关闭，接口字段由官方合同确认后配置 ---
+    volcengine-video:
+      enabled: ${OPC_PROVIDER_VOLCENGINE_VIDEO_ENABLED:false}
+      base-url: ${OPC_PROVIDER_VOLCENGINE_VIDEO_BASE_URL:}
+      api-key: ${OPC_PROVIDER_VOLCENGINE_VIDEO_API_KEY:}
+      region: ${OPC_PROVIDER_VOLCENGINE_VIDEO_REGION:}
+      model: ${OPC_PROVIDER_VOLCENGINE_VIDEO_MODEL:}
+      request-method: POST
+      create-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_CREATE_PATH:}
+      query-method: GET
+      query-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_QUERY_PATH:}
+      cancel-method: POST
+      cancel-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_CANCEL_PATH:}
+      headers-json: ${OPC_PROVIDER_VOLCENGINE_VIDEO_HEADERS_JSON:}
+      request-body-json: ${OPC_PROVIDER_VOLCENGINE_VIDEO_REQUEST_BODY_JSON:}
+      query-body-json: ${OPC_PROVIDER_VOLCENGINE_VIDEO_QUERY_BODY_JSON:}
+      auth-header-name: ${OPC_PROVIDER_VOLCENGINE_VIDEO_AUTH_HEADER_NAME:Authorization}
+      auth-header-prefix: '${OPC_PROVIDER_VOLCENGINE_VIDEO_AUTH_HEADER_PREFIX:Bearer }'
+      response-task-id-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_RESPONSE_TASK_ID_PATH:}
+      response-status-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_RESPONSE_STATUS_PATH:}
+      response-progress-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_RESPONSE_PROGRESS_PATH:}
+      response-result-url-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_RESPONSE_RESULT_URL_PATH:}
+      response-thumb-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_RESPONSE_THUMB_PATH:}
+      response-error-path: ${OPC_PROVIDER_VOLCENGINE_VIDEO_RESPONSE_ERROR_PATH:}
+      processing-statuses: ${OPC_PROVIDER_VOLCENGINE_VIDEO_PROCESSING_STATUSES:queued,submitted,running,processing}
+      success-statuses: ${OPC_PROVIDER_VOLCENGINE_VIDEO_SUCCESS_STATUSES:succeeded,success,completed}
+      failure-statuses: ${OPC_PROVIDER_VOLCENGINE_VIDEO_FAILURE_STATUSES:failed,error,cancelled,canceled}
+      timeout-seconds: ${OPC_PROVIDER_VOLCENGINE_VIDEO_TIMEOUT_SECONDS:600}
+
+    # --- 火山引擎 TTS Provider：默认关闭 ---
+    volcengine-tts:
+      enabled: ${OPC_PROVIDER_VOLCENGINE_TTS_ENABLED:false}
+      base-url: ${OPC_PROVIDER_VOLCENGINE_TTS_BASE_URL:}
+      api-key: ${OPC_PROVIDER_VOLCENGINE_TTS_API_KEY:}
+      region: ${OPC_PROVIDER_VOLCENGINE_TTS_REGION:}
+      model: ${OPC_PROVIDER_VOLCENGINE_TTS_MODEL:}
+      request-method: POST
+      create-path: ${OPC_PROVIDER_VOLCENGINE_TTS_CREATE_PATH:}
+      query-method: GET
+      query-path: ${OPC_PROVIDER_VOLCENGINE_TTS_QUERY_PATH:}
+      cancel-method: POST
+      cancel-path: ${OPC_PROVIDER_VOLCENGINE_TTS_CANCEL_PATH:}
+      headers-json: ${OPC_PROVIDER_VOLCENGINE_TTS_HEADERS_JSON:}
+      request-body-json: ${OPC_PROVIDER_VOLCENGINE_TTS_REQUEST_BODY_JSON:}
+      query-body-json: ${OPC_PROVIDER_VOLCENGINE_TTS_QUERY_BODY_JSON:}
+      auth-header-name: ${OPC_PROVIDER_VOLCENGINE_TTS_AUTH_HEADER_NAME:Authorization}
+      auth-header-prefix: '${OPC_PROVIDER_VOLCENGINE_TTS_AUTH_HEADER_PREFIX:Bearer }'
+      response-task-id-path: ${OPC_PROVIDER_VOLCENGINE_TTS_RESPONSE_TASK_ID_PATH:}
+      response-status-path: ${OPC_PROVIDER_VOLCENGINE_TTS_RESPONSE_STATUS_PATH:}
+      response-progress-path: ${OPC_PROVIDER_VOLCENGINE_TTS_RESPONSE_PROGRESS_PATH:}
+      response-audio-url-path: ${OPC_PROVIDER_VOLCENGINE_TTS_RESPONSE_AUDIO_URL_PATH:}
+      response-audio-base64-path: ${OPC_PROVIDER_VOLCENGINE_TTS_RESPONSE_AUDIO_BASE64_PATH:}
+      response-error-path: ${OPC_PROVIDER_VOLCENGINE_TTS_RESPONSE_ERROR_PATH:}
+      processing-statuses: ${OPC_PROVIDER_VOLCENGINE_TTS_PROCESSING_STATUSES:queued,submitted,running,processing}
+      success-statuses: ${OPC_PROVIDER_VOLCENGINE_TTS_SUCCESS_STATUSES:succeeded,success,completed}
+      failure-statuses: ${OPC_PROVIDER_VOLCENGINE_TTS_FAILURE_STATUSES:failed,error,cancelled,canceled}
+      default-voice-code: ${OPC_PROVIDER_VOLCENGINE_TTS_DEFAULT_VOICE_CODE:warm_female}
+      default-language: ${OPC_PROVIDER_VOLCENGINE_TTS_DEFAULT_LANGUAGE:zh-CN}
+      default-format: ${OPC_PROVIDER_VOLCENGINE_TTS_DEFAULT_FORMAT:wav}
+      timeout-seconds: ${OPC_PROVIDER_VOLCENGINE_TTS_TIMEOUT_SECONDS:180}
 
   # --- 支付回调（课设使用共享密钥模拟渠道验签）---
   payment:
